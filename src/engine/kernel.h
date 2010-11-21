@@ -17,8 +17,6 @@ public:
 	IInterface() : m_pKernel(0) {}
 	virtual ~IInterface() {}
 	
-	//virtual unsigned InterfaceID() = 0;
-	//virtual const char *InterfaceName() = 0;
 };
 
 #define MACRO_INTERFACE(Name, ver) \
