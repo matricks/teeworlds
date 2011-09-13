@@ -193,7 +193,7 @@ void CMapLayers::OnRender()
 						Graphics()->TextureSet(pResource);
 					}
 
-					if(Loaded || pGroup == m_pLayers->GameGroup())
+					if(Loaded || (pGroup == m_pLayers->GameGroup() && !(pLayer->m_Flags&LAYERFLAG_DETAIL)))
 					{
 						CTile *pTiles = (CTile *)m_pLayers->Map()->GetData(pTMap->m_Data);
 						Graphics()->BlendNone();
