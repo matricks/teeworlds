@@ -6,6 +6,7 @@
 #include <engine/serverbrowser.h>
 #include <engine/shared/config.h>
 #include <engine/storage.h>
+#include <engine/loader.h>
 
 #include <game/layers.h>
 #include <game/client/gameclient.h>
@@ -181,35 +182,51 @@ void CMapLayers::OnRender()
 
 				if(pLayer->m_Type == LAYERTYPE_TILES)
 				{
+					bool Loaded = true;
 					CMapItemLayerTilemap *pTMap = (CMapItemLayerTilemap *)pLayer;
 					if(pTMap->m_Image == -1)
 						Graphics()->TextureSet(0);
 					else
-						Graphics()->TextureSet(m_pClient->m_pMapimages->Get(pTMap->m_Image));
+					{
+						IResource *pResource = m_pClient->m_pMapimages->Get(pTMap->m_Image);
+						Loaded = pResource->IsLoaded();
+						Graphics()->TextureSet(pResource);
+					}
 
-					CTile *pTiles = (CTile *)m_pLayers->Map()->GetData(pTMap->m_Data);
-					Graphics()->BlendNone();
-					vec4 Color = vec4(pTMap->m_Color.r/255.0f, pTMap->m_Color.g/255.0f, pTMap->m_Color.b/255.0f, pTMap->m_Color.a/255.0f);
-					RenderTools()->RenderTilemap(pTiles, pTMap->m_Width, pTMap->m_Height, 32.0f, Color, TILERENDERFLAG_EXTEND|LAYERRENDERFLAG_OPAQUE,
-													EnvelopeEval, this, pTMap->m_ColorEnv, pTMap->m_ColorEnvOffset);
-					Graphics()->BlendNormal();
-					RenderTools()->RenderTilemap(pTiles, pTMap->m_Width, pTMap->m_Height, 32.0f, Color, TILERENDERFLAG_EXTEND|LAYERRENDERFLAG_TRANSPARENT,
-													EnvelopeEval, this, pTMap->m_ColorEnv, pTMap->m_ColorEnvOffset);
+					if(Loaded || pGroup == m_pLayers->GameGroup())
+					{
+						CTile *pTiles = (CTile *)m_pLayers->Map()->GetData(pTMap->m_Data);
+						Graphics()->BlendNone();
+						vec4 Color = vec4(pTMap->m_Color.r/255.0f, pTMap->m_Color.g/255.0f, pTMap->m_Color.b/255.0f, pTMap->m_Color.a/255.0f);
+						RenderTools()->RenderTilemap(pTiles, pTMap->m_Width, pTMap->m_Height, 32.0f, Color, TILERENDERFLAG_EXTEND|LAYERRENDERFLAG_OPAQUE,
+														EnvelopeEval, this, pTMap->m_ColorEnv, pTMap->m_ColorEnvOffset);
+						Graphics()->BlendNormal();
+						RenderTools()->RenderTilemap(pTiles, pTMap->m_Width, pTMap->m_Height, 32.0f, Color, TILERENDERFLAG_EXTEND|LAYERRENDERFLAG_TRANSPARENT,
+														EnvelopeEval, this, pTMap->m_ColorEnv, pTMap->m_ColorEnvOffset);
+					}
 				}
 				else if(pLayer->m_Type == LAYERTYPE_QUADS)
 				{
+					bool Loaded = true;
 					CMapItemLayerQuads *pQLayer = (CMapItemLayerQuads *)pLayer;
 					if(pQLayer->m_Image == -1)
 						Graphics()->TextureSet(0);
 					else
-						Graphics()->TextureSet(m_pClient->m_pMapimages->Get(pQLayer->m_Image));
+					{
+						IResource *pResource = m_pClient->m_pMapimages->Get(pQLayer->m_Image);
+						Loaded = pResource->IsLoaded();
+						Graphics()->TextureSet(pResource);
+					}
 
-					CQuad *pQuads = (CQuad *)m_pLayers->Map()->GetDataSwapped(pQLayer->m_Data);
+					if(Loaded)
+					{
+						CQuad *pQuads = (CQuad *)m_pLayers->Map()->GetDataSwapped(pQLayer->m_Data);
 
-					Graphics()->BlendNone();
-					RenderTools()->RenderQuads(pQuads, pQLayer->m_NumQuads, LAYERRENDERFLAG_OPAQUE, EnvelopeEval, this);
-					Graphics()->BlendNormal();
-					RenderTools()->RenderQuads(pQuads, pQLayer->m_NumQuads, LAYERRENDERFLAG_TRANSPARENT, EnvelopeEval, this);
+						Graphics()->BlendNone();
+						RenderTools()->RenderQuads(pQuads, pQLayer->m_NumQuads, LAYERRENDERFLAG_OPAQUE, EnvelopeEval, this);
+						Graphics()->BlendNormal();
+						RenderTools()->RenderQuads(pQuads, pQLayer->m_NumQuads, LAYERRENDERFLAG_TRANSPARENT, EnvelopeEval, this);
+					}
 				}
 
 				//layershot_end();

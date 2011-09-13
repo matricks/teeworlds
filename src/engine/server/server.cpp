@@ -1314,7 +1314,6 @@ int CServer::LoadMap(const char *pMapName)
 
 	// clear the resource list
 	m_ResourceList.Clear();
-
 	return 1;
 }
 

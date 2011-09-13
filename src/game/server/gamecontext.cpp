@@ -1344,15 +1344,24 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 	m_World.SetGameServer(this);
 	m_Events.SetGameServer(this);
 
-	// TODO: temporary behaviour, map load should automaticlly add these
-	m_pServer->LoadResource("mapres/grass_main.png");
-	m_pServer->LoadResource("mapres/bg_cloud1.png");
-	m_pServer->LoadResource("mapres/bg_cloud2.png");
-	m_pServer->LoadResource("mapres/bg_cloud3.png");
+	// dig out the images that the map uses
+	{
+		IMap *pMap = Kernel()->RequestInterface<IMap>();
+		int Start, Count;
+		pMap->GetType(MAPITEMTYPE_IMAGE, &Start, &Count);
 
-	m_pServer->LoadResource("mapres/grass_doodads.png");
-	m_pServer->LoadResource("mapres/mountains.png");
-	m_pServer->LoadResource("mapres/sun.png");
+		// load new textures
+		for(int i = 0; i < Count; i++)
+		{
+			CMapItemImage *pImg = (CMapItemImage *)pMap->GetItem(Start+i, 0, 0);
+			if(pImg->m_External)
+			{
+				char Buf[256];
+				str_format(Buf, sizeof(Buf), "mapres/%s.png", (char *)pMap->GetData(pImg->m_ImageName));
+				m_pServer->LoadResource(Buf);
+			}
+		}
+	}
 
 	//if(!data) // only load once
 		//data = load_data_from_memory(internal_data);
