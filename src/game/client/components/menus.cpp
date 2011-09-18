@@ -71,6 +71,8 @@ CMenus::CMenus()
 	m_aCallvoteReason[0] = 0;
 
 	m_FriendlistSelectedIndex = -1;
+
+	m_pMusic = 0;
 }
 
 vec4 CMenus::ButtonColorMul(const void *pID)
@@ -686,6 +688,7 @@ void CMenus::RenderNews(CUIRect MainView)
 
 void CMenus::OnInit()
 {
+	m_pMusic = Resources()->GetResource("audio/music_menu.wv");
 
 	/*
 	array<string> my_strings;
@@ -772,7 +775,7 @@ int CMenus::Render()
 			ServerBrowser()->Refresh(IServerBrowser::TYPE_LAN);
 		else if(g_Config.m_UiPage == PAGE_FAVORITES)
 			ServerBrowser()->Refresh(IServerBrowser::TYPE_FAVORITES);
-		m_pClient->m_pSounds->Enqueue(CSounds::CHN_MUSIC, SOUND_MENU);
+		m_pClient->m_pSounds->Enqueue(CSounds::CHN_MUSIC, m_pMusic);
 		s_First = false;
 	}
 
@@ -1403,7 +1406,7 @@ void CMenus::OnStateChange(int NewState, int OldState)
 	if(NewState == IClient::STATE_OFFLINE)
 	{
 		if(OldState >= IClient::STATE_ONLINE)
-			m_pClient->m_pSounds->Play(CSounds::CHN_MUSIC, SOUND_MENU, 1.0f, vec2(0, 0));
+			m_pClient->m_pSounds->Play(CSounds::CHN_MUSIC, m_pMusic, 1.0f, vec2(0, 0));
 		m_Popup = POPUP_NONE;
 		if(Client()->ErrorString() && Client()->ErrorString()[0] != 0)
 		{

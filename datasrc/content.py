@@ -173,6 +173,7 @@ def FileList(format, num):
 
 container = DataContainer()
 
+# all these soundsets are requeried by the client due to prediction, can't remove em
 container.sounds.Add(SoundSet("hammer_hit", FileList("audio/wp_hammer_hit-%02d.wv", 3))) # client needs
 container.sounds.Add(SoundSet("player_airjump", FileList("audio/foley_dbljump-%02d.wv", 3))) # client needs
 container.sounds.Add(SoundSet("player_jump", FileList("audio/foley_foot_left-%02d.wv", 4) + FileList("audio/foley_foot_right-%02d.wv", 4))) # client needs
@@ -181,11 +182,11 @@ container.sounds.Add(SoundSet("player_skid", FileList("audio/sfx_skid-%02d.wv", 
 container.sounds.Add(SoundSet("hook_attach_ground", FileList("audio/hook_attach-%02d.wv", 3))) # client needs
 container.sounds.Add(SoundSet("hook_noattach", FileList("audio/hook_noattach-%02d.wv", 2))) # client needs
 
-container.sounds.Add(SoundSet("chat_server", ["audio/sfx_msg-server.wv"])) # client needs
-container.sounds.Add(SoundSet("chat_client", ["audio/sfx_msg-client.wv"])) # client needs
-container.sounds.Add(SoundSet("chat_highlight", ["audio/sfx_msg-highlight.wv"])) # client needs
+#container.sounds.Add(SoundSet("chat_server", ["audio/sfx_msg-server.wv"])) # client needs
+#container.sounds.Add(SoundSet("chat_client", ["audio/sfx_msg-client.wv"])) # client needs
+#container.sounds.Add(SoundSet("chat_highlight", ["audio/sfx_msg-highlight.wv"])) # client needs
 
-container.sounds.Add(SoundSet("menu", ["audio/music_menu.wv"])) # client needs
+#container.sounds.Add(SoundSet("menu", ["audio/music_menu.wv"])) # client needs
 
 #container.sounds.Add(SoundSet("gun_fire", FileList("audio/wp_gun_fire-%02d.wv", 3)))
 #container.sounds.Add(SoundSet("shotgun_fire", FileList("audio/wp_shotty_fire-%02d.wv", 3)))

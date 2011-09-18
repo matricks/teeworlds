@@ -100,7 +100,7 @@ void CSounds::OnRender()
 		int64 Now = time_get();
 		if(m_QueueWaitTime <= Now)
 		{
-			Play(m_aQueue[0].m_Channel, m_aQueue[0].m_SetId, 1.0f, vec2(0,0));
+			Play(m_aQueue[0].m_Channel, m_aQueue[0].m_pResource, 1.0f, vec2(0,0));
 			m_QueueWaitTime = Now+time_freq()*3/10; // wait 300ms before playing the next one
 			if(--m_QueuePos > 0)
 				mem_move(m_aQueue, m_aQueue+1, m_QueuePos*sizeof(QueueEntry));
@@ -115,7 +115,7 @@ void CSounds::ClearQueue()
 	m_QueueWaitTime = time_get();
 }
 
-void CSounds::Enqueue(int Channel, int SetId)
+void CSounds::Enqueue(int Channel, IResource *pResource)
 {
 	// add sound to the queue
 	if(m_QueuePos < QUEUE_SIZE)
@@ -123,7 +123,37 @@ void CSounds::Enqueue(int Channel, int SetId)
 		if(Channel == CHN_MUSIC || !g_Config.m_ClEditor)
 		{
 			m_aQueue[m_QueuePos].m_Channel = Channel;
-			m_aQueue[m_QueuePos++].m_SetId = SetId;
+			m_aQueue[m_QueuePos++].m_pResource = pResource;
+		}
+	}
+}
+
+void CSounds::Enqueue(int Channel, int SetId)
+{
+	// add sound to the queue
+	if(m_QueuePos < QUEUE_SIZE)
+	{
+		if(Channel == CHN_MUSIC || !g_Config.m_ClEditor)
+		{
+			// play a random one
+			CDataSoundset *pSet = &g_pData->m_aSounds[SetId];
+			int Id = 0;
+	
+			// play a random one
+			if(pSet->m_NumSounds > 1)
+			{
+				do
+				{
+					Id = rand() % pSet->m_NumSounds;
+				}
+				while(Id == pSet->m_Last);
+				pSet->m_Last = Id;
+			}
+
+			//Sound()->PlayAt(Chn, pSet->m_aSounds[Id].m_pResource, Flags, Pos.x, Pos.y);
+				
+			m_aQueue[m_QueuePos].m_Channel = Channel;
+			m_aQueue[m_QueuePos++].m_pResource = pSet->m_aSounds[Id].m_pResource;
 		}
 	}
 }
@@ -197,6 +227,14 @@ void CSounds::Play(int Chn, int SetId, float Vol, vec2 Pos)
 	while(Id == pSet->m_Last);
 	Sound()->PlayAt(Chn, pSet->m_aSounds[Id].m_pResource, Flags, Pos.x, Pos.y);
 	pSet->m_Last = Id;
+}
+
+
+void CSounds::Stop(IResource *pResource)
+{
+	if(!pResource)
+		return;
+	Sound()->Stop(pResource);
 }
 
 void CSounds::Stop(int SetId)

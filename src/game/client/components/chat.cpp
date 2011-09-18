@@ -21,8 +21,20 @@
 
 CChat::CChat()
 {
+	m_pSound_ChatPlayer = 0;
+	m_pSound_ChatServer = 0;
+	m_pSound_ChatHighlight = 0;
+
 	OnReset();
 }
+
+void CChat::OnInit()
+{
+	m_pSound_ChatPlayer = Resources()->GetResource("audio/sfx_msg-client.wv");
+	m_pSound_ChatServer = Resources()->GetResource("audio/sfx_msg-server.wv");
+	m_pSound_ChatHighlight = Resources()->GetResource("audio/sfx_msg-highlight.wv");
+}
+
 
 void CChat::OnReset()
 {
@@ -323,11 +335,11 @@ void CChat::AddLine(int ClientID, int Team, const char *pLine)
 
 	// play sound
 	if(ClientID == -1)
-		m_pClient->m_pSounds->Play(CSounds::CHN_GUI, SOUND_CHAT_SERVER, 0, vec2(0,0));
+		m_pClient->m_pSounds->Play(CSounds::CHN_GUI, m_pSound_ChatServer, 0, vec2(0,0));
 	else if(Highlighted)
-		m_pClient->m_pSounds->Play(CSounds::CHN_GUI, SOUND_CHAT_HIGHLIGHT, 0, vec2(0.0f, 0.0f));
+		m_pClient->m_pSounds->Play(CSounds::CHN_GUI, m_pSound_ChatHighlight, 0, vec2(0.0f, 0.0f));
 	else
-		m_pClient->m_pSounds->Play(CSounds::CHN_GUI, SOUND_CHAT_CLIENT, 0, vec2(0,0));
+		m_pClient->m_pSounds->Play(CSounds::CHN_GUI, m_pSound_ChatPlayer, 0, vec2(0,0));
 }
 
 void CChat::OnRender()

@@ -273,6 +273,8 @@ class CMenus : public CComponent
 	void RenderSettings(CUIRect MainView);
 
 	void SetActive(bool Active);
+
+	IResource *m_pMusic;
 public:
 	void RenderBackground();
 

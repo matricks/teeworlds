@@ -29,6 +29,8 @@ protected:
 	class IServerBrowser *ServerBrowser() const { return m_pClient->ServerBrowser(); }
 	class CLayers *Layers() const { return m_pClient->Layers(); }
 	class CCollision *Collision() const { return m_pClient->Collision(); }
+	class IResources *Resources() const { return m_pClient->Resources(); }
+
 public:
 	virtual ~CComponent() {}
 

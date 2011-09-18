@@ -498,17 +498,6 @@ protected:
 		{
 			dbg_msg("resources", "[%s] error opening '%s'", Name(), aFilename);
 		}
-
-		// kick the data off to processing
-		//dbg_msg("resources", "[%s] adding processing job for '%s'", Name(), pOrder->m_pResource->Name());
-		/*
-		CLoadJobInfo *pInfo = g_JobHandler.AllocJobData<CLoadJobInfo>();
-		pInfo->m_pThis = (CResources *)Resources();
-		pInfo->m_pResource = pOrder->m_pResource;
-		pInfo->m_pData = pOrder->m_pData;
-		pInfo->m_DataSize = pOrder->m_DataSize;
-		g_JobHandler.Kick(JOBQUEUE_IO, Job_ProcessData, pInfo);
-		*/
 	}	
 public:
 	CSource_Cache(const char *pBase = 0)
@@ -1707,6 +1696,11 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket)
 
 		GameClient()->OnMessage(Msg, &Unpacker);
 	}
+}
+
+
+IResource *CClient::GetResource(const char *pName)
+{
 }
 
 // resources

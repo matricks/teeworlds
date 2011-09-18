@@ -55,8 +55,14 @@ class CChat : public CComponent
 	static void ConChat(IConsole::IResult *pResult, void *pUserData);
 	static void ConShowChat(IConsole::IResult *pResult, void *pUserData);
 
+	IResource *m_pSound_ChatPlayer;
+	IResource *m_pSound_ChatServer;
+	IResource *m_pSound_ChatHighlight;
+
 public:
 	CChat();
+
+	virtual void OnInit();
 
 	bool IsActive() const { return m_Mode != MODE_NONE; }
 

@@ -262,6 +262,7 @@ public:
 	virtual void OnDemoPlayerMessage(void *pData, int Size);
 
 	// resources
+	virtual IResource *GetResource(const char *pName);
 	virtual IResource *GetResource(CResourceIndex Idx);
 
 	void Update();
