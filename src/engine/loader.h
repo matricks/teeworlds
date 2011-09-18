@@ -202,10 +202,12 @@ unsigned hash_crc32(unsigned crc, const void *data, size_t datasize);
 
 class CSource_Disk : public IResources::CSource
 {
+protected:
 	static int LoadWholeFile(const char *pFilename, void **ppData, unsigned *pDataSize);
 	char m_aBaseDirectory[512];
-protected:
+
 	virtual bool Load(CLoadOrder *pOrder);
+	CSource_Disk(const char *pName, const char *pBase);
 public:
 	CSource_Disk(const char *pBase = 0);
 	void SetBaseDirectory(const char *pBase);

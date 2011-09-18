@@ -380,7 +380,8 @@ protected:
 				{
 					// TODO: crc check data
 					unsigned HashValue = hash_crc32(0, m_pOrder->m_pData, m_pOrder->m_DataSize);
-					dbg_msg("resources", "[%s] transfer done, %08x vs %08x", Name(), HashValue, ContentHash);
+					if(HashValue != (unsigned)ContentHash)
+						return false;
 					m_Done = true;
 				}
 				else
@@ -401,7 +402,7 @@ protected:
 		m_DataOffset = 0;
 		m_Done = false;
 		SendNextFetch();
-		dbg_msg("resources", "[%s] starting transfer of '%s'", Name(), m_pOrder->m_pResource->Name());
+		//dbg_msg("resources", "[%s] starting transfer of '%s'", Name(), m_pOrder->m_pResource->Name());
 
 		// send chunks
 		while(true)
@@ -462,6 +463,59 @@ public:
 };
 
 CSource_GameServer m_SourceGameServer;
+
+class CSource_Cache : public CSource_Disk
+{
+protected:
+	void GetCacheName(char *pBuffer, int BufferSize, IResource *pResource)
+	{
+		str_format(pBuffer, BufferSize, "%s/%08x_%08x", m_aBaseDirectory,pResource->NameHash(), pResource->ContentHash());
+	}
+
+	virtual bool Load(CLoadOrder *pOrder)
+	{
+		if(pOrder->m_pResource->ContentHash() == 0)
+			return false;
+
+		char aFilename[512];
+		GetCacheName(aFilename, sizeof(aFilename), pOrder->m_pResource);
+		return LoadWholeFile(aFilename, &pOrder->m_pData, &pOrder->m_DataSize) == 0;
+	}
+
+	virtual void Feedback(CLoadOrder *pOrder)
+	{
+		char aFilename[512];
+		GetCacheName(aFilename, sizeof(aFilename), pOrder->m_pResource);
+
+		IOHANDLE hFile = io_open(aFilename, IOFLAG_WRITE);
+		if(hFile)
+		{
+			io_write(hFile, pOrder->m_pData, pOrder->m_DataSize);
+			io_close(hFile);
+			dbg_msg("resources", "[%s] saved '%s' to '%s'", Name(), pOrder->m_pResource->Name(), aFilename);
+		}
+		else
+		{
+			dbg_msg("resources", "[%s] error opening '%s'", Name(), aFilename);
+		}
+
+		// kick the data off to processing
+		//dbg_msg("resources", "[%s] adding processing job for '%s'", Name(), pOrder->m_pResource->Name());
+		/*
+		CLoadJobInfo *pInfo = g_JobHandler.AllocJobData<CLoadJobInfo>();
+		pInfo->m_pThis = (CResources *)Resources();
+		pInfo->m_pResource = pOrder->m_pResource;
+		pInfo->m_pData = pOrder->m_pData;
+		pInfo->m_DataSize = pOrder->m_DataSize;
+		g_JobHandler.Kick(JOBQUEUE_IO, Job_ProcessData, pInfo);
+		*/
+	}	
+public:
+	CSource_Cache(const char *pBase = 0)
+	: CSource_Disk("cache", pBase)
+	{
+	}
+};
 
 CClient::CClient() : m_DemoPlayer(&m_SnapshotDelta), m_DemoRecorder(&m_SnapshotDelta)
 {
@@ -2546,7 +2600,9 @@ int main(int argc, const char **argv) // ignore_convention
 	}
 
 	CSource_Disk SourceDisk("data");
+	CSource_Cache SourceCache("cache"); // temp temp temp
 	pResources->AddSource(&SourceDisk);
+	pResources->AddSource(&SourceCache);
 	pResources->AddSource(&m_SourceGameServer);
 
 	pEngine->Init();

@@ -93,6 +93,12 @@ void CJobHandler::WorkerThread(void *pUser)
 }
 
 
+CSource_Disk::CSource_Disk(const char *pName, const char *pBase)
+: CSource(pName)
+{
+	SetBaseDirectory(pBase);
+}
+
 CSource_Disk::CSource_Disk(const char *pBase)
 : CSource("disk")
 {
@@ -169,7 +175,7 @@ void IResources::CSource::Update()
 		}
 		else
 		{
-			dbg_msg("resources", "[%s] forwarding %s", Name(), Order.m_pResource->Name());
+			//dbg_msg("resources", "[%s] forwarding %s", Name(), Order.m_pResource->Name());
 			ForwardOrder(&Order);
 		}
 	}
@@ -345,7 +351,7 @@ class CResources : public IResources
 		virtual void Feedback(CLoadOrder *pOrder)
 		{
 			// kick the data off to processing
-			dbg_msg("resources", "[%s] adding processing job for '%s'", Name(), pOrder->m_pResource->Name());
+			//dbg_msg("resources", "[%s] adding processing job for '%s'", Name(), pOrder->m_pResource->Name());
 
 			CLoadJobInfo *pInfo = g_JobHandler.AllocJobData<CLoadJobInfo>();
 			pInfo->m_pThis = (CResources *)Resources();
@@ -373,7 +379,7 @@ class CResources : public IResources
 		virtual bool Load(CLoadOrder *pOrder)
 		{
 			// if the order has come this far, it has gone wrong.
-			dbg_msg("resources", "[%s] end station for '%s'", Name(), pOrder->m_pResource->Name());
+			dbg_msg("resources", "[%s] missing '%s'", Name(), pOrder->m_pResource->Name());
 
 			// TODO: set it to a failure to load
 			return false;
