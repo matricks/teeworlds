@@ -562,12 +562,15 @@ void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker)
 
 		// don't enqueue pseudo-global sounds from demos (created by PlayAndRecord)
 		CNetMsg_Sv_SoundGlobal *pMsg = (CNetMsg_Sv_SoundGlobal *)pRawMsg;
+		/*
+		// TODO: this should perhaps be handled on the server side
 		if(pMsg->m_SoundID == SOUND_CTF_DROP || pMsg->m_SoundID == SOUND_CTF_RETURN ||
 			pMsg->m_SoundID == SOUND_CTF_CAPTURE || pMsg->m_SoundID == SOUND_CTF_GRAB_EN ||
 			pMsg->m_SoundID == SOUND_CTF_GRAB_PL)
 			g_GameClient.m_pSounds->Enqueue(CSounds::CHN_GLOBAL, pMsg->m_SoundID);
 		else
-			g_GameClient.m_pSounds->Play(CSounds::CHN_GLOBAL, pMsg->m_SoundID, 1.0f, vec2(0,0));
+		*/
+		m_pSounds->Play(CSounds::CHN_GLOBAL, Client()->GetResource(pMsg->m_SoundID), 1.0f, vec2(0,0));
 	}
 }
 

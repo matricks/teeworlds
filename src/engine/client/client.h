@@ -261,6 +261,9 @@ public:
 	virtual void OnDemoPlayerSnapshot(void *pData, int Size);
 	virtual void OnDemoPlayerMessage(void *pData, int Size);
 
+	// resources
+	virtual IResource *GetResource(CResourceIndex Idx);
+
 	void Update();
 
 	void RegisterInterfaces();

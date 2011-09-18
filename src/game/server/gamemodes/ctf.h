@@ -10,6 +10,12 @@ class CGameControllerCTF : public IGameController
 public:
 	class CFlag *m_apFlags[2];
 
+	CResourceIndex m_Sound_FlagDrop;
+	CResourceIndex m_Sound_FlagReturn;
+	CResourceIndex m_Sound_FlagCapture;
+	CResourceIndex m_Sound_FlagGrabEn;
+	CResourceIndex m_Sound_FlagGrabPl;
+
 	CGameControllerCTF(class CGameContext *pGameServer);
 	virtual void DoWincheck();
 	virtual bool CanBeMovedOnBalance(int ClientID);

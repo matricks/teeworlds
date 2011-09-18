@@ -130,12 +130,43 @@ void CSounds::Enqueue(int Channel, int SetId)
 
 void CSounds::PlayAndRecord(int Chn, int SetId, float Vol, vec2 Pos)
 {
+	// TODO: I broke this
+	/*
 	CNetMsg_Sv_SoundGlobal Msg;
 	Msg.m_SoundID = SetId;
 	Client()->SendPackMsg(&Msg, MSGFLAG_NOSEND|MSGFLAG_RECORD);
-
+	*/
 	Play(Chn, SetId, Vol, Pos);
 }
+
+void CSounds::Play(int Channel, IResource *pResource, float Vol, vec2 Pos)
+{
+	if(!g_Config.m_SndEnable || !pResource || !Sound()->IsSoundEnabled() || (Channel == CHN_MUSIC && !g_Config.m_SndMusic))
+		return;
+
+	int Flags = 0;
+	if(Channel == CHN_MUSIC)
+		Flags = ISound::FLAG_LOOP;
+
+	/*
+	if(pSet->m_NumSounds == 1)
+	{
+		Sound()->PlayAt(Channel, pSet->m_aSounds[0].m_pResource, Flags, Pos.x, Pos.y);
+		return;
+	}
+
+	// play a random one
+	int Id;
+	do
+	{
+		Id = rand() % pSet->m_NumSounds;
+	}
+	while(Id == pSet->m_Last);
+	*/
+	Sound()->PlayAt(Channel, pResource, Flags, Pos.x, Pos.y);
+	//pSet->m_Last = Id;
+}
+
 
 void CSounds::Play(int Chn, int SetId, float Vol, vec2 Pos)
 {

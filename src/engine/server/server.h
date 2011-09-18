@@ -223,7 +223,7 @@ public:
 	virtual void *SnapNewItem(int Type, int ID, int Size);
 	void SnapSetStaticsize(int ItemType, int Size);
 
-	virtual int LoadResource(const char *pName);
+	virtual CResourceIndex LoadResource(const char *pName);
 
 };
 

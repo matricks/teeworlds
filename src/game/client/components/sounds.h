@@ -37,6 +37,9 @@ public:
 
 	void ClearQueue();
 	void Enqueue(int Channel, int SetId);
+
+	void Play(int Channel, IResource *pResource, float Vol, vec2 Pos);
+
 	void Play(int Channel, int SetId, float Vol, vec2 Pos);
 	void PlayAndRecord(int Channel, int SetId, float Vol, vec2 Pos);
 	void Stop(int SetId);

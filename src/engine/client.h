@@ -5,8 +5,7 @@
 #include "kernel.h"
 
 #include "message.h"
-
-class IResource;
+#include "loader.h" // kinda ugly
 
 class IClient : public IInterface
 {
@@ -102,6 +101,9 @@ public:
 
 	// server info
 	virtual void GetServerInfo(class CServerInfo *pServerInfo) = 0;
+
+	// resources
+	virtual IResource *GetResource(CResourceIndex Idx) = 0;
 
 	// snapshot interface
 

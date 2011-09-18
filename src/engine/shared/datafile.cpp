@@ -284,7 +284,7 @@ void *CDataFileReader::GetDataImpl(int Index, int Swap)
 			unsigned long UncompressedSize = m_pDataFile->m_Info.m_pDataSizes[Index];
 			unsigned long s;
 
-			dbg_msg("datafile", "loading data index=%d size=%d uncompressed=%d", Index, DataSize, UncompressedSize);
+			//dbg_msg("datafile", "loading data index=%d size=%d uncompressed=%d", Index, DataSize, UncompressedSize);
 			m_pDataFile->m_ppDataPtrs[Index] = (char *)mem_alloc(UncompressedSize, 1);
 
 			// read the compressed data
@@ -304,7 +304,7 @@ void *CDataFileReader::GetDataImpl(int Index, int Swap)
 		else
 		{
 			// load the data
-			dbg_msg("datafile", "loading data index=%d size=%d", Index, DataSize);
+			//dbg_msg("datafile", "loading data index=%d size=%d", Index, DataSize);
 			m_pDataFile->m_ppDataPtrs[Index] = (char *)mem_alloc(DataSize, 1);
 			io_seek(m_pDataFile->m_File, m_pDataFile->m_DataStartOffset+m_pDataFile->m_Info.m_pDataOffsets[Index], IOSEEK_START);
 			io_read(m_pDataFile->m_File, m_pDataFile->m_ppDataPtrs[Index], DataSize);

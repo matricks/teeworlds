@@ -1220,14 +1220,14 @@ char *CServer::GetMapName()
 	return pMapShortName;
 }
 
-int CServer::LoadResource(const char *pName)
+CResourceIndex CServer::LoadResource(const char *pName)
 {
 	// load the complete file into memory
 	IOHANDLE hFile = m_pStorage->OpenFile(pName, IOFLAG_READ, IStorage::TYPE_ALL) ;
 	if(hFile == 0)
 	{
 		dbg_msg("server", "failed to load resource '%s'", pName);
-		return -1;
+		return CResourceIndex();
 	}
 
 	unsigned DataSize = io_length(hFile);
@@ -1239,13 +1239,13 @@ int CServer::LoadResource(const char *pName)
 	{
 		dbg_msg("server", "failed to load resource '%s'", pName);
 		mem_free(pData);
-		return -1;
+		return CResourceIndex();
 	}
 
 	int Id = m_ResourceList.Add(pName, pData, DataSize);
 	//int Id = m_ResourceList.Add(pName, pData, DataSize);
-	dbg_msg("server", "loaded resource #%d = '%s'", Id, pName);
-	return Id;
+	dbg_msg("server", "loaded resource #%d = [%08x] '%s'", Id, m_ResourceList.m_aList[Id].m_ContentHash, pName);
+	return CResourceIndex(Id);
 }
 
 void CServer::SendResource(int ClientID, int ResourceId)

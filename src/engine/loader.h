@@ -1,3 +1,5 @@
+#pragma once
+
 #include "kernel.h"
 
 #include <base/tl/ringbuffer.h>
@@ -258,21 +260,20 @@ public:
 	bool IsLoading() const { return m_State == STATE_LOADING; }
 	bool IsLoaded() const { return m_State == STATE_LOADED; }
 };
-/*
-class CResourceList
+
+
+class CResourceIndex
 {
+	int m_Id;
 public:
-	enum
-	{
-		MAX_RESOURCES = 1024*4,
-	};
+	explicit CResourceIndex(int Id)
+	: m_Id(Id)
+	{}
 
-	IResource *m_apResources[MAX_RESOURCES];
-
-	CResourceList()
-	{
-
-	}
-
+	CResourceIndex()
+	: m_Id(-1)
+	{}
+	
+	bool IsValid() const { return m_Id >= 0; }
+	int Id() const { return m_Id; }
 };
-*/

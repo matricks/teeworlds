@@ -12,6 +12,7 @@ Powerups = ["HEALTH", "ARMOR", "WEAPON", "NINJA"]
 RawHeader = '''
 
 #include <engine/message.h>
+#include <engine/loader.h> // not that nice
 
 enum
 {
@@ -242,7 +243,7 @@ Messages = [
 	]),
 
 	NetMessage("Sv_SoundGlobal", [
-		NetIntRange("m_SoundID", 0, 'NUM_SOUNDS-1'),
+		NetResourceIndex("m_SoundID"),
 	]),
 
 	NetMessage("Sv_TuneParams", []),

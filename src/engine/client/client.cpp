@@ -50,6 +50,53 @@
 #endif
 
 
+// this list is almost like the CResourceList  on the server
+class CResourceMapping
+{
+public:
+	enum
+	{
+		MAX_RESOURCES = 1024*4,
+	};
+
+	IResource *m_aList[MAX_RESOURCES];
+
+	CResourceMapping()
+	{
+		mem_zero(m_aList, sizeof(m_aList));
+	}
+
+	void Clear()
+	{
+		for(int i = 0; i < MAX_RESOURCES; i++)
+		{
+			if(m_aList[i])
+				m_aList[i]->Destroy();
+		}
+
+		mem_zero(m_aList, sizeof(m_aList));
+	}
+
+	void Set(CResourceIndex Idx, IResource *pResource)
+	{
+		if(Idx.Id() < 0 || Idx.Id() >= MAX_RESOURCES)
+			return;
+
+		if(m_aList[Idx.Id()])
+			m_aList[Idx.Id()]->Destroy();
+		m_aList[Idx.Id()] = pResource;
+	}
+
+	IResource *Get(CResourceIndex Idx)
+	{
+		if(Idx.Id() < 0 || Idx.Id() >= MAX_RESOURCES)
+			return 0x0;
+		return m_aList[Idx.Id()];
+	}
+};
+
+CResourceMapping m_ResourceMapping;
+
 void CGraph::Init(float Min, float Max)
 {
 	m_Min = Min;
@@ -252,11 +299,11 @@ public:
 		}
 	};
 protected:
-
-
 	ringbuffer_swsr<CChunk*, 64> m_lpInputChunks; // main thread writes, source thread reads
 	ringbuffer_swsr<CChunk*, 64> m_lpOutputChunks; // source thread writes, main thread reads
-	semaphore m_NetworkActivity;
+
+	volatile int m_Active; // main thread writes, source thread reads
+	semaphore m_Activity;
 
 	unsigned m_DataOffset;
 	bool m_Done;
@@ -346,7 +393,10 @@ protected:
 
 	virtual bool Load(CLoadOrder *pOrder)
 	{
-		// setup and send initial fetch
+		if(!m_Active)
+			return false;
+
+			// setup and send initial fetch
 		m_pOrder = pOrder;
 		m_DataOffset = 0;
 		m_Done = false;
@@ -356,7 +406,10 @@ protected:
 		// send chunks
 		while(true)
 		{
-			m_NetworkActivity.wait();
+			m_Activity.wait();
+
+			if(!m_Active)
+				return false;
 
 			bool Error = false;
 
@@ -383,13 +436,21 @@ protected:
 public:
 	CSource_GameServer()
 	: CSource("gameserver")
-	{}
+	{
+		m_Active = 0;
+	}
+
+	void SetActive(bool Active)
+	{
+		m_Active = Active;
+		m_Activity.signal();
+	}
 
 	void QueueChunk(const void *pData, unsigned DataSize)
 	{
 		CChunk *pChunk = CChunk::Create(pData, DataSize);
 		m_lpInputChunks.push(pChunk);
-		m_NetworkActivity.signal();
+		m_Activity.signal();
 	}
 
 	CChunk *PopOutputChunk()
@@ -710,6 +771,9 @@ void CClient::Connect(const char *pAddress)
 
 void CClient::DisconnectWithReason(const char *pReason)
 {
+	// turn off the game server source
+	m_SourceGameServer.SetActive(false);
+
 	char aBuf[512];
 	str_format(aBuf, sizeof(aBuf), "disconnecting. reason='%s'", pReason?pReason:"unknown");
 	m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "client", aBuf);
@@ -1553,6 +1617,9 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket)
 		}
 		else if(Msg == NETMSG_RES_SET)
 		{
+			// activate the game server source
+			m_SourceGameServer.SetActive(true);
+
 			int ResourceId = Unpacker.GetInt();
 			const char *pName = Unpacker.GetString();
 			unsigned ContentHash = Unpacker.GetInt();
@@ -1565,7 +1632,7 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket)
 				Id.m_NameHash = str_quickhash(pName);
 				Id.m_ContentHash = ContentHash;
 				IResource *pResource = m_pResources->GetResource(Id);
-				(void)pResource; // store this somewhere
+				m_ResourceMapping.Set(CResourceIndex(ResourceId), pResource);
 			}
 		}
 		else if(Msg == NETMSG_RES_DATA)
@@ -1587,6 +1654,13 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket)
 		GameClient()->OnMessage(Msg, &Unpacker);
 	}
 }
+
+// resources
+IResource *CClient::GetResource(CResourceIndex Idx)
+{
+	return m_ResourceMapping.Get(Idx);
+}
+
 
 void CClient::PumpNetwork()
 {

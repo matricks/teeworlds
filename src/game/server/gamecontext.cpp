@@ -197,9 +197,9 @@ void CGameContext::CreateSound(vec2 Pos, int Sound, int Mask)
 	}
 }
 
-void CGameContext::CreateSoundGlobal(int Sound, int Target)
+void CGameContext::CreateSoundGlobal(CResourceIndex Sound, int Target)
 {
-	if (Sound < 0)
+	if(!Sound.IsValid())
 		return;
 
 	CNetMsg_Sv_SoundGlobal Msg;

@@ -17,6 +17,12 @@ CGameControllerCTF::CGameControllerCTF(class CGameContext *pGameServer)
 	m_apFlags[1] = 0;
 	m_pGameType = "CTF";
 	m_GameFlags = GAMEFLAG_TEAMS|GAMEFLAG_FLAGS;
+
+	m_Sound_FlagDrop = Server()->LoadResource("audio/sfx_ctf_drop.wv");
+	m_Sound_FlagReturn = Server()->LoadResource("audio/sfx_ctf_rtn.wv");
+	m_Sound_FlagCapture = Server()->LoadResource("audio/sfx_ctf_cap_pl.wv");
+	m_Sound_FlagGrabEn = Server()->LoadResource("audio/sfx_ctf_grab_en.wv");
+	m_Sound_FlagGrabPl = Server()->LoadResource("audio/sfx_ctf_grab_pl.wv");
 }
 
 bool CGameControllerCTF::OnEntity(int Index, vec2 Pos)
@@ -51,7 +57,7 @@ int CGameControllerCTF::OnCharacterDeath(class CCharacter *pVictim, class CPlaye
 			HadFlag |= 2;
 		if(F && F->m_pCarryingCharacter == pVictim)
 		{
-			GameServer()->CreateSoundGlobal(SOUND_CTF_DROP);
+			GameServer()->CreateSoundGlobal(m_Sound_FlagDrop);
 			F->m_DropTick = Server()->Tick();
 			F->m_pCarryingCharacter = 0;
 			F->m_Vel = vec2(0,0);
@@ -158,7 +164,7 @@ void CGameControllerCTF::Tick()
 		if(GameServer()->Collision()->GetCollisionAt(F->m_Pos.x, F->m_Pos.y)&CCollision::COLFLAG_DEATH || F->GameLayerClipped(F->m_Pos))
 		{
 			GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "game", "flag_return");
-			GameServer()->CreateSoundGlobal(SOUND_CTF_RETURN);
+			GameServer()->CreateSoundGlobal(m_Sound_FlagReturn);
 			F->Reset();
 			continue;
 		}
@@ -196,7 +202,7 @@ void CGameControllerCTF::Tick()
 					for(int i = 0; i < 2; i++)
 						m_apFlags[i]->Reset();
 
-					GameServer()->CreateSoundGlobal(SOUND_CTF_CAPTURE);
+					GameServer()->CreateSoundGlobal(m_Sound_FlagCapture);
 				}
 			}
 		}
@@ -223,7 +229,7 @@ void CGameControllerCTF::Tick()
 							Server()->ClientName(pChr->GetPlayer()->GetCID()));
 						GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "game", aBuf);
 
-						GameServer()->CreateSoundGlobal(SOUND_CTF_RETURN);
+						GameServer()->CreateSoundGlobal(m_Sound_FlagReturn);
 						F->Reset();
 					}
 				}
@@ -253,11 +259,11 @@ void CGameControllerCTF::Tick()
 							continue;
 
 						if(pPlayer->GetTeam() == TEAM_SPECTATORS && pPlayer->m_SpectatorID != SPEC_FREEVIEW && GameServer()->m_apPlayers[pPlayer->m_SpectatorID] && GameServer()->m_apPlayers[pPlayer->m_SpectatorID]->GetTeam() == fi)
-							GameServer()->CreateSoundGlobal(SOUND_CTF_GRAB_EN, c);
+							GameServer()->CreateSoundGlobal(m_Sound_FlagGrabEn, c);
 						else if(pPlayer->GetTeam() == fi)
-							GameServer()->CreateSoundGlobal(SOUND_CTF_GRAB_EN, c);
+							GameServer()->CreateSoundGlobal(m_Sound_FlagGrabEn, c);
 						else
-							GameServer()->CreateSoundGlobal(SOUND_CTF_GRAB_PL, c);
+							GameServer()->CreateSoundGlobal(m_Sound_FlagGrabPl, c);
 					}
 					break;
 				}
@@ -267,7 +273,7 @@ void CGameControllerCTF::Tick()
 			{
 				if(Server()->Tick() > F->m_DropTick + Server()->TickSpeed()*30)
 				{
-					GameServer()->CreateSoundGlobal(SOUND_CTF_RETURN);
+					GameServer()->CreateSoundGlobal(m_Sound_FlagReturn);
 					F->Reset();
 				}
 				else
