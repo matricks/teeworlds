@@ -645,7 +645,7 @@ void CGameClient::ProcessEvents()
 		else if(Item.m_Type == NETEVENTTYPE_SOUNDWORLD)
 		{
 			CNetEvent_SoundWorld *ev = (CNetEvent_SoundWorld *)pData;
-			g_GameClient.m_pSounds->Play(CSounds::CHN_WORLD, ev->m_SoundID, 1.0f, vec2(ev->m_X, ev->m_Y));
+			g_GameClient.m_pSounds->Play(CSounds::CHN_WORLD, Client()->GetResource(ev->m_SoundID), 1.0f, vec2(ev->m_X, ev->m_Y));
 		}
 	}
 }

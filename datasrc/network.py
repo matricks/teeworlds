@@ -205,12 +205,12 @@ Objects = [
 		NetIntRange("m_ClientID", 0, 'MAX_CLIENTS-1'),
 	]),
 
-	NetEvent("SoundGlobal:Common", [ #TODO 0.7: remove me
-		NetIntRange("m_SoundID", 0, 'NUM_SOUNDS-1'),
-	]),
+	#NetEvent("SoundGlobal:Common", [ #TODO 0.7: remove me
+	#	NetIntRange("m_SoundID", 0, 'NUM_SOUNDS-1'),
+	#]),
 
 	NetEvent("SoundWorld:Common", [
-		NetIntRange("m_SoundID", 0, 'NUM_SOUNDS-1'),
+		NetResourceIndex("m_SoundID"),
 	]),
 
 	NetEvent("DamageInd:Common", [

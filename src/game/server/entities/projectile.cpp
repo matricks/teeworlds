@@ -5,7 +5,7 @@
 #include "projectile.h"
 
 CProjectile::CProjectile(CGameWorld *pGameWorld, int Type, int Owner, vec2 Pos, vec2 Dir, int Span,
-		int Damage, bool Explosive, float Force, int SoundImpact, int Weapon)
+		int Damage, bool Explosive, float Force, CResourceIndex SoundImpact, int Weapon)
 : CEntity(pGameWorld, CGameWorld::ENTTYPE_PROJECTILE)
 {
 	m_Type = Type;
