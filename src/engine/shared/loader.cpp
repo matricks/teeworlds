@@ -217,6 +217,9 @@ class CResources : public IResources
 		// a bit ugly
 		JOBQUEUE_IO = CJobHandler::NUM_QUEUES - 1,
 		JOBQUEUE_PROCESS = JOBQUEUE_IO - 1,
+
+		//
+		MAX_RESOURCES = 1<<16,
 	};
 
 	class CHandlerEntry
@@ -225,9 +228,21 @@ class CResources : public IResources
 		const char *m_pType;
 		IHandler *m_pHandler;
 	};
-	array<CHandlerEntry> m_lHandlers;
 
+	array<CHandlerEntry> m_lHandlers;
 	array<IResource*> m_lpResources;
+
+	// resource slots
+	IResource *m_apSlots[MAX_RESOURCES];
+	short m_CurrentSlot;
+
+	CResourceSlot FindFreeSlot()
+	{
+		// TODO: bad performance, linear search, kinda
+		while(m_apSlots[m_CurrentSlot] != 0)
+			m_CurrentSlot = (m_CurrentSlot+1)&(MAX_RESOURCES-1);
+		return CResourceSlot(m_CurrentSlot);
+	}
 
 	IResource *FindResource(CResourceId Id)
 	{
@@ -281,6 +296,8 @@ class CResources : public IResources
 			return 0x0;
 
 		IResource *pResource = pHandler->Create(Id);
+		pResource->m_Slot = FindFreeSlot();
+		m_apSlots[pResource->Slot().Slot()] = pResource;
 		pResource->m_Id = Id;
 		pResource->m_pResources = this;
 		pResource->m_pHandler = pHandler;
@@ -411,6 +428,9 @@ class CResources : public IResources
 public:
 	CResources()
 	{
+		mem_zero(m_apSlots, sizeof(m_apSlots));
+		m_CurrentSlot = 0;
+
 		m_SourceStart.m_pNextSource = &m_SourceEnd;
 		m_SourceEnd.m_pPrevSource = &m_SourceStart;
 
@@ -426,7 +446,7 @@ public:
 		m_lHandlers.add(Entry);
 	}
 
-	virtual IResource *GetResource(CResourceId Id)
+	virtual IResource *GetResourceById(CResourceId Id)
 	{
 		IResource *pResource = FindResource(Id);
 		if(pResource)
@@ -438,6 +458,14 @@ public:
 		dbg_msg("resources", "creating '%s'", Id.m_pName);
 		return CreateResource(Id);
 	}
+
+	virtual IResource *GetResourceBySlot(CResourceSlot Slot)
+	{
+		if(!Slot.IsValid() || Slot.Slot() >= MAX_RESOURCES)
+			return 0x0;
+		return m_apSlots[Slot.Slot()];
+	}
+
 
 	virtual void Update()
 	{
@@ -457,6 +485,7 @@ public:
 			}
 			else
 			{
+				m_apSlots[pResource->Slot().Slot()] = 0x0;
 				pResource->m_pHandler->Destroy(pResource);
 				assert(pResource->Name() != 0); // make sure that the handler didn't call delete on the resource
 				delete pResource;

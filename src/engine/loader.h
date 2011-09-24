@@ -70,6 +70,22 @@ extern CJobHandler g_JobHandler;
 
 class IResource;
 
+// slots are used so we can store a resource as a safe index that we can retrive later
+class CResourceSlot
+{
+	short m_Slot;
+public:
+	explicit CResourceSlot(short Slot)
+	: m_Slot(Slot)
+	{}
+
+	CResourceSlot()
+	: m_Slot(-1)
+	{}
+	
+	bool IsValid() const { return m_Slot >= 0; }
+	short Slot() const { return m_Slot; }
+};
 
 /*
 
@@ -180,15 +196,16 @@ public:
 
 	virtual void Update() = 0;
 
-	virtual IResource *GetResource(CResourceId Id) = 0;
+	virtual IResource *GetResourceById(CResourceId Id) = 0;
+	virtual IResource *GetResourceBySlot(CResourceSlot Slot) = 0;
 
-	IResource *GetResource(const char *pName)
+	IResource *GetResourceByName(const char *pName)
 	{
 		CResourceId Id;
 		Id.m_pName = pName;
 		Id.m_NameHash = str_quickhash(pName);
 		Id.m_ContentHash = 0;
-		return GetResource(Id);
+		return GetResourceById(Id);
 	}
 
 	static IResources *CreateInstance();
@@ -232,6 +249,7 @@ protected:
 	IResources::CResourceId m_Id;
 	IResources::IHandler *m_pHandler;
 	IResources *m_pResources;
+	CResourceSlot m_Slot;
 
 	enum
 	{
@@ -258,11 +276,11 @@ public:
 	const char *Name() const { return m_Id.m_pName; }
 	unsigned NameHash() const { return m_Id.m_NameHash; }
 	unsigned ContentHash() const { return m_Id.m_ContentHash; }
+	CResourceSlot Slot() const { return m_Slot; }
 
 	bool IsLoading() const { return m_State == STATE_LOADING; }
 	bool IsLoaded() const { return m_State == STATE_LOADED; }
 };
-
 
 class CResourceIndex
 {

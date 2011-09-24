@@ -103,7 +103,6 @@ public:
 	virtual void GetServerInfo(class CServerInfo *pServerInfo) = 0;
 
 	// resources
-	virtual IResource *GetResource(const char *pResource) = 0;
 	virtual IResource *GetResource(CResourceIndex Idx) = 0;
 
 	// snapshot interface

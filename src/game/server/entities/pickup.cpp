@@ -4,11 +4,10 @@
 #include <game/server/gamecontext.h>
 #include "pickup.h"
 
-CPickup::CPickup(CGameWorld *pGameWorld, int Type, int SubType)
+CPickup::CPickup(CGameWorld *pGameWorld, int Type)
 : CEntity(pGameWorld, CGameWorld::ENTTYPE_PICKUP)
 {
 	m_Type = Type;
-	m_Subtype = SubType;
 	m_ProximityRadius = PickupPhysSize;
 
 	Reset();
@@ -34,7 +33,7 @@ void CPickup::Tick()
 			// respawn
 			m_SpawnTick = -1;
 
-			if(m_Type == POWERUP_WEAPON)
+			if(m_Type == POWERUP_WEAPON_SHOTGUN || m_Type == POWERUP_WEAPON_RIFLE || m_Type == POWERUP_WEAPON_GRENADE)
 				GameServer()->CreateSound(m_Pos, GameServer()->m_Sound_WeaponSpawn.Get());
 		}
 		else
@@ -64,26 +63,30 @@ void CPickup::Tick()
 				}
 				break;
 
-			case POWERUP_WEAPON:
-				if(m_Subtype >= 0 && m_Subtype < NUM_WEAPONS)
+			case POWERUP_WEAPON_RIFLE:
+				if(pChr->GiveWeapon(WEAPON_RIFLE, 10))
 				{
-					if(pChr->GiveWeapon(m_Subtype, 10))
-					{
-						RespawnTime = g_pData->m_aPickups[m_Type].m_Respawntime;
-
-						if(m_Subtype == WEAPON_GRENADE)
-							GameServer()->CreateSound(m_Pos, GameServer()->m_Sound_PickupGrenade.Get());
-						else if(m_Subtype == WEAPON_SHOTGUN)
-							GameServer()->CreateSound(m_Pos, GameServer()->m_Sound_PickupShotgun.Get());
-						else if(m_Subtype == WEAPON_RIFLE)
-							GameServer()->CreateSound(m_Pos, GameServer()->m_Sound_PickupShotgun.Get());
-
-						if(pChr->GetPlayer())
-							GameServer()->SendWeaponPickup(pChr->GetPlayer()->GetCID(), m_Subtype);
-					}
+					RespawnTime = g_pData->m_aPickups[POWERUP_WEAPON_RIFLE].m_Respawntime;
+					GameServer()->CreateSound(m_Pos, GameServer()->m_Sound_PickupShotgun.Get());
+					GameServer()->SendWeaponPickup(pChr->GetPlayer()->GetCID(), WEAPON_RIFLE);
 				}
 				break;
-
+			case POWERUP_WEAPON_GRENADE:
+				if(pChr->GiveWeapon(WEAPON_GRENADE, 10))
+				{
+					RespawnTime = g_pData->m_aPickups[POWERUP_WEAPON_GRENADE].m_Respawntime;
+					GameServer()->CreateSound(m_Pos, GameServer()->m_Sound_PickupGrenade.Get());
+					GameServer()->SendWeaponPickup(pChr->GetPlayer()->GetCID(), WEAPON_GRENADE);
+				}
+				break;
+			case POWERUP_WEAPON_SHOTGUN:
+				if(pChr->GiveWeapon(WEAPON_SHOTGUN, 10))
+				{
+					RespawnTime = g_pData->m_aPickups[POWERUP_WEAPON_SHOTGUN].m_Respawntime;
+					GameServer()->CreateSound(m_Pos, GameServer()->m_Sound_PickupShotgun.Get());
+					GameServer()->SendWeaponPickup(pChr->GetPlayer()->GetCID(), WEAPON_SHOTGUN);
+				}
+				break;
 			case POWERUP_NINJA:
 				{
 					// activate ninja on target player
@@ -109,8 +112,8 @@ void CPickup::Tick()
 		if(RespawnTime >= 0)
 		{
 			char aBuf[256];
-			str_format(aBuf, sizeof(aBuf), "pickup player='%d:%s' item=%d/%d",
-				pChr->GetPlayer()->GetCID(), Server()->ClientName(pChr->GetPlayer()->GetCID()), m_Type, m_Subtype);
+			str_format(aBuf, sizeof(aBuf), "pickup player='%d:%s' item=%d",
+				pChr->GetPlayer()->GetCID(), Server()->ClientName(pChr->GetPlayer()->GetCID()), m_Type);
 			GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "game", aBuf);
 			m_SpawnTick = Server()->Tick() + Server()->TickSpeed() * RespawnTime;
 		}
@@ -129,5 +132,4 @@ void CPickup::Snap(int SnappingClient)
 	pP->m_X = (int)m_Pos.x;
 	pP->m_Y = (int)m_Pos.y;
 	pP->m_Type = m_Type;
-	pP->m_Subtype = m_Subtype;
 }

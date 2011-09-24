@@ -49,6 +49,416 @@
 	#include <windows.h>
 #endif
 
+extern "C"
+{
+	#include <lua.h>
+	#include <lualib.h>
+	#include <lauxlib.h>
+}
+
+class CScriptHost
+{
+	lua_State *m_pLua;
+
+	IKernel *m_pKernel;
+
+	IResources *m_pResources;
+	IGraphics *m_pGraphics;
+	IClient *m_pClient;
+
+	unsigned m_Mem_Calls;
+	unsigned m_Mem_NumAllocs;
+	unsigned m_Mem_NumReallocs;
+	unsigned m_Mem_NumFree;
+
+	// Light data handling
+	// we store type + index in a light data pointer inorder to do safe fetches
+	enum
+	{
+		LD_TYPEMASK = 0xff000000,
+		LD_INDEXMASK = 0xffffff,
+
+		TYPE_RESOURCE = 0x01000000,
+	};
+
+	static void *LuaAllocator(void *pUser, void *pPtr, size_t OldSize, size_t NewSize)
+	{
+		CScriptHost *pThis = (CScriptHost *)pUser;
+		pThis->m_Mem_Calls++;
+		(void)OldSize;  /* not used */
+		if (NewSize == 0)
+		{
+			pThis->m_Mem_NumFree++;
+			free(pPtr);
+			return NULL;
+		}
+		else
+		{
+			if(pPtr)
+				pThis->m_Mem_NumReallocs++;
+			else
+				pThis->m_Mem_NumAllocs++;
+			return realloc(pPtr, NewSize);
+		}
+	}
+
+	static CScriptHost *GetThis(lua_State *pLua)
+	{
+		CScriptHost *pThis;
+		lua_getallocf(pLua, (void**)&pThis);
+		return pThis;
+	}
+
+	static void *GenerateLightData(unsigned Type, int Index)
+	{
+		return (void *)(Type | (Index&LD_INDEXMASK));
+	}
+
+	static IResource *ToResource(lua_State *pLua, int Index)
+	{
+		CScriptHost *pThis = GetThis(pLua);
+		ptrdiff_t Value = (ptrdiff_t)lua_topointer(pLua, 1);
+		if((Value&LD_TYPEMASK) != TYPE_RESOURCE)
+			return NULL;
+		return pThis->m_pResources->GetResourceBySlot(CResourceSlot(Value&LD_INDEXMASK));
+	}
+
+	static int LF_Snap_NumItems(lua_State *pLua)
+	{
+		CScriptHost *pThis = GetThis(pLua);
+		lua_pushinteger(pLua, pThis->m_pClient->SnapNumItems(IClient::SNAP_CURRENT));
+		return 1;
+	}
+
+	class CMapping
+	{
+	public:
+		char m_aField[64];
+	};
+
+	CMapping m_aMappings[64][32];
+	int m_NumMappings;
+
+	static int LF_Snap_GetItem(lua_State *pLua)
+	{
+		CScriptHost *pThis = GetThis(pLua);
+		int Idx = lua_tointeger(pLua, 1);
+		
+		IClient::CSnapItem Item;
+		int *pData = (int *)pThis->m_pClient->SnapGetItem(IClient::SNAP_CURRENT, Idx, &Item);
+
+
+		lua_getglobal(pLua, "__snaps");
+		lua_rawgeti(pLua, -1, Item.m_Type);
+
+		if(lua_istable(pLua, -1))
+		{
+			for(int i = 0; i < Item.m_DataSize/4; i++)
+			{
+				lua_pushlstring(pLua, pThis->m_aMappings[Item.m_Type][i].m_aField, str_length(pThis->m_aMappings[Item.m_Type][i].m_aField));
+				lua_pushinteger(pLua, pData[i]);
+				lua_rawset(pLua, -3);
+			}
+		}
+		else
+		{
+			//dbg_msg("script", "missing %d", Item.m_Type);
+			lua_pushnil(pLua);
+		}
+			
+		return 1;
+	}
+
+	static int LF_Resource_Get(lua_State *pLua)
+	{
+		CScriptHost *pThis = GetThis(pLua);
+		const char *pResourceName = lua_tostring(pLua, 1);
+		IResource *pRes = pThis->m_pResources->GetResourceByName(pResourceName);
+
+		lua_pushlightuserdata(pLua, GenerateLightData(TYPE_RESOURCE, pRes->Slot().Slot()));
+		return 1;
+	}
+
+	static int LF_Graphics_DrawQuad(lua_State *pLua)
+	{
+		CScriptHost *pThis = GetThis(pLua);
+		(void)pThis;
+
+		IResource *pTexture = ToResource(pLua, 1);
+		float x = lua_tonumber(pLua, 2);
+		float y = lua_tonumber(pLua, 3);
+		float w = lua_tonumber(pLua, 4);
+		float h = lua_tonumber(pLua, 5);
+		float r = lua_tonumber(pLua, 6);
+
+		IGraphics *pGraphics = pThis->m_pGraphics;
+
+		pGraphics->TextureSet(pTexture);	
+		pGraphics->QuadsBegin();
+		pGraphics->QuadsSetRotation(r);
+		IGraphics::CQuadItem QuadItem(x, y, w,h);
+		pGraphics->QuadsDraw(&QuadItem, 1);
+		pGraphics->QuadsEnd();
+		return 0;
+	}
+
+
+	static int LF_Snap_RegisterItemType(lua_State *pLua)
+	{
+		CScriptHost *pThis = GetThis(pLua);
+
+		int iType = pThis->m_NumMappings++;
+		int iField = 0;
+
+		lua_pushnil(pLua); //
+		while(lua_next(pLua, -2) != 0)
+		{
+			// -2 == key 
+			// -1 == value
+			str_copy(pThis->m_aMappings[iType][iField].m_aField, lua_tostring(pLua, -1), sizeof(pThis->m_aMappings[iType][iField].m_aField));
+			iField++;
+
+			// pop value
+			lua_pop(pLua, 1);
+		}
+
+		// do a register function for this
+		lua_getglobal(pLua, "__snaps");
+			lua_newtable(pLua); // object table
+				// set the type
+				lua_pushinteger(pLua, iType);
+				lua_setfield(pLua, -2, "_type");
+
+				// register the fields
+				for(int i = 0; i < iField; i++)
+				{
+					lua_pushnumber(pLua, 0);
+					lua_setfield(pLua, -2, pThis->m_aMappings[iType][iField].m_aField);
+				}
+			lua_rawseti(pLua, -2, iType); // __snaps[iType] = object table
+		lua_pop(pLua, 1);
+
+		/*
+		const char *pResourceName = lua_tostring(pLua, 1);
+		IResource *pRes = pThis->m_pResources->GetResourceByName(pResourceName);
+
+		lua_pushlightuserdata(pLua, GenerateLightData(TYPE_RESOURCE, pRes->Slot().Slot()));
+		*/
+		lua_pushinteger(pLua, iType);
+		return 1;
+	}
+
+	/* ** */
+	static void debug_print_lua_value(lua_State *L, int i)
+	{
+		if(lua_type(L,i) == LUA_TNIL)
+			printf("nil");
+		else if(lua_type(L,i) == LUA_TSTRING)
+			printf("'%s'", lua_tostring(L,i));
+		else if(lua_type(L,i) == LUA_TNUMBER)
+			printf("%f", lua_tonumber(L,i));
+		else if(lua_type(L,i) == LUA_TBOOLEAN)
+		{
+			if(lua_toboolean(L,i))
+				printf("true");
+			else
+				printf("false");
+		}
+		else if(lua_type(L,i) == LUA_TTABLE)
+		{
+			printf("{...}");
+		}
+		else
+			printf("%p (%s (%d))", lua_topointer(L,i), lua_typename(L,lua_type(L,i)), lua_type(L,i));
+	}
+
+
+	/* error function */
+	static int LF_ErrorFunc(lua_State *L)
+	{
+		int depth = 0;
+		//int frameskip = 0;
+		lua_Debug frame;
+
+		if(true) //session.report_color)
+			printf("\033[01;31m%s\033[00m\n", lua_tostring(L,-1));
+		else
+			printf("%s\n", lua_tostring(L,-1));
+		
+		if(true) //session.lua_backtrace)
+		{
+			printf("backtrace:\n");
+			while(lua_getstack(L, depth, &frame) == 1)
+			{
+				depth++;
+				
+				lua_getinfo(L, "nlSf", &frame);
+
+				/* check for functions that just report errors. these frames just confuses more then they help */
+				/*if(frameskip && str_comp(frame.short_src, "[C]") == 0 && frame.currentline == -1)
+					continue;
+				frameskip = 0;*/
+				
+				/* print stack frame */
+				printf("  %s(%d): %s %s\n", frame.short_src, frame.currentline, frame.name, frame.namewhat);
+				
+				/* print all local variables for the frame */
+				if(true) //session.lua_locals)
+				{
+					int i;
+					const char *name = 0;
+					
+					i = 1;
+					while((name = lua_getlocal(L, &frame, i)) != NULL)
+					{
+						printf("    %s = ", name);
+						debug_print_lua_value(L,-1);
+						printf("\n");
+						lua_pop(L,1);
+						i++;
+					}
+					
+					i = 1;
+					while((name = lua_getupvalue(L, -1, i)) != NULL)
+					{
+						printf("    upvalue #%d: %s ", i-1, name);
+						debug_print_lua_value(L, -1);
+						lua_pop(L,1);
+						i++;
+					}
+				}
+			}
+		}
+		
+		return 1;
+	}
+public:
+	CScriptHost()
+	{
+		mem_zero(m_aMappings, sizeof(m_aMappings));
+		m_pLua = 0;
+	}
+
+	void Reset(IKernel *pKernel)
+	{
+		m_Mem_NumAllocs = 0;
+		m_Mem_NumReallocs = 0;
+		m_Mem_NumFree = 0;
+
+		m_NumMappings = 1;
+
+		m_pKernel = pKernel;
+		m_pResources = m_pKernel->RequestInterface<IResources>();
+		m_pGraphics = m_pKernel->RequestInterface<IGraphics>();
+		m_pClient = m_pKernel->RequestInterface<IClient>();
+
+		if(m_pLua)
+		{
+			lua_close(m_pLua);
+			m_pLua = 0;
+		}
+
+		m_pLua = lua_newstate(LuaAllocator, this);
+		luaopen_base(m_pLua);
+		luaopen_math(m_pLua);
+	
+		lua_register(m_pLua, "__errorfunc", LF_ErrorFunc);
+
+		// kill everything that touches disc
+		lua_pushnil(m_pLua); lua_setglobal(m_pLua, "dofile");
+		lua_pushnil(m_pLua); lua_setglobal(m_pLua, "load");
+		lua_pushnil(m_pLua); lua_setglobal(m_pLua, "loadfile");
+		lua_pushnil(m_pLua); lua_setglobal(m_pLua, "loadstring");
+		lua_pushnil(m_pLua); lua_setglobal(m_pLua, "module");
+		lua_pushnil(m_pLua); lua_setglobal(m_pLua, "require");
+
+
+		// register functions
+		lua_newtable(m_pLua); // create snaps table
+		lua_setglobal(m_pLua, "engine");
+
+#define MARCO_REGISTERFUNC(name, func) \
+		lua_getglobal(m_pLua, "engine"); \
+		lua_pushcfunction(m_pLua, func); \
+		lua_setfield(m_pLua, -2, name); \
+		lua_pop(m_pLua, 1);
+
+		MARCO_REGISTERFUNC("Resource_Get", LF_Resource_Get);
+		MARCO_REGISTERFUNC("Graphics_DrawQuad", LF_Graphics_DrawQuad);
+		MARCO_REGISTERFUNC("Snap_RegisterItemType", LF_Snap_RegisterItemType);
+		MARCO_REGISTERFUNC("Snap_NumItems", LF_Snap_NumItems);
+		MARCO_REGISTERFUNC("Snap_GetItem", LF_Snap_GetItem);
+
+
+		lua_newtable(m_pLua); // create snaps table
+		lua_setglobal(m_pLua, "__snaps");
+
+		//
+		if(luaL_dofile(m_pLua, "data/base.lua") != 0)
+		{
+#define MACRO_ERROR_STR(x) "\033[01;31m" x "\033[00m"
+			
+			dbg_msg("script", MACRO_ERROR_STR("error loading script"));
+			dbg_msg("script", MACRO_ERROR_STR("error: %s"), lua_tostring(m_pLua, -1));
+		}
+
+	}
+
+	void SetVariableDouble(const char *pName, double Value)
+	{
+		lua_getglobal(m_pLua, "engine");
+		lua_pushnumber(m_pLua, Value);
+		lua_setfield(m_pLua, -2, pName);
+		lua_pop(m_pLua, 1);		
+	}
+
+	void SetVariableInt(const char *pName, int Value)
+	{
+		SetVariableDouble(pName, (double)Value);
+	}
+
+	void SetVariableFloat(const char *pName, float Value)
+	{
+		SetVariableDouble(pName, (double)Value);
+	}
+
+	void UpdateVariables()
+	{
+		SetVariableInt("time_prevgametick", m_pClient->PrevGameTick());
+		SetVariableInt("time_gametick", m_pClient->GameTick());
+		SetVariableFloat("time_intragametick", m_pClient->IntraGameTick());
+		SetVariableFloat("time_gameticktime", m_pClient->GameTickTime());
+		SetVariableFloat("time_localtime", m_pClient->LocalTime());
+		SetVariableFloat("time_servertickspeed", SERVER_TICK_SPEED);
+	}
+
+	void Call(const char *pFunctionName)
+	{
+		unsigned Before = m_Mem_Calls;
+
+		// TODO: move this update variables
+		UpdateVariables();
+
+		// call global on render function
+		lua_getglobal(m_pLua, "__errorfunc");
+		lua_getglobal(m_pLua, pFunctionName);
+		if(lua_pcall(m_pLua, 0, 0, -2) != 0)
+		{
+			//dbg_msg("script", "error: %s", lua_tostring(m_pLua, -1));
+			//LF_ErrorFunc(m_pLua);
+		}
+
+		if(Before != m_Mem_Calls)
+			dbg_msg("script", "Warning: %s called the memory allocator %u times", pFunctionName, m_Mem_Calls - Before);
+	}
+};
+
+CScriptHost m_ServerScripting;
+
+void SCRIPT_TEMP_OnRender()
+{
+	m_ServerScripting.Call("OnRender");
+}
 
 // this list is almost like the CResourceList  on the server
 class CResourceMapping
@@ -1674,7 +2084,7 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket)
 				Id.m_pName = pName;
 				Id.m_NameHash = str_quickhash(pName);
 				Id.m_ContentHash = ContentHash;
-				IResource *pResource = m_pResources->GetResource(Id);
+				IResource *pResource = m_pResources->GetResourceById(Id);
 				m_ResourceMapping.Set(CResourceIndex(ResourceId), pResource);
 			}
 		}
@@ -1696,11 +2106,6 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket)
 
 		GameClient()->OnMessage(Msg, &Unpacker);
 	}
-}
-
-
-IResource *CClient::GetResource(const char *pName)
-{
 }
 
 // resources
@@ -2076,6 +2481,8 @@ void CClient::Run()
 		Connect(config.cl_connect);
 	config.cl_connect[0] = 0;
 	*/
+
+	m_ServerScripting.Reset(Kernel());
 
 	//
 	m_FpsGraph.Init(0.0f, 200.0f);

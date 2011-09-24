@@ -19,7 +19,11 @@ class CItems : public CComponent
 	void RenderFlag(const CNetObj_Flag *pPrev, const CNetObj_Flag *pCurrent, const CNetObj_GameData *pPrevGameData, const CNetObj_GameData *pCurGameData);
 	void RenderLaser(const struct CNetObj_Laser *pCurrent);
 
+	IResource *m_pTexture_PickupHealth;
+	IResource *m_pTexture_PickupArmor;
+
 public:
+	virtual void OnInit();
 	virtual void OnReset();
 	virtual void OnRender();
 

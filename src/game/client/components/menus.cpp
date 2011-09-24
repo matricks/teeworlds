@@ -688,7 +688,7 @@ void CMenus::RenderNews(CUIRect MainView)
 
 void CMenus::OnInit()
 {
-	m_pMusic = Resources()->GetResource("audio/music_menu.wv");
+	m_pMusic = Resources()->GetResourceByName("audio/music_menu.wv");
 
 	/*
 	array<string> my_strings;

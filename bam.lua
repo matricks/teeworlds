@@ -183,6 +183,10 @@ function build(settings)
 	wavpack = Compile(settings, Collect("src/engine/external/wavpack/*.c"))
 	pnglite = Compile(settings, Collect("src/engine/external/pnglite/*.c"))
 
+	-- temp, add a dash of lua
+	settings.cc.flags:Add("`pkg-config --cflags lua5.1`")
+	settings.link.flags:Add("`pkg-config --libs lua5.1`")
+
 	-- build game components
 	engine_settings = settings:Copy()
 	server_settings = engine_settings:Copy()

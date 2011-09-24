@@ -20,9 +20,16 @@ void CItems::OnReset()
 	ExtraProjectilesNum = 0;
 }
 
+void CItems::OnInit()
+{
+	m_pTexture_PickupHealth = Resources()->GetResourceByName("gfx/pickup_health.png");
+	m_pTexture_PickupArmor = Resources()->GetResourceByName("gfx/pickup_armor.png");
+}
+
 void CItems::RenderProjectile(const CNetObj_Projectile *pCurrent, int ItemID)
 {
-
+	return;
+	
 	// get positions
 	float Curvature = 0;
 	float Speed = 0;
@@ -102,6 +109,39 @@ void CItems::RenderProjectile(const CNetObj_Projectile *pCurrent, int ItemID)
 
 void CItems::RenderPickup(const CNetObj_Pickup *pPrev, const CNetObj_Pickup *pCurrent)
 {
+#if 1
+	return;
+
+	IResource *pTexture = 0;
+
+	if(pCurrent->m_Type == POWERUP_HEALTH) pTexture = m_pTexture_PickupHealth;
+	if(pCurrent->m_Type == POWERUP_ARMOR) pTexture = m_pTexture_PickupArmor;
+	//if(pCurrent->m_Type == POWERUP_HEALTH) pTexture = m_pTexture_PickupHealth;
+
+		/*
+		IGraphics::CQuadItem QuadItem(Pos.x, Pos.y, Size, Size);
+		Graphics()->QuadsDraw(&QuadItem, 1);
+		m_pTexture_PickupHealth*/
+	/*else
+	{
+	}*/
+
+	vec2 Pos = mix(vec2(pPrev->m_X, pPrev->m_Y), vec2(pCurrent->m_X, pCurrent->m_Y), Client()->IntraGameTick());
+	float Size = 32.0f*1.5f;
+	float Offset = Pos.y/32.0f + Pos.x/32.0f;
+	Pos.x += cosf(Client()->LocalTime()*2.0f+Offset)*2.5f;
+	Pos.y += sinf(Client()->LocalTime()*2.0f+Offset)*2.5f;
+
+	if(pTexture)
+	{
+		Graphics()->TextureSet(pTexture);	
+		Graphics()->QuadsBegin();
+		IGraphics::CQuadItem QuadItem(Pos.x, Pos.y, Size, Size);
+		Graphics()->QuadsDraw(&QuadItem, 1);
+		Graphics()->QuadsEnd();
+	}
+	
+#else
 	Graphics()->TextureSet(g_pData->m_aImages[IMAGE_GAME].m_pResource);
 	Graphics()->QuadsBegin();
 	vec2 Pos = mix(vec2(pPrev->m_X, pPrev->m_Y), vec2(pCurrent->m_X, pCurrent->m_Y), Client()->IntraGameTick());
@@ -153,8 +193,10 @@ void CItems::RenderPickup(const CNetObj_Pickup *pPrev, const CNetObj_Pickup *pCu
 		Pos.x += cosf(Client()->LocalTime()*2.0f+Offset)*2.5f;
 		Pos.y += sinf(Client()->LocalTime()*2.0f+Offset)*2.5f;
 	}
+	
 	RenderTools()->DrawSprite(Pos.x, Pos.y, Size);
 	Graphics()->QuadsEnd();
+#endif
 }
 
 void CItems::RenderFlag(const CNetObj_Flag *pPrev, const CNetObj_Flag *pCurrent, const CNetObj_GameData *pPrevGameData, const CNetObj_GameData *pCurGameData)
@@ -264,10 +306,16 @@ void CItems::RenderLaser(const struct CNetObj_Laser *pCurrent)
 	Graphics()->BlendNormal();
 }
 
+extern void SCRIPT_TEMP_OnRender();
+
+
+
 void CItems::OnRender()
 {
 	if(Client()->State() < IClient::STATE_ONLINE)
 		return;
+
+	SCRIPT_TEMP_OnRender();
 
 	int Num = Client()->SnapNumItems(IClient::SNAP_CURRENT);
 	for(int i = 0; i < Num; i++)

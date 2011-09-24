@@ -30,9 +30,9 @@ CChat::CChat()
 
 void CChat::OnInit()
 {
-	m_pSound_ChatPlayer = Resources()->GetResource("audio/sfx_msg-client.wv");
-	m_pSound_ChatServer = Resources()->GetResource("audio/sfx_msg-server.wv");
-	m_pSound_ChatHighlight = Resources()->GetResource("audio/sfx_msg-highlight.wv");
+	m_pSound_ChatPlayer = Resources()->GetResourceByName("audio/sfx_msg-client.wv");
+	m_pSound_ChatServer = Resources()->GetResourceByName("audio/sfx_msg-server.wv");
+	m_pSound_ChatHighlight = Resources()->GetResourceByName("audio/sfx_msg-highlight.wv");
 }
 
 

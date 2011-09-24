@@ -459,7 +459,7 @@ IResource *CGraphics_OpenGL::LoadTexture(const char *pFilename, int StorageType,
 	(void)StorageType;
 	(void)StoreFormat;
 	(void)Flags;
-	return m_pResources->GetResource(pFilename);
+	return m_pResources->GetResourceByName(pFilename);
 }
 
 int CGraphics_OpenGL::LoadPNG(CImageInfo *pImg, const char *pFilename, int StorageType)

@@ -397,7 +397,7 @@ bool CSound::CResourceHandler::Destroy(IResource *pResource)
 
 IResource *CSound::LoadWV(const char *pFilename)
 {
-	return m_pResources->GetResource(pFilename);
+	return m_pResources->GetResourceByName(pFilename);
 }
 
 void CSound::SetListenerPos(float x, float y)
