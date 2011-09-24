@@ -351,10 +351,21 @@ int io_flush(IOHANDLE io)
 	return 0;
 }
 
+
+static char DEBUG_threadnames[64][64] = {{"main"}, {0}};
+static int DEBUG_threadcount = 1;
+
+
 void *thread_create(void (*threadfunc)(void *), void *u, const char *name)
 {
 #if defined(CONF_FAMILY_UNIX)
 	pthread_t id;
+	if(DEBUG_threadcount < 64)
+	{
+		str_copy(DEBUG_threadnames[DEBUG_threadcount], name, sizeof(DEBUG_threadnames[DEBUG_threadcount]));
+		DEBUG_threadcount++;
+	}
+
 	pthread_create(&id, NULL, (void *(*)(void*))threadfunc, u);
 	return (void*)id;
 #elif defined(CONF_FAMILY_WINDOWS)
@@ -1701,6 +1712,26 @@ void str_timestamp(char *buffer, int buffer_size)
 	time_info = localtime(&time_data);
 	strftime(buffer, buffer_size, "%Y-%m-%d_%H-%M-%S", time_info);
 	buffer[buffer_size-1] = 0;	/* assure null termination */
+}
+
+
+
+uint64 io_timestamp(const char *filename)
+{
+#ifdef CONF_PLATFORM_MACOSX
+	/* Mac OS X version */
+		struct stat s;
+		if(stat(filename, &s) == 0)
+			return s.st_mtimespec.tv_sec;
+		return 0;
+
+#else		
+	/* *NIX version and windows version*/
+	struct stat s;
+	if(stat(filename, &s) == 0)
+		return s.st_mtime;
+	return 0;
+#endif
 }
 
 int mem_comp(const void *a, const void *b, int size)

@@ -14,6 +14,17 @@
 extern "C" {
 #endif
 
+/* if compiled with -pedantic-errors it will complain about long
+	not being a C90 thing.
+*/
+#ifdef __GNUC__
+__extension__ typedef long long int64;
+__extension__ typedef unsigned long long uint64;
+#else
+typedef long long int64;
+typedef unsigned long long uint64;
+#endif
+
 /* Group: Debug */
 /*
 	Function: dbg_assert
@@ -320,6 +331,12 @@ IOHANDLE io_stdout();
 */
 IOHANDLE io_stderr();
 
+/*
+	Function: io_timestamp
+		Returns the timestamp of the given file.
+*/
+uint64 io_timestamp(const char *filename);
+
 
 /* Group: Threads */
 
@@ -390,14 +407,6 @@ void lock_wait(LOCK lock);
 void lock_release(LOCK lock);
 
 /* Group: Timer */
-#ifdef __GNUC__
-/* if compiled with -pedantic-errors it will complain about long
-	not being a C90 thing.
-*/
-__extension__ typedef long long int64;
-#else
-typedef long long int64;
-#endif
 /*
 	Function: time_get
 		Fetches a sample from a high resolution timer.

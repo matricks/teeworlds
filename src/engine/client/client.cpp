@@ -179,10 +179,11 @@ class CScriptHost
 		return 1;
 	}
 
+	float m_aUVs[4];
+
 	static int LF_Graphics_DrawQuad(lua_State *pLua)
 	{
 		CScriptHost *pThis = GetThis(pLua);
-		(void)pThis;
 
 		IResource *pTexture = ToResource(pLua, 1);
 		float x = lua_tonumber(pLua, 2);
@@ -196,12 +197,43 @@ class CScriptHost
 		pGraphics->TextureSet(pTexture);	
 		pGraphics->QuadsBegin();
 		pGraphics->QuadsSetRotation(r);
+		pGraphics->QuadsSetSubset(pThis->m_aUVs[0], pThis->m_aUVs[1], pThis->m_aUVs[2], pThis->m_aUVs[3]);
 		IGraphics::CQuadItem QuadItem(x, y, w,h);
 		pGraphics->QuadsDraw(&QuadItem, 1);
 		pGraphics->QuadsEnd();
 		return 0;
 	}
 
+	static int LF_Graphics_ResetUV(lua_State *pLua)
+	{
+		CScriptHost *pThis = GetThis(pLua);
+		pThis->m_aUVs[0] = 0;
+		pThis->m_aUVs[1] = 0;
+		pThis->m_aUVs[2] = 1;
+		pThis->m_aUVs[3] = 1;
+		return 0;
+	}
+
+	static int LF_Graphics_SetUV(lua_State *pLua)
+	{
+		CScriptHost *pThis = GetThis(pLua);
+		(void)pThis;
+
+		pThis->m_aUVs[0] = lua_tonumber(pLua, 1);
+		pThis->m_aUVs[1] = lua_tonumber(pLua, 2);
+		pThis->m_aUVs[2] = lua_tonumber(pLua, 3);
+		pThis->m_aUVs[3] = lua_tonumber(pLua, 4);
+		/*
+		IGraphics *pGraphics = pThis->m_pGraphics;
+
+		pGraphics->TextureSet(pTexture);	
+		pGraphics->QuadsBegin();
+		pGraphics->QuadsSetRotation(r);
+		IGraphics::CQuadItem QuadItem(x, y, w,h);
+		pGraphics->QuadsDraw(&QuadItem, 1);
+		pGraphics->QuadsEnd();*/
+		return 0;
+	}
 
 	static int LF_Snap_RegisterItemType(lua_State *pLua)
 	{
@@ -384,11 +416,16 @@ public:
 		lua_pop(m_pLua, 1);
 
 		MARCO_REGISTERFUNC("Resource_Get", LF_Resource_Get);
+		MARCO_REGISTERFUNC("Graphics_SetUV", LF_Graphics_SetUV);
+		MARCO_REGISTERFUNC("Graphics_ResetUV", LF_Graphics_ResetUV);
 		MARCO_REGISTERFUNC("Graphics_DrawQuad", LF_Graphics_DrawQuad);
 		MARCO_REGISTERFUNC("Snap_RegisterItemType", LF_Snap_RegisterItemType);
 		MARCO_REGISTERFUNC("Snap_NumItems", LF_Snap_NumItems);
 		MARCO_REGISTERFUNC("Snap_GetItem", LF_Snap_GetItem);
 
+
+		// talk about lazy
+		LF_Graphics_ResetUV(m_pLua);
 
 		lua_newtable(m_pLua); // create snaps table
 		lua_setglobal(m_pLua, "__snaps");
@@ -2565,6 +2602,20 @@ void CClient::Run()
 			g_Config.m_ClEditor = g_Config.m_ClEditor^1;
 			Input()->MouseModeRelative();
 		}
+
+		// LAZY ASS HOT RELOAD :D
+		{
+			static uint64 last_timestamp = 0;
+			uint64 t = io_timestamp("data/base.lua");
+			if(t != last_timestamp)
+			{
+				m_ServerScripting.Reset(Kernel());
+				last_timestamp = t;
+			}
+		}
+
+		if(Input()->KeyPressed(KEY_LCTRL) && Input()->KeyPressed(KEY_LSHIFT) && Input()->KeyDown('r'))
+			m_ServerScripting.Reset(Kernel());
 
 		/*
 		if(!gfx_window_open())
