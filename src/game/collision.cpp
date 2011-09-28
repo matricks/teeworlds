@@ -20,6 +20,11 @@ bool SCRIPT_TEMP_Physics_CheckPoint(float x, float y)
 	return gs_SCRIPT_TEMP_pCollision->CheckPoint(x,y);
 }
 
+void SCRIPT_TEMP_Physics_MoveBox(vec2 *pInoutPos, vec2 *pInoutVel, vec2 Size, float Elasticity)
+{
+	gs_SCRIPT_TEMP_pCollision->MoveBox(pInoutPos, pInoutVel, Size, Elasticity);
+}
+
 CCollision::CCollision()
 {
 	m_pTiles = 0;

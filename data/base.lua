@@ -1,3 +1,13 @@
+function TableLock(tbl)
+	local mt = getmetatable(tbl)
+	if not mt then mt = {} end
+	mt.__newindex = function(tbl, key, value)
+		error("trying to create key '" .. key .. "' on a locked table")
+	end
+	setmetatable(tbl, mt)
+end
+
+
 data = {}
 data.texture_flagblue = engine.Resource_Get("gfx/flag_blue.png")
 data.texture_pickuphealth = engine.Resource_Get("gfx/pickup_health.png")
@@ -52,12 +62,14 @@ WEAPON_GRENADE_SPEED = 1000
 WEAPON_GRENADE_CURVATURE = 7
 
 tuning = {}
+
+-- TODO: these has to be rounded off as the engine does it, should work like it's now however
 tuning.groundcontrolspeed = 10.0
-tuning.groundcontrolaccel = 100.0
+tuning.groundcontrolaccel = 100.0 / engine.time_servertickspeed
 tuning.groundfriction = 0.5
 tuning.groundjumpimpulse = 13.2
 tuning.airjumpimpulse = 12.0
-tuning.aircontrolspeed = 250.0
+tuning.aircontrolspeed = 250.0 / engine.time_servertickspeed
 tuning.aircontrolaccel = 1.5
 tuning.airfriction = 0.95
 tuning.hooklength = 380.0
@@ -65,6 +77,11 @@ tuning.hookfirespeed = 80.0
 tuning.hookdragaccel = 3.0
 tuning.hookdragspeed = 15.0
 tuning.gravity = 0.5
+
+tuning.velramp_start = 550
+tuning.velramp_range = 2000
+tuning.velramp_curvature = 1.4
+
 
 SNAPITEM_PLAYERINPUT = engine.Snap_RegisterItemType({"direction", "target_x", "target_y", "jump", "fire", "hook", "playerflags", "wantedweapon", "nextweapon", "prevweapon"})
 SNAPITEM_PROJECTILE = engine.Snap_RegisterItemType({"x", "y", "vel_x", "vel_y", "type", "starttick"})
@@ -98,6 +115,13 @@ function CalculateCurvedPosition(x, y, vx, vy, curvature, speed, time)
 	return nx, ny;
 end
 
+
+function Round(v)
+	if v > 0 then
+		return math.floor(v + 0.5)
+	end
+	return math.floor(v - 0.5)
+end
 
 function AngleFromVector(x, y)
 	if x == 0 and y == 0 then
@@ -301,12 +325,25 @@ function RenderTee(x, y, angle, grounded) --, CAnimState *pAnim, CTeeRenderInfo 
 end
 
 function Evolve(char, to_tick)
-	-- TICK
-	-- MOVE
-	-- QUANT
+	while char.tick < to_tick do
+		char.tick = char.tick + 1
+
+		Character_Tick(char, input)
+		Character_Move(char)
+		Character_Quantize(char)
+
+		-- TICK
+		-- MOVE
+		-- QUANT
+	end
 end
 
 function RenderPlayer(prev_char, char, prev_playerinfo, playerinfo)
+	char.vel_x = char.vel_x / 256.0
+	char.vel_y = char.vel_y / 256.0
+
+	Evolve(char, engine.time_gametick)
+
 	local x = char.x
 	local y = char.y
 	local grounded = engine.Physics_CheckPoint(char.x, char.y + 16)
@@ -314,7 +351,6 @@ function RenderPlayer(prev_char, char, prev_playerinfo, playerinfo)
 	--[[if char.
 
 		PlayerTick()]]
-
 	RenderTee(char.x, char.y, char.angle/256, grounded)
 
 	--[[
@@ -698,22 +734,88 @@ function SaturatedAdd(min, max, current, modifier)
 	end
 end
 
-function PlayerTick(player, input, use_input)
+function VelocityRamp(value, start, range, curvature)
+	if value < start then
+		return 1.0
+	end
+	return 1.0 / math.pow(curvature, (value-start)/range)
+end
+
+
+function Character_Move(char)
+	local rampvalue = VelocityRamp(vLength(char.vel_x, char.vel_y)*50, tuning.velramp_start, tuning.velramp_range, tuning.velramp_curvature)
+
+	char.vel_x = char.vel_x * rampvalue;
+
+	--local nx,ny = char.x, char.y
+	local nx,ny,nvx,nvy = engine.Physics_MoveBox(char.x, char.y, char.vel_x, char.vel_y, 28, 28, 0)
+
+	nvx = nvx * (1.0 / rampvalue)
+
+	--[[
+	if(m_pWorld && m_pWorld->m_Tuning.m_PlayerCollision)
+	{
+		// check player collision
+		float Distance = distance(m_Pos, NewPos);
+		int End = Distance+1;
+		vec2 LastPos = m_Pos;
+		for(int i = 0; i < End; i++)
+		{
+			float a = i/Distance;
+			vec2 Pos = mix(m_Pos, NewPos, a);
+			for(int p = 0; p < MAX_CLIENTS; p++)
+			{
+				CCharacterCore *pCharCore = m_pWorld->m_apCharacters[p];
+				if(!pCharCore || pCharCore == this)
+					continue;
+				float D = distance(Pos, pCharCore->m_Pos);
+				if(D < 28.0f && D > 0.0f)
+				{
+					if(a > 0.0f)
+						m_Pos = LastPos;
+					else if(distance(NewPos, pCharCore->m_Pos) > D)
+						m_Pos = NewPos;
+					return;
+				}
+			}
+			LastPos = Pos;
+		}
+	}]]--
+
+	char.vel_x = nvx
+	char.vel_y = nvy
+	char.x = nx
+	char.y = ny
+end
+
+function Character_Quantize(char)
+	char.x = Round(char.x)
+	char.y = Round(char.y)
+	char.vel_x = Round(char.vel_x*256)/256
+	char.vel_y = Round(char.vel_y*256)/256
+end
+
+
+function Character_Tick(char, input, use_input)
 	local PHYS_SIZE = 28.0
 	--m_TriggeredEvents = 0;
 
 	-- get ground state
 	local grounded = false
-	if engine.Physics_CheckPoint(player.pos_x+PHYS_SIZE/2, player.pos_y+PHYS_SIZE/2+5) then
+	if engine.Physics_CheckPoint(char.x+PHYS_SIZE/2, char.y+PHYS_SIZE/2+5) then
 		grounded = true
-	elseif engine.Physics_CheckPoint(player.pos_x-PHYS_SIZE/2, player.pos_y+PHYS_SIZE/2+5) then
+	elseif engine.Physics_CheckPoint(char.x-PHYS_SIZE/2, char.y+PHYS_SIZE/2+5) then
 		grounded = true
 	end
 	
 
-	local target_dir_x, target_dir_y = vNormalize(input.target_x, input.target_y)
+	local target_dir_x = 1
+	local target_dir_y = 0
+	if input then
+		target_dir_x, target_dir_y = vNormalize(input.target_x, input.target_y)
+	end
 
-	player.vel_y = player.vel_y + tuning.gravity
+	char.vel_y = char.vel_y + tuning.gravity
 
 	local maxspeed = tuning.aircontrolspeed
 	local accel = tuning.aircontrolaccel
@@ -722,12 +824,12 @@ function PlayerTick(player, input, use_input)
 	if grounded then
 		maxspeed = tuning.groundcontrolspeed
 		accel = tuning.groundcontrolaccel
-		friction = tuning.m_groundfriction
+		friction = tuning.groundfriction
 	end
 
 	--[[ handle input ]]--
-	if use_input then
-		player.direction = input.direction;
+	if input then
+		char.direction = input.direction;
 
 		-- setup angle
 		local a = 0
@@ -741,7 +843,7 @@ function PlayerTick(player, input, use_input)
 			a = a + pi
 		end
 
-		player.angle = a*256.0
+		char.angle = a*256.0
 
 		-- handle jump
 		--[[
@@ -790,21 +892,21 @@ function PlayerTick(player, input, use_input)
 	end
 
 	-- add the speed modification according to players wanted direction
-	if player.direction < 0 then
-		player.vel_x = SaturatedAdd(-maxspeed, maxspeed, player.vel_x, -accel)
-	elseif player.direction > 0 then
-		player.vel_x = SaturatedAdd(-maxspeed, maxspeed, player.vel_x, accel)
-	elseif player.direction == 0 then
-		player.vel_x = player.vel_x * friction
+	if char.direction < 0 then
+		char.vel_x = SaturatedAdd(-maxspeed, maxspeed, char.vel_x, -accel)
+	elseif char.direction > 0 then
+		char.vel_x = SaturatedAdd(-maxspeed, maxspeed, char.vel_x, accel)
+	elseif char.direction == 0 then
+		char.vel_x = char.vel_x * friction
 	end
 
 	-- handle jumping
 	-- 1 bit = to keep track if a jump has been made on this input
 	-- 2 bit = to keep track if a air-jump has been made
 	if grounded then
-		-- player.jumped &= ~2
-		if player.jumped > 1 then
-			player.jumped = player.jumped - 2
+		-- char.jumped &= ~2
+		if char.jumped > 1 then
+			char.jumped = char.jumped - 2
 		end
 	end
 
@@ -994,8 +1096,8 @@ function PlayerTick(player, input, use_input)
 	]]
 
 	-- clamp the velocity to something sane
-	if vLength(player.vel_x, player.vel_y) > 6000 then
-		player.vel_x, player.vel_y = vNormalize(player.vel_x, player.vel_y) * 6000;
+	if vLength(char.vel_x, char.vel_y) > 6000 then
+		char.vel_x, char.vel_y = vNormalize(char.vel_x, char.vel_y) * 6000;
 	end
 end
 --[[

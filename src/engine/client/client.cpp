@@ -6,6 +6,7 @@
 #include <stdarg.h>
 
 #include <base/math.h>
+#include <base/vmath.h>
 #include <base/system.h>
 
 #include <engine/client.h>
@@ -57,6 +58,7 @@ extern "C"
 }
 
 extern bool SCRIPT_TEMP_Physics_CheckPoint(float x, float y);
+extern void SCRIPT_TEMP_Physics_MoveBox(vec2 *pInoutPos, vec2 *pInoutVel, vec2 Size, float Elasticity);
 
 class CScriptHost
 {
@@ -171,6 +173,57 @@ class CScriptHost
 		return 1;
 	}
 
+
+	static int LF_Snap_RegisterItemType(lua_State *pLua)
+	{
+		CScriptHost *pThis = GetThis(pLua);
+
+		int iType = pThis->m_NumMappings++;
+		int iField = 0;
+
+		lua_pushnil(pLua); //
+		while(lua_next(pLua, -2) != 0)
+		{
+			// -2 == key 
+			// -1 == value
+			str_copy(pThis->m_aMappings[iType][iField].m_aField, lua_tostring(pLua, -1), sizeof(pThis->m_aMappings[iType][iField].m_aField));
+			iField++;
+
+			// pop value
+			lua_pop(pLua, 1);
+		}
+
+		// do a register function for this
+		lua_getglobal(pLua, "__snaps");
+			lua_newtable(pLua); // table of objects
+				for(int k = 0; k < 10; k++)
+				{
+					lua_newtable(pLua); // object table
+						// set the type
+						lua_pushinteger(pLua, iType);
+						lua_setfield(pLua, -2, "_type");
+
+						// register the fields
+						for(int i = 0; i < iField; i++)
+						{
+							lua_pushnumber(pLua, 0);
+							lua_setfield(pLua, -2, pThis->m_aMappings[iType][iField].m_aField);
+						}
+					lua_rawseti(pLua, -2, k); // __snaps[iType] = table of objects
+				}
+				lua_rawseti(pLua, -2, iType); // __snaps[iType] = table of objects
+		lua_pop(pLua, 1);
+
+		/*
+		const char *pResourceName = lua_tostring(pLua, 1);
+		IResource *pRes = pThis->m_pResources->GetResourceByName(pResourceName);
+
+		lua_pushlightuserdata(pLua, GenerateLightData(TYPE_RESOURCE, pRes->Slot().Slot()));
+		*/
+		lua_pushinteger(pLua, iType);
+		return 1;
+	}
+
 	static int LF_Resource_Get(lua_State *pLua)
 	{
 		CScriptHost *pThis = GetThis(pLua);
@@ -239,49 +292,25 @@ class CScriptHost
 		return 1;
 	}
 
-	static int LF_Snap_RegisterItemType(lua_State *pLua)
+	static int LF_Physics_MoveBox(lua_State *pLua)
 	{
 		CScriptHost *pThis = GetThis(pLua);
-
-		int iType = pThis->m_NumMappings++;
-		int iField = 0;
-
-		lua_pushnil(pLua); //
-		while(lua_next(pLua, -2) != 0)
-		{
-			// -2 == key 
-			// -1 == value
-			str_copy(pThis->m_aMappings[iType][iField].m_aField, lua_tostring(pLua, -1), sizeof(pThis->m_aMappings[iType][iField].m_aField));
-			iField++;
-
-			// pop value
-			lua_pop(pLua, 1);
-		}
-
-		// do a register function for this
-		lua_getglobal(pLua, "__snaps");
-			lua_newtable(pLua); // object table
-				// set the type
-				lua_pushinteger(pLua, iType);
-				lua_setfield(pLua, -2, "_type");
-
-				// register the fields
-				for(int i = 0; i < iField; i++)
-				{
-					lua_pushnumber(pLua, 0);
-					lua_setfield(pLua, -2, pThis->m_aMappings[iType][iField].m_aField);
-				}
-			lua_rawseti(pLua, -2, iType); // __snaps[iType] = object table
-		lua_pop(pLua, 1);
-
-		/*
-		const char *pResourceName = lua_tostring(pLua, 1);
-		IResource *pRes = pThis->m_pResources->GetResourceByName(pResourceName);
-
-		lua_pushlightuserdata(pLua, GenerateLightData(TYPE_RESOURCE, pRes->Slot().Slot()));
-		*/
-		lua_pushinteger(pLua, iType);
-		return 1;
+		(void)pThis;
+		vec2 Pos, Vel, BoxSize;
+		float Elast;
+		Pos.x = lua_tonumber(pLua, 1);
+		Pos.y = lua_tonumber(pLua, 2);
+		Vel.x = lua_tonumber(pLua, 3);
+		Vel.y = lua_tonumber(pLua, 4);
+		BoxSize.x = lua_tonumber(pLua, 5);
+		BoxSize.y = lua_tonumber(pLua, 6);
+		Elast = lua_tonumber(pLua, 7);
+		SCRIPT_TEMP_Physics_MoveBox(&Pos, &Vel, BoxSize, Elast);
+		lua_pushnumber(pLua, Pos.x);
+		lua_pushnumber(pLua, Pos.y);
+		lua_pushnumber(pLua, Vel.x);
+		lua_pushnumber(pLua, Vel.y);
+		return 4;
 	}
 
 	/* ** */
@@ -428,6 +457,7 @@ public:
 		MARCO_REGISTERFUNC("Snap_GetItem", LF_Snap_GetItem);
 
 		MARCO_REGISTERFUNC("Physics_CheckPoint", LF_Physics_CheckPoint);
+		MARCO_REGISTERFUNC("Physics_MoveBox", LF_Physics_MoveBox);
 
 
 		// talk about lazy
@@ -435,6 +465,8 @@ public:
 
 		lua_newtable(m_pLua); // create snaps table
 		lua_setglobal(m_pLua, "__snaps");
+
+		UpdateVariables();
 
 		//
 		if(luaL_dofile(m_pLua, "data/base.lua") != 0)
