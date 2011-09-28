@@ -17,8 +17,10 @@ data.texture_tee = engine.Resource_Get("skins/default.png")
 
 data.tee = {
 	body = {0, 0, 3/8, 3/4},
-	body_shadow = {3/8, 0, 3/8+3/8, 3/4},
+	body_outline = {3/8, 0, 3/8+3/8, 3/4},
 	eye = {2/8, 3/4, 2/8 + 1/8, 1},
+	foot = {6/8, 1/4, 1, 1/4 + 1/4},
+	foot_outline = {6/8, 2/4, 1, 2/4 + 1/4},
 }
 
 ---------- VERY IMPORANT THAT THIS SECTION MATCHES datasrc/network.py ----------
@@ -70,6 +72,7 @@ SNAPITEM_LASER = engine.Snap_RegisterItemType({"x", "y", "from_x", "from_y", "st
 SNAPITEM_PICKUP = engine.Snap_RegisterItemType({"x", "y", "type"})
 SNAPITEM_FLAG = engine.Snap_RegisterItemType({"x", "y", "team"})
 SNAPITEM_GAMEINFO = engine.Snap_RegisterItemType({"gameflags", "gamestateflags", "roundstarttick", "warmuptimer", "scorelimit", "timelimit", "roundnum", "roundcurrent"})
+SNAPITEM_GAMEDATA = engine.Snap_RegisterItemType({"teamscore_red", "teamscore_blue", "flagcarrier_red", "flagcarrier_blue"})
 SNAPITEM_CHARACTERCORE = engine.Snap_RegisterItemType({"tick", "x", "y", "vel_x", "vel_y", "angle", "direction", "jumped", "hookedplayer", "hookedstate", "hooktick", "hook_x", "hook_y", "hook_dx", "hook_dy"})
 SNAPITEM_CHARACTER = engine.Snap_RegisterItemType({"tick", "x", "y", "vel_x", "vel_y", "angle", "direction", "jumped", "hookedplayer", "hookedstate", "hooktick", "hook_x", "hook_y", "hook_dx", "hook_dy", 
 													"playerflags", "health", "armor", "ammocount", "weapon", "emote", "attacktick"})
@@ -165,18 +168,18 @@ function SetUV(uvset)
 
 end
 
-function RenderTee(x, y) --, CAnimState *pAnim, CTeeRenderInfo *pInfo, int Emote, vec2 Dir, vec2 Pos)
+function RenderTee(x, y, angle, grounded) --, CAnimState *pAnim, CTeeRenderInfo *pInfo, int Emote, vec2 Dir, vec2 Pos)
 	-- first pass we draw the outline
 	-- second pass we draw the filling
 	local base_size = 64
-	local dir_x = 1.0
-	local dir_y = 0
+	local dir_x = math.cos(angle)
+	local dir_y = math.sin(angle)
 
 	for i = 0, 1 do
 		local outline = i == 0
 		
 		if outline then
-			SetUV(data.tee.body_shadow)
+			SetUV(data.tee.body_outline)
 			engine.Graphics_DrawQuad(data.texture_tee, x, y, base_size, base_size, r)
 		else
 			SetUV(data.tee.body)
@@ -190,6 +193,14 @@ function RenderTee(x, y) --, CAnimState *pAnim, CTeeRenderInfo *pInfo, int Emote
 			local oy = (-0.05 + dir_y * 0.10) * base_size
 			engine.Graphics_DrawQuad(data.texture_tee, x-eye_separation+ox, y+oy, eye_scale, eye_scale, 0)
 			engine.Graphics_DrawQuad(data.texture_tee, x+eye_separation+ox, y+oy, -eye_scale, eye_scale, 0)
+
+			if grounded then
+				SetUV(data.tee.foot)
+				-- TODO: impriove alot
+				local fy = y + 16 - math.max(math.sin(x/32*math.pi*2), 0)*16
+				--local fx = x + math.max(math.sin(x/32*math.pi*2 + math.pi), 0)
+				engine.Graphics_DrawQuad(data.texture_tee, x, fy, base_size, base_size/2, 0)
+			end
 		end
 	end
 
@@ -289,7 +300,23 @@ function RenderTee(x, y) --, CAnimState *pAnim, CTeeRenderInfo *pInfo, int Emote
 	]]--
 end
 
+function Evolve(char, to_tick)
+	-- TICK
+	-- MOVE
+	-- QUANT
+end
+
 function RenderPlayer(prev_char, char, prev_playerinfo, playerinfo)
+	local x = char.x
+	local y = char.y
+	local grounded = engine.Physics_CheckPoint(char.x, char.y + 16)
+
+	--[[if char.
+
+		PlayerTick()]]
+
+	RenderTee(char.x, char.y, char.angle/256, grounded)
+
 	--[[
 	CNetObj_Character Prev;
 	CNetObj_Character Player;
@@ -633,10 +660,11 @@ function OnRender()
 		if item then
 			if item._type == SNAPITEM_PROJECTILE then RenderProjectile(item) end
 			if item._type == SNAPITEM_PICKUP then RenderPickup(item) end
+			if item._type == SNAPITEM_CHARACTER then RenderPlayer(nil, item, nil, nil) end
 		end
 	end
 
-	RenderTee(500, 300)
+	--RenderTee(500, 300)
 end
 
 function vLength(x,y)
@@ -670,7 +698,7 @@ function SaturatedAdd(min, max, current, modifier)
 	end
 end
 
-function X(player, input, use_input)
+function PlayerTick(player, input, use_input)
 	local PHYS_SIZE = 28.0
 	--m_TriggeredEvents = 0;
 

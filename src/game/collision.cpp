@@ -12,12 +12,22 @@
 #include <game/layers.h>
 #include <game/collision.h>
 
+
+static CCollision *gs_SCRIPT_TEMP_pCollision = 0;
+
+bool SCRIPT_TEMP_Physics_CheckPoint(float x, float y)
+{
+	return gs_SCRIPT_TEMP_pCollision->CheckPoint(x,y);
+}
+
 CCollision::CCollision()
 {
 	m_pTiles = 0;
 	m_Width = 0;
 	m_Height = 0;
 	m_pLayers = 0;
+
+	gs_SCRIPT_TEMP_pCollision = this;
 }
 
 void CCollision::Init(class CLayers *pLayers)

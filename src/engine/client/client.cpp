@@ -56,6 +56,8 @@ extern "C"
 	#include <lauxlib.h>
 }
 
+extern bool SCRIPT_TEMP_Physics_CheckPoint(float x, float y);
+
 class CScriptHost
 {
 	lua_State *m_pLua;
@@ -223,16 +225,18 @@ class CScriptHost
 		pThis->m_aUVs[1] = lua_tonumber(pLua, 2);
 		pThis->m_aUVs[2] = lua_tonumber(pLua, 3);
 		pThis->m_aUVs[3] = lua_tonumber(pLua, 4);
-		/*
-		IGraphics *pGraphics = pThis->m_pGraphics;
-
-		pGraphics->TextureSet(pTexture);	
-		pGraphics->QuadsBegin();
-		pGraphics->QuadsSetRotation(r);
-		IGraphics::CQuadItem QuadItem(x, y, w,h);
-		pGraphics->QuadsDraw(&QuadItem, 1);
-		pGraphics->QuadsEnd();*/
 		return 0;
+	}
+
+
+
+	static int LF_Physics_CheckPoint(lua_State *pLua)
+	{
+		CScriptHost *pThis = GetThis(pLua);
+		(void)pThis;
+
+		lua_pushboolean(pLua, SCRIPT_TEMP_Physics_CheckPoint(lua_tonumber(pLua, 1), lua_tonumber(pLua, 2)));
+		return 1;
 	}
 
 	static int LF_Snap_RegisterItemType(lua_State *pLua)
@@ -423,6 +427,8 @@ public:
 		MARCO_REGISTERFUNC("Snap_NumItems", LF_Snap_NumItems);
 		MARCO_REGISTERFUNC("Snap_GetItem", LF_Snap_GetItem);
 
+		MARCO_REGISTERFUNC("Physics_CheckPoint", LF_Physics_CheckPoint);
+
 
 		// talk about lazy
 		LF_Graphics_ResetUV(m_pLua);
@@ -492,10 +498,12 @@ public:
 
 CScriptHost m_ServerScripting;
 
+
 void SCRIPT_TEMP_OnRender()
 {
 	m_ServerScripting.Call("OnRender");
 }
+
 
 // this list is almost like the CResourceList  on the server
 class CResourceMapping

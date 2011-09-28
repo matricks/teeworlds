@@ -546,6 +546,8 @@ void CPlayers::RenderPlayer(
 
 void CPlayers::OnRender()
 {
+	return;
+	
 	// render other players in two passes, first pass we render the other, second pass we render our self
 	for(int p = 0; p < 4; p++)
 	{
