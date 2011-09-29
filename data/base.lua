@@ -82,7 +82,7 @@ tuning.velramp_start = 550
 tuning.velramp_range = 2000
 tuning.velramp_curvature = 1.4
 
-
+--[[
 SNAPITEM_PLAYERINPUT = engine.Snap_RegisterItemType({"direction", "target_x", "target_y", "jump", "fire", "hook", "playerflags", "wantedweapon", "nextweapon", "prevweapon"})
 SNAPITEM_PROJECTILE = engine.Snap_RegisterItemType({"x", "y", "vel_x", "vel_y", "type", "starttick"})
 SNAPITEM_LASER = engine.Snap_RegisterItemType({"x", "y", "from_x", "from_y", "starttick"})
@@ -104,6 +104,182 @@ SNAPITEM_EVENT_HAMMERHIT = engine.Snap_RegisterItemType({"x", "y"})
 SNAPITEM_EVENT_DEATH = engine.Snap_RegisterItemType({"x", "y", "clientid"})
 SNAPITEM_EVENT_SOUNDWORLD = engine.Snap_RegisterItemType({"x", "y", "soundid"})
 SNAPITEM_EVENT_DAMAGEIND = engine.Snap_RegisterItemType({"x", "y", "angle"})
+]]--
+
+SNAPITEM_PLAYERINPUT = engine.Snap_RegisterItemType({
+	{name = "direction"},
+	{name = "target_x"},
+	{name = "target_y"},
+	{name = "jump"},
+	{name = "fire"},
+	{name = "hook"},
+	{name = "playerflags"},
+	{name = "wantedweapon"},
+	{name = "nextweapon"},
+	{name = "prevweapon"},
+})
+
+SNAPITEM_PROJECTILE = engine.Snap_RegisterItemType({
+	{name = "x"},
+	{name = "y"},
+	{name = "vel_x"},
+	{name = "vel_y"},
+	{name = "type"},
+	{name = "starttick"},
+})
+
+SNAPITEM_LASER = engine.Snap_RegisterItemType({
+	{name = "x"},
+	{name = "y"},
+	{name = "from_x"},
+	{name = "from_y"},
+	{name = "starttick"},
+})
+
+SNAPITEM_PICKUP = engine.Snap_RegisterItemType({
+	{name = "x"},
+	{name = "y"},
+	{name = "type"},
+})
+
+SNAPITEM_FLAG = engine.Snap_RegisterItemType({
+	{name = "x"},
+	{name = "y"},
+	{name = "team"},
+})
+
+SNAPITEM_GAMEINFO = engine.Snap_RegisterItemType({
+	{name = "gameflags"},
+	{name = "gamestateflags"},
+	{name = "roundstarttick"},
+	{name = "warmuptimer"},
+	{name = "scorelimit"},
+	{name = "timelimit"},
+	{name = "roundnum"},
+	{name = "roundcurrent"},
+})
+
+SNAPITEM_GAMEDATA = engine.Snap_RegisterItemType({
+	{name = "teamscore_red"},
+	{name = "teamscore_blue"},
+	{name = "flagcarrier_red"},
+	{name = "flagcarrier_blue"},
+})
+
+SNAPITEM_CHARACTERCORE = engine.Snap_RegisterItemType({
+	{name = "tick"},
+	{name = "x"},
+	{name = "y"},
+	{name = "vel_x", scale = 256},
+	{name = "vel_y", scale = 256},
+	{name = "angle", scale = 256},
+	{name = "direction"},
+	{name = "jumped"},
+	{name = "hookedplayer"},
+	{name = "hookedstate"},
+	{name = "hooktick"},
+	{name = "hook_x"},
+	{name = "hook_y"},
+	{name = "hook_dx"},
+	{name = "hook_dy"},
+})
+
+SNAPITEM_CHARACTER = engine.Snap_RegisterItemType({
+	{name = "tick"},
+	{name = "x"},
+	{name = "y"},
+	{name = "vel_x", scale = 256},
+	{name = "vel_y", scale = 256},
+	{name = "angle", scale = 256},
+	{name = "direction"},
+	{name = "jumped"},
+	{name = "hookedplayer"},
+	{name = "hookedstate"},
+	{name = "hooktick"},
+	{name = "hook_x"},
+	{name = "hook_y"},
+	{name = "hook_dx"},
+	{name = "hook_dy"},
+	{name = "playerflags"},
+	{name = "health"},
+	{name = "armor"},
+	{name = "ammocount"},
+	{name = "weapon"},
+	{name = "emote"},
+	{name = "attacktick"},
+})
+
+SNAPITEM_PLAYERINFO = engine.Snap_RegisterItemType({
+	{name = "local"},
+	{name = "clientid"},
+	{name = "team"},
+	{name = "score"},
+	{name = "latency"},
+})
+
+SNAPITEM_CLIENTINFO = engine.Snap_RegisterItemType({
+	{name = "name0"},
+	{name = "name1"},
+	{name = "name2"},
+	{name = "name3"},
+	{name = "clan0"},
+	{name = "clan1"},
+	{name = "clan2"},
+	{name = "country"},
+	{name = "skin0"},
+	{name = "skin1"},
+	{name = "skin2"},
+	{name = "skin3"},
+	{name = "skin4"},
+	{name = "skin5"},
+	{name = "usecustomcolor"},
+	{name = "colorbody"},
+	{name = "colorfeet"},
+})
+
+SNAPITEM_SPECTATORINFO = engine.Snap_RegisterItemType({
+	{name = "spectatorid"},
+	{name = "x"},
+	{name = "y"},
+})
+
+SNAPITEM_EVENT_COMMON = engine.Snap_RegisterItemType({
+	{name = "x"},
+	{name = "y"},
+})
+
+SNAPITEM_EVENT_EXPLOSION = engine.Snap_RegisterItemType({
+	{name = "x"},
+	{name = "y"},
+})
+
+SNAPITEM_EVENT_SPAWN = engine.Snap_RegisterItemType({
+	{name = "x"},
+	{name = "y"},
+})
+
+SNAPITEM_EVENT_HAMMERHIT = engine.Snap_RegisterItemType({
+	{name = "x"},
+	{name = "y"},
+})
+
+SNAPITEM_EVENT_DEATH = engine.Snap_RegisterItemType({
+	{name = "x"},
+	{name = "y"},
+	{name = "clientid"},
+})
+
+SNAPITEM_EVENT_SOUNDWORLD = engine.Snap_RegisterItemType({
+	{name = "x"},
+	{name = "y"},
+	{name = "soundid"},
+})
+
+SNAPITEM_EVENT_DAMAGEIND = engine.Snap_RegisterItemType({
+	{name = "x"},
+	{name = "y"},
+	{name = "angle"},
+})
 
 -- TODO: messages
 
@@ -339,9 +515,6 @@ function Evolve(char, to_tick)
 end
 
 function RenderPlayer(prev_char, char, prev_playerinfo, playerinfo)
-	char.vel_x = char.vel_x / 256.0
-	char.vel_y = char.vel_y / 256.0
-
 	Evolve(char, engine.time_gametick)
 
 	local x = char.x
@@ -351,7 +524,7 @@ function RenderPlayer(prev_char, char, prev_playerinfo, playerinfo)
 	--[[if char.
 
 		PlayerTick()]]
-	RenderTee(char.x, char.y, char.angle/256, grounded)
+	RenderTee(char.x, char.y, char.angle, grounded)
 
 	--[[
 	CNetObj_Character Prev;

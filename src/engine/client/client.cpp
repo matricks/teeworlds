@@ -83,6 +83,8 @@ class CScriptHost
 		LD_INDEXMASK = 0xffffff,
 
 		TYPE_RESOURCE = 0x01000000,
+
+		NUM_SNAPOBJECTS = 16, // how many tables of each snapshot item type we should create
 	};
 
 	static void *LuaAllocator(void *pUser, void *pPtr, size_t OldSize, size_t NewSize)
@@ -134,14 +136,24 @@ class CScriptHost
 		return 1;
 	}
 
-	class CMapping
+	class CSnapType
 	{
 	public:
-		char m_aField[64];
+		class CField
+		{
+		public:
+			float m_Scale;
+			char m_aName[32];
+		};
+
+		CField m_aFields[32];
+		int m_NumFields;
+
+		int m_LastUsedIndex;
 	};
 
-	CMapping m_aMappings[64][32];
-	int m_NumMappings;
+	CSnapType m_aSnapTypes[64];
+	int m_NumSnapTypes;
 
 	static int LF_Snap_GetItem(lua_State *pLua)
 	{
@@ -151,16 +163,23 @@ class CScriptHost
 		IClient::CSnapItem Item;
 		int *pData = (int *)pThis->m_pClient->SnapGetItem(IClient::SNAP_CURRENT, Idx, &Item);
 
-
 		lua_getglobal(pLua, "__snaps");
 		lua_rawgeti(pLua, -1, Item.m_Type);
+
+
+		CSnapType *pSnapType = &pThis->m_aSnapTypes[Item.m_Type];
+		pSnapType->m_LastUsedIndex = (pSnapType->m_LastUsedIndex+1) % NUM_SNAPOBJECTS;
+		lua_rawgeti(pLua, -1, pSnapType->m_LastUsedIndex);
 
 		if(lua_istable(pLua, -1))
 		{
 			for(int i = 0; i < Item.m_DataSize/4; i++)
 			{
-				lua_pushlstring(pLua, pThis->m_aMappings[Item.m_Type][i].m_aField, str_length(pThis->m_aMappings[Item.m_Type][i].m_aField));
-				lua_pushinteger(pLua, pData[i]);
+				const char *pFieldName = pSnapType->m_aFields[i].m_aName;
+
+				lua_pushlstring(pLua, pFieldName, str_length(pFieldName));
+				lua_pushnumber(pLua, pData[i] / pSnapType->m_aFields[i].m_Scale);
+
 				lua_rawset(pLua, -3);
 			}
 		}
@@ -174,41 +193,64 @@ class CScriptHost
 	}
 
 
+	void CreateSnapItemTable(int iType)
+	{
+		lua_newtable(m_pLua); // object table
+		// set the type
+		lua_pushinteger(m_pLua, iType);
+		lua_setfield(m_pLua, -2, "_type");
+
+		// register the fields
+		const CSnapType *pType = &m_aSnapTypes[iType];
+		for(int i = 0; i < pType->m_NumFields; i++)
+		{
+			lua_pushnumber(m_pLua, 0);
+			lua_setfield(m_pLua, -2, pType->m_aFields[i].m_aName);
+		}
+	}
+
 	static int LF_Snap_RegisterItemType(lua_State *pLua)
 	{
 		CScriptHost *pThis = GetThis(pLua);
 
-		int iType = pThis->m_NumMappings++;
+		int iType = pThis->m_NumSnapTypes++;
 		int iField = 0;
+
+		//printf("%d\n", iType);
 
 		lua_pushnil(pLua); //
 		while(lua_next(pLua, -2) != 0)
 		{
 			// -2 == key 
-			// -1 == value
-			str_copy(pThis->m_aMappings[iType][iField].m_aField, lua_tostring(pLua, -1), sizeof(pThis->m_aMappings[iType][iField].m_aField));
-			iField++;
+			// -1 == value (table)
+			CSnapType::CField *pField = &pThis->m_aSnapTypes[iType].m_aFields[iField];
+
+			// get name
+			lua_getfield(pLua, -1, "name");
+			str_copy(pField->m_aName, lua_tostring(pLua, -1), sizeof(pField->m_aName));
+			lua_pop(pLua, 1);
+
+			// get scale
+			pField->m_Scale = 1.0f;
+			lua_getfield(pLua, -1, "scale");
+			if(lua_isnumber(pLua, -1))
+				pField->m_Scale = lua_tonumber(pLua, -1);
+			lua_pop(pLua, 1);
+
 
 			// pop value
+			iField++;
 			lua_pop(pLua, 1);
 		}
+
+		pThis->m_aSnapTypes[iType].m_NumFields = iField;
 
 		// do a register function for this
 		lua_getglobal(pLua, "__snaps");
 			lua_newtable(pLua); // table of objects
-				for(int k = 0; k < 10; k++)
+				for(unsigned k = 0; k < NUM_SNAPOBJECTS; k++)
 				{
-					lua_newtable(pLua); // object table
-						// set the type
-						lua_pushinteger(pLua, iType);
-						lua_setfield(pLua, -2, "_type");
-
-						// register the fields
-						for(int i = 0; i < iField; i++)
-						{
-							lua_pushnumber(pLua, 0);
-							lua_setfield(pLua, -2, pThis->m_aMappings[iType][iField].m_aField);
-						}
+					pThis->CreateSnapItemTable(iType);
 					lua_rawseti(pLua, -2, k); // __snaps[iType] = table of objects
 				}
 				lua_rawseti(pLua, -2, iType); // __snaps[iType] = table of objects
@@ -400,7 +442,6 @@ class CScriptHost
 public:
 	CScriptHost()
 	{
-		mem_zero(m_aMappings, sizeof(m_aMappings));
 		m_pLua = 0;
 	}
 
@@ -410,7 +451,8 @@ public:
 		m_Mem_NumReallocs = 0;
 		m_Mem_NumFree = 0;
 
-		m_NumMappings = 1;
+		mem_zero(m_aSnapTypes, sizeof(m_aSnapTypes));
+		m_NumSnapTypes = 1; // we start at 1
 
 		m_pKernel = pKernel;
 		m_pResources = m_pKernel->RequestInterface<IResources>();
