@@ -514,17 +514,22 @@ function Evolve(char, to_tick)
 	end
 end
 
+function Lerp(s, d, a)
+	return s + (d - s) * a
+end
+
 function RenderPlayer(prev_char, char, prev_playerinfo, playerinfo)
+	Evolve(prev_char, engine.time_prevgametick)
 	Evolve(char, engine.time_gametick)
 
-	local x = char.x
-	local y = char.y
-	local grounded = engine.Physics_CheckPoint(char.x, char.y + 16)
+	local x = Lerp(prev_char.x, char.x, engine.time_intragametick)
+	local y = Lerp(prev_char.y, char.y, engine.time_intragametick)
+	local grounded = engine.Physics_CheckPoint(x, y + 16)
 
 	--[[if char.
 
 		PlayerTick()]]
-	RenderTee(char.x, char.y, char.angle, grounded)
+	RenderTee(x, y, char.angle, grounded)
 
 	--[[
 	CNetObj_Character Prev;
@@ -865,11 +870,11 @@ function OnRender()
 	local i = 0
 	local num = engine.Snap_NumItems()
 	for i = 0, num-1 do
-		local item = engine.Snap_GetItem(i)
-		if item then
-			if item._type == SNAPITEM_PROJECTILE then RenderProjectile(item) end
-			if item._type == SNAPITEM_PICKUP then RenderPickup(item) end
-			if item._type == SNAPITEM_CHARACTER then RenderPlayer(nil, item, nil, nil) end
+		local prev,cur = engine.Snap_GetItem(i)
+		if cur then
+			if cur._type == SNAPITEM_PROJECTILE then RenderProjectile(cur) end
+			if cur._type == SNAPITEM_PICKUP then RenderPickup(cur) end
+			if cur._type == SNAPITEM_CHARACTER then RenderPlayer(prev, cur, nil, nil) end
 		end
 	end
 

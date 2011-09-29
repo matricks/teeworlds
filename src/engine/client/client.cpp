@@ -155,18 +155,61 @@ class CScriptHost
 	CSnapType m_aSnapTypes[64];
 	int m_NumSnapTypes;
 
+	void GetSnapItemTable(int iType)
+	{
+		lua_getglobal(m_pLua, "__snaps");
+		lua_rawgeti(m_pLua, -1, iType);
+		CSnapType *pSnapType = &m_aSnapTypes[iType];
+		pSnapType->m_LastUsedIndex = (pSnapType->m_LastUsedIndex+1) % NUM_SNAPOBJECTS;
+		lua_rawgeti(m_pLua, -1, pSnapType->m_LastUsedIndex);
+		lua_remove(m_pLua, -2); // remove objects table
+		lua_remove(m_pLua, -2); // remove __snaps
+	}
+
+	void FillSnapItem(int iType, const int *pData, int Count)
+	{
+		CSnapType *pSnapType = &m_aSnapTypes[iType];
+
+		for(int i = 0; i < Count; i++)
+		{
+			const char *pFieldName = pSnapType->m_aFields[i].m_aName;
+
+			lua_pushlstring(m_pLua, pFieldName, str_length(pFieldName));
+			lua_pushnumber(m_pLua, pData[i] / pSnapType->m_aFields[i].m_Scale);
+
+			lua_rawset(m_pLua, -3);
+		}
+	}
+
 	static int LF_Snap_GetItem(lua_State *pLua)
 	{
 		CScriptHost *pThis = GetThis(pLua);
 		int Idx = lua_tointeger(pLua, 1);
 		
 		IClient::CSnapItem Item;
-		int *pData = (int *)pThis->m_pClient->SnapGetItem(IClient::SNAP_CURRENT, Idx, &Item);
+		const int *pData = (const int *)pThis->m_pClient->SnapGetItem(IClient::SNAP_CURRENT, Idx, &Item);
+		const int *pOldData = (const int *)pThis->m_pClient->SnapFindItem(IClient::SNAP_PREV, Item.m_Type, Item.m_ID);
+
+		if(pOldData)
+		{
+			pThis->GetSnapItemTable(Item.m_Type);
+			pThis->FillSnapItem(Item.m_Type, pOldData, Item.m_DataSize/4);
+		}
+		else
+			lua_pushnil(pLua);			
+
+		if(pData)
+		{
+			pThis->GetSnapItemTable(Item.m_Type);
+			pThis->FillSnapItem(Item.m_Type, pData, Item.m_DataSize/4);
+		}
+		else
+			lua_pushnil(pLua);
+
+		/*
 
 		lua_getglobal(pLua, "__snaps");
 		lua_rawgeti(pLua, -1, Item.m_Type);
-
-
 		CSnapType *pSnapType = &pThis->m_aSnapTypes[Item.m_Type];
 		pSnapType->m_LastUsedIndex = (pSnapType->m_LastUsedIndex+1) % NUM_SNAPOBJECTS;
 		lua_rawgeti(pLua, -1, pSnapType->m_LastUsedIndex);
@@ -187,9 +230,9 @@ class CScriptHost
 		{
 			//dbg_msg("script", "missing %d", Item.m_Type);
 			lua_pushnil(pLua);
-		}
+		}*/
 			
-		return 1;
+		return 2;
 	}
 
 
