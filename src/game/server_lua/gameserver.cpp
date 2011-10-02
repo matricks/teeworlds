@@ -1,6 +1,6 @@
 #include <engine/shared/protocol.h>
 #include <engine/server.h>
-#include <engine/scripting.h>
+#include <game/scripting.h>
 
 class CGameServer_Lua : public IGameServer
 {

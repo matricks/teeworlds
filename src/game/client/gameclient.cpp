@@ -88,14 +88,25 @@ static CMapLayers gs_MapLayersForeGround(CMapLayers::TYPE_FOREGROUND);
 CGameClient::CStack::CStack() { m_Num = 0; }
 void CGameClient::CStack::Add(class CComponent *pComponent) { m_paComponents[m_Num++] = pComponent; }
 
-const char *CGameClient::Version() { return "lua1"; }
-const char *CGameClient::NetVersion() { return "lua1"; }
-//const char *CGameClient::Version() { return GAME_VERSION; }
-//const char *CGameClient::NetVersion() { return GAME_NETVERSION; }
+//const char *CGameClient::Version() { return "lua1"; }
+//const char *CGameClient::NetVersion() { return "lua1"; }
+const char *CGameClient::Version() { return GAME_VERSION; }
+const char *CGameClient::NetVersion() { return GAME_NETVERSION; }
 const char *CGameClient::GetItemName(int Type) { return m_NetObjHandler.GetObjName(Type); }
+
+
+extern IGameClient *CreateGameClientLua(IKernel*);
+
+CGameClient::CGameClient()
+{
+}
 
 void CGameClient::OnConsoleInit()
 {
+	m_pLuaClient = CreateGameClientLua(Kernel());
+	m_pLuaClient->OnConsoleInit();
+
+
 	m_pEngine = Kernel()->RequestInterface<IEngine>();
 	m_pClient = Kernel()->RequestInterface<IClient>();
 	m_pGraphics = Kernel()->RequestInterface<IGraphics>();
@@ -225,6 +236,8 @@ void CGameClient::OnConsoleInit()
 
 void CGameClient::OnInit()
 {
+	m_pLuaClient->OnInit();
+
 	int64 Start = time_get();
 
 	// set the language
@@ -326,11 +339,14 @@ void CGameClient::DispatchInput()
 
 int CGameClient::OnSnapInput(int *pData)
 {
+	m_pLuaClient->OnSnapInput(pData);
 	return m_pControls->SnapInput(pData);
 }
 
 void CGameClient::OnConnected()
 {
+	m_pLuaClient->OnConnected();
+
 	m_Layers.Init(Kernel());
 	m_Collision.Init(Layers());
 
@@ -437,6 +453,8 @@ static void Evolve(CNetObj_Character *pCharacter, int Tick)
 
 void CGameClient::OnRender()
 {
+	m_pLuaClient->OnRender();
+
 	/*Graphics()->Clear(1,0,0);
 
 	menus->render_background();
@@ -494,6 +512,8 @@ void CGameClient::OnRelease()
 
 void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker)
 {
+	m_pLuaClient->OnMessage(MsgId, pUnpacker);
+
 	// special messages
 	if(MsgId == NETMSGTYPE_SV_EXTRAPROJECTILE)
 	{
@@ -578,6 +598,8 @@ void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker)
 
 void CGameClient::OnStateChange(int NewState, int OldState)
 {
+	m_pLuaClient->OnStateChange(NewState, OldState);
+
 	// reset everything when not already connected (to keep gathered stuff)
 	if(NewState < IClient::STATE_ONLINE)
 		OnReset();
@@ -587,8 +609,8 @@ void CGameClient::OnStateChange(int NewState, int OldState)
 		m_All.m_paComponents[i]->OnStateChange(NewState, OldState);
 }
 
-void CGameClient::OnShutdown() {}
-void CGameClient::OnEnterGame() {}
+void CGameClient::OnShutdown() { m_pLuaClient->OnShutdown(); }
+void CGameClient::OnEnterGame() { m_pLuaClient->OnEnterGame(); }
 
 void CGameClient::OnGameOver()
 {
@@ -654,6 +676,8 @@ void CGameClient::ProcessEvents()
 
 void CGameClient::OnNewSnapshot()
 {
+	m_pLuaClient->OnNewSnapshot();
+
 	m_NewTick = true;
 
 	// clear out the invalid pointers
@@ -918,6 +942,8 @@ void CGameClient::OnNewSnapshot()
 
 void CGameClient::OnPredict()
 {
+	m_pLuaClient->OnPredict();
+
 	// store the previous values so we can detect prediction errors
 	CCharacterCore BeforePrevChar = m_PredictedPrevChar;
 	CCharacterCore BeforeChar = m_PredictedChar;
@@ -1044,6 +1070,8 @@ void CGameClient::OnPredict()
 
 void CGameClient::OnActivateEditor()
 {
+	m_pLuaClient->OnActivateEditor();
+
 	OnRelease();
 }
 

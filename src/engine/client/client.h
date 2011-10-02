@@ -241,9 +241,6 @@ public:
 	void Render();
 	void DebugRender();
 
-	void ServerScript_UpdateTimeVariables();
-	void ServerScript_Reset();
-
 	virtual void Quit();
 
 	virtual const char *ErrorString();

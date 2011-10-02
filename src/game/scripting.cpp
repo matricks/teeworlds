@@ -1,7 +1,7 @@
 
 #include <base/vmath.h>
 #include <base/system.h>
-#include <engine/scripting.h>
+#include "scripting.h"
 
 extern "C"
 {

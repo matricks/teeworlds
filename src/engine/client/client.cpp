@@ -25,8 +25,6 @@
 #include <engine/textrender.h>
 #include <engine/loader.h>
 
-#include <engine/scripting.h>
-
 #include <engine/shared/config.h>
 #include <engine/shared/compression.h>
 #include <engine/shared/datafile.h>
@@ -2019,47 +2017,6 @@ void CClient::InitInterfaces()
 	m_Friends.Init();
 }
 
-CScriptHost m_ServerScripting;
-CScripting_Resources m_Scripting_Resources;
-CScripting_Graphics m_Scripting_Graphics;
-CScripting_SnapshotTypes m_Scripting_SnapshotTypes;
-CScripting_SnapshotClient m_Scripting_SnapshotClient;
-CScripting_Physics m_Scripting_Physics;
-
-static CClient *g_TEMP_pClient = 0;
-
-void CClient::ServerScript_UpdateTimeVariables()
-{
-	m_ServerScripting.SetVariableInt("time_prevgametick", PrevGameTick());
-	m_ServerScripting.SetVariableInt("time_gametick", GameTick());
-	m_ServerScripting.SetVariableFloat("time_intragametick", IntraGameTick());
-	m_ServerScripting.SetVariableFloat("time_gameticktime", GameTickTime());
-	m_ServerScripting.SetVariableFloat("time_localtime", LocalTime());
-	m_ServerScripting.SetVariableFloat("time_servertickspeed", SERVER_TICK_SPEED);
-}
-	
-void CClient::ServerScript_Reset()
-{
-	m_ServerScripting.Reset();
-	m_Scripting_Resources.Register(&m_ServerScripting, m_pResources);
-	m_Scripting_Graphics.Register(&m_ServerScripting, &m_Scripting_Resources, m_pGraphics);
-	m_Scripting_SnapshotTypes.Register(&m_ServerScripting);
-	m_Scripting_SnapshotClient.Register(&m_ServerScripting, this, &m_Scripting_SnapshotTypes);
-	m_Scripting_Physics.Register(&m_ServerScripting);
-
-	g_TEMP_pClient = this;
-	ServerScript_UpdateTimeVariables();
-
-	m_ServerScripting.SetVariableInt("client", 1);
-	m_ServerScripting.DoFile("data/games/teeworlds/client.lua");
-}
-
-void SCRIPT_TEMP_OnRender()
-{
-	g_TEMP_pClient->ServerScript_UpdateTimeVariables();
-	m_ServerScripting.Call("OnRender", "");
-}
-
 void CClient::Run()
 {
 	int64 ReportTime = time_get();
@@ -2117,9 +2074,6 @@ void CClient::Run()
 		Connect(config.cl_connect);
 	config.cl_connect[0] = 0;
 	*/
-	dbg_msg("", "1");
-	ServerScript_Reset();
-	dbg_msg("", "2");
 
 	//
 	m_FpsGraph.Init(0.0f, 200.0f);
@@ -2202,20 +2156,6 @@ void CClient::Run()
 			g_Config.m_ClEditor = g_Config.m_ClEditor^1;
 			Input()->MouseModeRelative();
 		}
-
-		// LAZY ASS HOT RELOAD :D
-		{
-			static uint64 last_timestamp = 0;
-			uint64 t = io_timestamp("data/base.lua");
-			if(t != last_timestamp)
-			{
-				ServerScript_Reset();
-				last_timestamp = t;
-			}
-		}
-
-		if(Input()->KeyPressed(KEY_LCTRL) && Input()->KeyPressed(KEY_LSHIFT) && Input()->KeyDown('r'))
-			ServerScript_Reset();
 
 		/*
 		if(!gfx_window_open())

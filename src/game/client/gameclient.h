@@ -12,6 +12,8 @@
 
 class CGameClient : public IGameClient
 {
+	IGameClient *m_pLuaClient;
+
 	class CStack
 	{
 	public:
@@ -65,6 +67,8 @@ class CGameClient : public IGameClient
 	static void ConchainSpecialInfoupdate(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 
 public:
+	CGameClient();
+
 	IKernel *Kernel() { return IInterface::Kernel(); }
 	IEngine *Engine() const { return m_pEngine; }
 	class IGraphics *Graphics() const { return m_pGraphics; }
