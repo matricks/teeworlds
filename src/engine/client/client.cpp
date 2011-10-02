@@ -2050,13 +2050,14 @@ void CClient::ServerScript_Reset()
 	g_TEMP_pClient = this;
 	ServerScript_UpdateTimeVariables();
 
-	m_ServerScripting.DoFile("data/base.lua");
+	m_ServerScripting.SetVariableInt("client", 1);
+	m_ServerScripting.DoFile("data/games/teeworlds/client.lua");
 }
 
 void SCRIPT_TEMP_OnRender()
 {
 	g_TEMP_pClient->ServerScript_UpdateTimeVariables();
-	m_ServerScripting.Call("OnRender");
+	m_ServerScripting.Call("OnRender", "");
 }
 
 void CClient::Run()

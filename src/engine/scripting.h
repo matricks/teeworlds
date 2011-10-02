@@ -46,8 +46,45 @@ public:
 	void SetVariableInt(const char *pName, int Value);
 	void SetVariableFloat(const char *pName, float Value);
 
-	void Call(const char *pFunctionName);
+	void Call(const char *pFunctionName, const char *pArgs, ...);
 };
+/*
+template<typename TFIELDMIXIN>
+class TScripting_ObjectTypes
+{
+public:
+	class CObjectType
+	{
+	public:
+		enum
+		{
+			TYPE_INT = 0,
+			TYPE_FLOAT,
+			TYPE_STRING,
+		};
+
+		class CField : public TFIELDMIXIN
+		{
+		public:
+			int m_Type;
+			char m_aName[32];
+		};
+
+		CField m_aFields[32];
+		int m_NumFields;
+
+		int m_LastUsedIndex;
+	};
+
+	array<CObjectType*> m_lpObjectTypes;
+	
+	void GetSnapItemTable(CScriptHost *pHost, int iType);
+	void CreateSnapItemTable(CScriptHost *pHost, int iType);
+
+public:
+	void Register(CScriptHost *pHost);
+	int RegisterObjectType(CScriptHost *pHost);
+};*/
 
 class CScripting_SnapshotTypes
 {

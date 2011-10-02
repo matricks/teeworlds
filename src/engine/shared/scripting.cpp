@@ -147,13 +147,14 @@ void CScriptHost::Reset()
 	lua_register(m_pLua, "__errorfunc", LF_ErrorFunc);
 
 	// kill everything that touches disc
-	lua_pushnil(m_pLua); lua_setglobal(m_pLua, "dofile");
 	lua_pushnil(m_pLua); lua_setglobal(m_pLua, "load");
 	lua_pushnil(m_pLua); lua_setglobal(m_pLua, "loadfile");
 	lua_pushnil(m_pLua); lua_setglobal(m_pLua, "loadstring");
 	lua_pushnil(m_pLua); lua_setglobal(m_pLua, "module");
 	lua_pushnil(m_pLua); lua_setglobal(m_pLua, "require");
 
+	// allow this for now
+	//lua_pushnil(m_pLua); lua_setglobal(m_pLua, "dofile"); 
 
 	// register functions
 	lua_newtable(m_pLua); // create snaps table
@@ -208,14 +209,39 @@ void CScriptHost::SetVariableFloat(const char *pName, float Value)
 	SetVariableDouble(pName, (double)Value);
 }
 
-void CScriptHost::Call(const char *pFunctionName)
+#include <stdarg.h>
+
+void CScriptHost::Call(const char *pFunctionName, const char *pArgs, ...)
 {
 	unsigned Before = m_Mem_Calls;
 
 	// call global on render function
 	lua_getglobal(m_pLua, "__errorfunc");
 	lua_getglobal(m_pLua, pFunctionName);
-	if(lua_pcall(m_pLua, 0, 0, -2) != 0)
+	int NumArgs = 0;
+
+	{
+		va_list ArgList;
+
+		va_start(ArgList, pArgs);
+		for(int i = 0; pArgs[i]; i++)
+		{
+			if(pArgs[i] == 'i')
+				lua_pushinteger(m_pLua, va_arg(ArgList, int));
+			else if(pArgs[i] == 'f')
+				lua_pushnumber(m_pLua, va_arg(ArgList, double));
+			else
+			{
+				dbg_assert(false, "invalid type");
+			}
+			NumArgs++;
+		}
+
+		va_end(ArgList);
+	}
+
+
+	if(lua_pcall(m_pLua, NumArgs, 0, -2 - NumArgs) != 0)
 	{
 		//dbg_msg("script", "error: %s", lua_tostring(m_pLua, -1));
 		//LF_ErrorFunc(m_pLua);

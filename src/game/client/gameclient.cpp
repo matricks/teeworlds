@@ -88,8 +88,10 @@ static CMapLayers gs_MapLayersForeGround(CMapLayers::TYPE_FOREGROUND);
 CGameClient::CStack::CStack() { m_Num = 0; }
 void CGameClient::CStack::Add(class CComponent *pComponent) { m_paComponents[m_Num++] = pComponent; }
 
-const char *CGameClient::Version() { return GAME_VERSION; }
-const char *CGameClient::NetVersion() { return GAME_NETVERSION; }
+const char *CGameClient::Version() { return "lua1"; }
+const char *CGameClient::NetVersion() { return "lua1"; }
+//const char *CGameClient::Version() { return GAME_VERSION; }
+//const char *CGameClient::NetVersion() { return GAME_NETVERSION; }
 const char *CGameClient::GetItemName(int Type) { return m_NetObjHandler.GetObjName(Type); }
 
 void CGameClient::OnConsoleInit()
