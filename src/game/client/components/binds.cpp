@@ -32,12 +32,14 @@ void CBinds::Bind(int KeyID, const char *pStr)
 		return;
 
 	str_copy(m_aaKeyBindings[KeyID], pStr, sizeof(m_aaKeyBindings[KeyID]));
+	/*
 	char aBuf[256];
 	if(!m_aaKeyBindings[KeyID][0])
 		str_format(aBuf, sizeof(aBuf), "unbound %s (%d)", Input()->KeyName(KeyID), KeyID);
 	else
 		str_format(aBuf, sizeof(aBuf), "bound %s (%d) = %s", Input()->KeyName(KeyID), KeyID, m_aaKeyBindings[KeyID]);
 	Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "binds", aBuf);
+	*/
 }
 
 

@@ -260,7 +260,6 @@ SNAPITEM_EVENT_DAMAGEIND = engine.Snap_RegisterItemType({
 	{name = "angle"},
 })
 
-
 --[[
 
 MSG_SV_MOTD = engine.Msg_Register({

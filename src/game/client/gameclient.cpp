@@ -264,10 +264,10 @@ void CGameClient::OnInit()
 	// init all components
 	for(int i = m_All.m_Num-1; i >= 0; --i)
 	{
-		int64 Start = time_get();
+		//int64 Start = time_get();
 		m_All.m_paComponents[i]->OnInit();
-		int64 End = time_get();
-		dbg_msg("gameclient", "#%d %p = %.2fms", i, m_All.m_paComponents[i], ((End-Start)*1000)/(float)time_freq());
+		//int64 End = time_get();
+		//dbg_msg("gameclient", "#%d %p = %.2fms", i, m_All.m_paComponents[i], ((End-Start)*1000)/(float)time_freq());
 	}
 
 	// setup load amount

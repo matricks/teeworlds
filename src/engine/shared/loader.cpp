@@ -170,7 +170,7 @@ void IResources::CSource::Update()
 
 		if(Load(&Order))
 		{
-			dbg_msg("resources", "[%s] loaded %s", Name(), Order.m_pResource->Name());
+			//dbg_msg("resources", "[%s] loaded %s", Name(), Order.m_pResource->Name());
 			FeedbackOrder(&Order);
 		}
 		else
@@ -450,12 +450,8 @@ public:
 	{
 		IResource *pResource = FindResource(Id);
 		if(pResource)
-		{
-			dbg_msg("resources", "found '%s'", Id.m_pName);
 			return pResource;
-		}
 
-		dbg_msg("resources", "creating '%s'", Id.m_pName);
 		return CreateResource(Id);
 	}
 

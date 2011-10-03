@@ -178,8 +178,7 @@ class CTextRender : public IEngineTextRender
 			FontMemoryUsage += Width*Height;
 		}
 
-		dbg_msg("", "pFont memory usage: %d", FontMemoryUsage);
-
+		//dbg_msg("", "pFont memory usage: %d", FontMemoryUsage);
 		mem_free(pMem);
 	}
 

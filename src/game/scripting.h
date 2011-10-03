@@ -1,4 +1,5 @@
 #include <stdlib.h> // ugly, it's for size_t
+#include <base/tl/array.h>
 
 typedef struct lua_State lua_State;
 
@@ -38,6 +39,8 @@ public:
 
 	void DoFile(const char *pFilename);
 
+	void Assert(bool Check);
+
 	typedef int (*SCRIPTFUNC)(CScriptHost *pHost, void *pData);
 
 	void RegisterFunction(const char *pName, SCRIPTFUNC pfnFunc, void *pValue);
@@ -48,25 +51,32 @@ public:
 
 	void Call(const char *pFunctionName, const char *pArgs, ...);
 };
-/*
-template<typename TFIELDMIXIN>
-class TScripting_ObjectTypes
+
+class CObjectTypes
 {
 public:
-	class CObjectType
+	class CType
 	{
 	public:
+		CType()
+		{
+			m_NumFields = 0;
+			m_LastUsedIndex = 0;
+		}
+
 		enum
 		{
-			TYPE_INT = 0,
+			TYPE_UNKNOWN = 0,
+			TYPE_INT,
 			TYPE_FLOAT,
 			TYPE_STRING,
 		};
 
-		class CField : public TFIELDMIXIN
+		class CField
 		{
 		public:
 			int m_Type;
+			float m_Scale;
 			char m_aName[32];
 		};
 
@@ -76,19 +86,30 @@ public:
 		int m_LastUsedIndex;
 	};
 
-	array<CObjectType*> m_lpObjectTypes;
-	
-	void GetSnapItemTable(CScriptHost *pHost, int iType);
-	void CreateSnapItemTable(CScriptHost *pHost, int iType);
+	enum
+	{
+		CACHE_SIZE = 16,
+	};
 
+	array<CType*> m_lpTypes;
+	const char *m_pCacheTableName;
+	
+	//void GetObjectTable(CScriptHost *pHost, int iType);
+	int RegisterType(CScriptHost *pHost);
 public:
-	void Register(CScriptHost *pHost);
+	void Register(CScriptHost *pHost, const char *pCacheTableName);
 	int RegisterObjectType(CScriptHost *pHost);
-};*/
+
+	CType *GetType(int iType) { return iType >= 0 && iType < m_lpTypes.size() ? m_lpTypes[iType] : 0x0; }
+	void PushCachedTable(CScriptHost *pHost, int iType);
+	void PushNewTable(CScriptHost *pHost, int iType);
+};
 
 class CScripting_SnapshotTypes
 {
 public:
+	CObjectTypes m_Types;
+	/*
 	class CSnapType
 	{
 	public:
@@ -114,10 +135,11 @@ public:
 	};
 
 	void GetSnapItemTable(CScriptHost *pHost, int iType);
-	void CreateSnapItemTable(CScriptHost *pHost, int iType);
+	void CreateSnapItemTable(CScriptHost *pHost, int iType);*/
 
 	static int LF_Snap_RegisterItemType(CScriptHost *pHost, void *pData);
 public:
+	CObjectTypes::CType *GetType(int iType) { return m_Types.GetType(iType); }
 	void Register(CScriptHost *pHost);
 };
 

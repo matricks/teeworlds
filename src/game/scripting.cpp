@@ -123,6 +123,20 @@ int CScriptHost::LF_ErrorFunc(lua_State *L)
 	return 1;
 }
 
+void CScriptHost::Assert(bool Check)
+{
+	if(Check)
+		return;
+
+	int Top = lua_gettop (m_pLua);
+	for(int i = 0; i < Top; i++)
+	{
+		printf("#%3d ", i);
+		PrintLuaValue(m_pLua, i);
+	}
+	dbg_assert(false, "script assert");
+}
+
 CScriptHost::CScriptHost()
 {
 	m_pLua = 0;
@@ -141,6 +155,7 @@ void CScriptHost::Reset()
 	}
 
 	m_pLua = lua_newstate(LuaAllocator, this);
+	lua_atpanic(m_pLua, LF_ErrorFunc);
 	luaopen_base(m_pLua);
 	luaopen_math(m_pLua);
 
@@ -251,19 +266,11 @@ void CScriptHost::Call(const char *pFunctionName, const char *pArgs, ...)
 		dbg_msg("script", "Warning: %s called the memory allocator %u times", pFunctionName, m_Mem_Calls - Before);
 }
 
-void CScripting_SnapshotTypes::GetSnapItemTable(CScriptHost *pHost, int iType)
-{
-	lua_State *pLua = pHost->Lua();
-	lua_getglobal(pLua, "__snaps");
-	lua_rawgeti(pLua, -1, iType);
-	CSnapType *pSnapType = &m_aSnapTypes[iType];
-	pSnapType->m_LastUsedIndex = (pSnapType->m_LastUsedIndex+1) % NUM_SNAPOBJECTS;
-	lua_rawgeti(pLua, -1, pSnapType->m_LastUsedIndex);
-	lua_remove(pLua, -2); // remove objects table
-	lua_remove(pLua, -2); // remove __snaps
-}
 
-void CScripting_SnapshotTypes::CreateSnapItemTable(CScriptHost *pHost, int iType)
+/*******************************/
+
+
+void CObjectTypes::PushNewTable(CScriptHost *pHost, int iType)
 {
 	lua_State *pLua = pHost->Lua();
 
@@ -274,7 +281,7 @@ void CScripting_SnapshotTypes::CreateSnapItemTable(CScriptHost *pHost, int iType
 	lua_setfield(pLua, -2, "_type");
 
 	// register the fields
-	const CSnapType *pType = &m_aSnapTypes[iType];
+	const CType *pType = m_lpTypes[iType];
 	for(int i = 0; i < pType->m_NumFields; i++)
 	{
 		lua_pushnumber(pLua, 0);
@@ -282,22 +289,20 @@ void CScripting_SnapshotTypes::CreateSnapItemTable(CScriptHost *pHost, int iType
 	}
 }
 
-int CScripting_SnapshotTypes::LF_Snap_RegisterItemType(CScriptHost *pHost, void *pData)
+int CObjectTypes::RegisterType(CScriptHost *pHost)
 {
-	CScripting_SnapshotTypes *pThis = (CScripting_SnapshotTypes *)pData;
 	lua_State *pLua = pHost->Lua();
 
-	int iType = pThis->m_NumSnapTypes++;
+	CType *pType = new CType;
+	int iType = m_lpTypes.add(pType);
 	int iField = 0;
-
-	//printf("%d\n", iType);
 
 	lua_pushnil(pLua); //
 	while(lua_next(pLua, -2) != 0)
 	{
 		// -2 == key 
 		// -1 == value (table)
-		CSnapType::CField *pField = &pThis->m_aSnapTypes[iType].m_aFields[iField];
+		CType::CField *pField = &pType->m_aFields[iField];
 
 		// get name
 		lua_getfield(pLua, -1, "name");
@@ -311,23 +316,31 @@ int CScripting_SnapshotTypes::LF_Snap_RegisterItemType(CScriptHost *pHost, void 
 			pField->m_Scale = lua_tonumber(pLua, -1);
 		lua_pop(pLua, 1);
 
+		// get type
+		pField->m_Type = CType::TYPE_UNKNOWN;
+		/*
+		lua_getfield(pLua, -1, "type");
+		if(lua_isnumber(pLua, -1))
+			pField->m_Scale = lua_tointe(pLua, -1);
+		lua_pop(pLua, 1);
+		*/
 
 		// pop value
 		iField++;
 		lua_pop(pLua, 1);
 	}
 
-	pThis->m_aSnapTypes[iType].m_NumFields = iField;
+	pType->m_NumFields = iField;
 
 	// do a register function for this
-	lua_getglobal(pLua, "__snaps");
+	lua_getglobal(pLua, m_pCacheTableName);
 		lua_newtable(pLua); // table of objects
-			for(unsigned k = 0; k < NUM_SNAPOBJECTS; k++)
+			for(unsigned k = 0; k < CACHE_SIZE; k++)
 			{
-				pThis->CreateSnapItemTable(pHost, iType);
+				PushNewTable(pHost, iType);
 				lua_rawseti(pLua, -2, k); // __snaps[iType] = table of objects
 			}
-			lua_rawseti(pLua, -2, iType); // __snaps[iType] = table of objects
+		lua_rawseti(pLua, -2, iType); // __snaps[iType] = table of objects
 	lua_pop(pLua, 1);
 
 	/*
@@ -336,20 +349,57 @@ int CScripting_SnapshotTypes::LF_Snap_RegisterItemType(CScriptHost *pHost, void 
 
 	lua_pushlightuserdata(pLua, GenerateLightData(TYPE_RESOURCE, pRes->Slot().Slot()));
 	*/
-	lua_pushinteger(pLua, iType);
-	return 1;
+	//lua_pushinteger(pLua, iType);
+	return iType;
 }
+
+
+void CObjectTypes::PushCachedTable(CScriptHost *pHost, int iType)
+{
+	lua_State *pLua = pHost->Lua();
+	lua_getglobal(pLua, m_pCacheTableName); // TODO: name
+	lua_rawgeti(pLua, -1, iType);
+	CType *pType = m_lpTypes[iType];
+	pType->m_LastUsedIndex = (pType->m_LastUsedIndex+1) % CACHE_SIZE;
+	lua_rawgeti(pLua, -1, pType->m_LastUsedIndex);
+	lua_remove(pLua, -2); // remove objects table
+	lua_remove(pLua, -2); // remove __snaps
+
+	pHost->Assert(lua_istable(pLua, -1));
+	
+}
+
+void CObjectTypes::Register(CScriptHost *pHost, const char *pCacheTableName)
+{
+	m_pCacheTableName = pCacheTableName;
+	m_lpTypes.delete_all();
+
+	lua_newtable(pHost->Lua()); // create cache table
+	lua_setglobal(pHost->Lua(), m_pCacheTableName);
+}
+
+
+/*******************************/
+
+int CScripting_SnapshotTypes::LF_Snap_RegisterItemType(CScriptHost *pHost, void *pData)
+{
+	CScripting_SnapshotTypes *pThis = (CScripting_SnapshotTypes *)pData;
+	lua_pushinteger(pHost->Lua(), pThis->m_Types.RegisterType(pHost));
+	return 1;
+};
 
 void CScripting_SnapshotTypes::Register(CScriptHost *pHost)
 {
-	mem_zero(m_aSnapTypes, sizeof(m_aSnapTypes));
-	m_NumSnapTypes = 1; // we start at 1
-
 	pHost->RegisterFunction("Snap_RegisterItemType", LF_Snap_RegisterItemType, this);
+	m_Types.Register(pHost, "__snapshottypes");
 
-	lua_newtable(pHost->Lua()); // create snaps table
-	lua_setglobal(pHost->Lua(), "__snaps");
+	// nr 0 first is invalid
+	lua_newtable(pHost->Lua());
+	m_Types.RegisterType(pHost);
+	lua_pop(pHost->Lua(), 1);
 }
+
+/*******************************/
 
 
 #include <engine/client.h>
@@ -357,14 +407,16 @@ void CScripting_SnapshotTypes::Register(CScriptHost *pHost)
 void CScripting_SnapshotClient::FillSnapItem(CScriptHost *pHost, int iType, const int *pData, int Count)
 {
 	lua_State *pLua = pHost->Lua();
-	CScripting_SnapshotTypes::CSnapType *pSnapType = &m_pScriptingSnapshotTypes->m_aSnapTypes[iType];
+	CObjectTypes::CType *pType = m_pScriptingSnapshotTypes->GetType(iType);
+	if(!pType)
+		return;
 
 	for(int i = 0; i < Count; i++)
 	{
-		const char *pFieldName = pSnapType->m_aFields[i].m_aName;
+		const char *pFieldName = pType->m_aFields[i].m_aName;
 
 		lua_pushlstring(pLua, pFieldName, str_length(pFieldName));
-		lua_pushnumber(pLua, pData[i] / pSnapType->m_aFields[i].m_Scale);
+		lua_pushnumber(pLua, pData[i] / pType->m_aFields[i].m_Scale);
 
 		lua_rawset(pLua, -3);
 	}
@@ -391,7 +443,7 @@ int CScripting_SnapshotClient::LF_Snap_GetItem(CScriptHost *pHost, void *pData)
 
 	if(pOldItemData)
 	{
-		pThis->m_pScriptingSnapshotTypes->GetSnapItemTable(pHost, Item.m_Type);
+		pThis->m_pScriptingSnapshotTypes->m_Types.PushCachedTable(pHost, Item.m_Type);
 		pThis->FillSnapItem(pHost, Item.m_Type, pOldItemData, Item.m_DataSize/4);
 	}
 	else
@@ -399,7 +451,7 @@ int CScripting_SnapshotClient::LF_Snap_GetItem(CScriptHost *pHost, void *pData)
 
 	if(pItemData)
 	{
-		pThis->m_pScriptingSnapshotTypes->GetSnapItemTable(pHost, Item.m_Type);
+		pThis->m_pScriptingSnapshotTypes->m_Types.PushCachedTable(pHost, Item.m_Type);
 		pThis->FillSnapItem(pHost, Item.m_Type, pItemData, Item.m_DataSize/4);
 	}
 	else
@@ -414,6 +466,8 @@ void CScripting_SnapshotClient::Register(CScriptHost *pHost, IClient *pClient, C
 	pHost->RegisterFunction("Snap_NumItems", LF_Snap_NumItems, this);
 	pHost->RegisterFunction("Snap_GetItem", LF_Snap_GetItem, this);
 }
+
+/*******************************/
 
 int CScripting_Resources::LF_Resource_Get(CScriptHost *pHost, void *pData)
 {
@@ -441,6 +495,8 @@ void CScripting_Resources::Register(CScriptHost *pHost, IResources *pResources)
 	pHost->RegisterFunction("Resource_Get", LF_Resource_Get, this);
 }
 
+
+/*******************************/
 
 #include <engine/graphics.h>
 
@@ -501,6 +557,8 @@ void CScripting_Graphics::Register(CScriptHost *pHost, CScripting_Resources *pSc
 	LF_Graphics_ResetUV(pHost, this);
 }
 
+
+/*******************************/
 
 extern bool SCRIPT_TEMP_Physics_CheckPoint(float x, float y);
 extern void SCRIPT_TEMP_Physics_MoveBox(vec2 *pInoutPos, vec2 *pInoutVel, vec2 Size, float Elasticity);
