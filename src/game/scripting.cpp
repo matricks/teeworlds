@@ -1,6 +1,6 @@
-
 #include <base/vmath.h>
 #include <base/system.h>
+#include <engine/message.h>
 #include "scripting.h"
 
 extern "C"
@@ -121,6 +121,25 @@ int CScriptHost::LF_ErrorFunc(lua_State *L)
 	}
 	
 	return 1;
+}
+
+
+void CScriptHost::Error(const char *pFormat, ...)
+{
+	char aBuffer[1024];
+	va_list ap;
+	va_start(ap, pFormat);
+#if defined(CONF_FAMILY_WINDOWS)
+	_vsnprintf(aBuffer, sizeof(aBuffer), pFormat, ap);
+#else
+	vsnprintf(aBuffer, sizeof(aBuffer), pFormat, ap);
+#endif
+	va_end(ap);
+
+	aBuffer[sizeof(aBuffer)-1] = 0;
+
+	lua_pushlstring(m_pLua, aBuffer, str_length(aBuffer));
+	lua_error(m_pLua);
 }
 
 void CScriptHost::Assert(bool Check)
@@ -258,7 +277,7 @@ void CScriptHost::Call(const char *pFunctionName, const char *pArgs, ...)
 
 	if(lua_pcall(m_pLua, NumArgs, 0, -2 - NumArgs) != 0)
 	{
-		//dbg_msg("script", "error: %s", lua_tostring(m_pLua, -1));
+		dbg_msg("script", "error calling: %s\n\t%s", pFunctionName, lua_tostring(m_pLua, -1));
 		//LF_ErrorFunc(m_pLua);
 	}
 
@@ -401,6 +420,114 @@ void CScripting_SnapshotTypes::Register(CScriptHost *pHost)
 
 /*******************************/
 
+int CScripting_Messaging::LF_Msg_Register(CScriptHost *pHost, void *pData)
+{
+	CScripting_Messaging *pThis = (CScripting_Messaging *)pData;
+	lua_pushinteger(pHost->Lua(), pThis->m_Types.RegisterType(pHost));
+	return 1;
+}
+
+int CScripting_Messaging::LF_Msg_Create(CScriptHost *pHost, void *pData)
+{
+	CScripting_Messaging *pThis = (CScripting_Messaging *)pData;
+	pThis->m_Types.PushCachedTable(pHost, lua_tointeger(pHost->Lua(), 1));
+	return 1;
+}
+
+#include <engine/client.h>
+#include <engine/server.h>
+#include <engine/shared/protocol.h>
+
+// Msg_Send(msg, [client])
+int CScripting_Messaging::LF_Msg_Send(CScriptHost *pHost, void *pData)
+{
+	CScripting_Messaging *pThis = (CScripting_Messaging *)pData;
+
+	lua_getfield(pHost->Lua(), 1, "_type");
+	int TypeId = lua_tointeger(pHost->Lua(), -1);
+	lua_pop(pHost->Lua(), 1);
+
+	CObjectTypes::CType *pType = pThis->m_Types.GetType(TypeId);
+	if(!pType)
+		return 0;
+
+	dbg_msg("script", "sending message %d", TypeId);
+
+	// build message
+	CMsgPacker Packer(TypeId);
+	for(int i = 0; i < pType->m_NumFields; i++)
+	{
+		CObjectTypes::CType::CField *pField = &pType->m_aFields[i];
+		
+		lua_getfield(pHost->Lua(), 1, pField->m_aName);
+		if(pField->m_Type == CObjectTypes::CType::TYPE_INT)
+		{
+			dbg_msg("script", "\t%s = %d", pField->m_aName, lua_tointeger(pHost->Lua(), -1));
+			Packer.AddInt(lua_tointeger(pHost->Lua(), -1));
+		}
+		else if(pField->m_Type == CObjectTypes::CType::TYPE_STRING)
+		{
+			dbg_msg("script", "\t%s = '%s'", pField->m_aName, lua_tolstring(pHost->Lua(), -1, NULL));
+			Packer.AddString(lua_tolstring(pHost->Lua(), -1, NULL), 128); // TODO: limit for now
+		}
+		else
+			pHost->Error("Field '%s' has unsupported type %d", pField->m_aName, pField->m_Type); // TODO: improve error message
+		
+		lua_pop(pHost->Lua(), 1);
+	}
+
+	if(pThis->m_pClient)
+	{
+		pThis->m_pClient->SendMsg(&Packer, MSGFLAG_VITAL);
+	}
+	else if(pThis->m_pServer)
+	{
+		int ClientId = lua_tointeger(pHost->Lua(), 2);
+		pThis->m_pServer->SendMsg(&Packer, MSGFLAG_VITAL, ClientId);
+	}
+
+		/*
+
+		CNetMsg_Sv_Chat Msg;
+		Msg.m_Team = 0;
+		Msg.m_ClientID = -1;
+		Msg.m_pMessage = pText;
+		Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, To);
+
+	template<class T>
+	int SendPackMsg(T *pMsg, int Flags, int ClientID)
+	{
+		CMsgPacker Packer(pMsg->MsgID());
+		if(pMsg->Pack(&Packer))
+			return -1;
+		return SendMsg(&Packer, Flags, ClientID);
+	}*/
+
+	//IClient *m_pClient;
+	//IServer *m_pServer;
+
+	return 0;
+}
+
+void CScripting_Messaging::Register(CScriptHost *pHost, IClient *pClient, IServer *pServer)
+{
+	m_pClient = pClient;
+	m_pServer = pServer;
+
+	// TODO: check that we have either server or client, not both, and not neither of em
+
+	pHost->RegisterFunction("Msg_Create", LF_Msg_Create, this);
+	pHost->RegisterFunction("Msg_Send", LF_Msg_Send, this);
+	pHost->RegisterFunction("Msg_Register", LF_Msg_Register, this);
+	m_Types.Register(pHost, "__messages");
+
+	// nr 0 first is invalid
+	lua_newtable(pHost->Lua());
+	m_Types.RegisterType(pHost);
+	lua_pop(pHost->Lua(), 1);
+}
+
+/*******************************/
 
 #include <engine/client.h>
 

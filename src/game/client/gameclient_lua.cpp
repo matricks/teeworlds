@@ -18,6 +18,7 @@ public:
 	CScripting_SnapshotTypes m_Scripting_SnapshotTypes;
 	CScripting_SnapshotClient m_Scripting_SnapshotClient;
 	CScripting_Physics m_Scripting_Physics;
+	CScripting_Messaging m_Scripting_Messaging;
 		
 	void Reset(IKernel *pKernel)
 	{
@@ -29,6 +30,7 @@ public:
 		m_Scripting_SnapshotTypes.Register(&m_Script);
 		m_Scripting_SnapshotClient.Register(&m_Script,  m_pClient, &m_Scripting_SnapshotTypes);
 		m_Scripting_Physics.Register(&m_Script);
+		m_Scripting_Messaging.Register(&m_Script, m_pClient, NULL);
 
 		UpdateVariables();
 

@@ -17,6 +17,9 @@ end
 
 function OnClientConnected(client_id)
 	print(client_id, "connected")
+
+	local msg = engine.Msg_Create(MSG_SV_READYTOENTER)
+	engine.Msg_Send(msg, client_id)
 end
 
 function OnClientEnter(client_id)

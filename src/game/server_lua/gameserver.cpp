@@ -11,6 +11,7 @@ protected:
 	CScripting_Resources m_Scripting_Resources;
 	CScripting_SnapshotTypes m_Scripting_SnapshotTypes;
 	CScripting_Physics m_Scripting_Physics;
+	CScripting_Messaging m_Scripting_Messaging;
 
 public:
 	virtual void OnInit()
@@ -19,6 +20,7 @@ public:
 		//m_Scripting_Resources.Register(&m_Script, m_pResources);
 		m_Scripting_SnapshotTypes.Register(&m_Script);
 		m_Scripting_Physics.Register(&m_Script);
+		m_Scripting_Messaging.Register(&m_Script, NULL, Kernel()->RequestInterface<IServer>());
 
 		m_Script.SetVariableInt("server", 1);
 		m_Script.SetVariableFloat("time_servertickspeed", SERVER_TICK_SPEED);

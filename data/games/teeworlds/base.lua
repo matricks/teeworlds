@@ -260,8 +260,6 @@ SNAPITEM_EVENT_DAMAGEIND = engine.Snap_RegisterItemType({
 	{name = "angle"},
 })
 
---[[
-
 MSG_SV_MOTD = engine.Msg_Register({
 	{type="string", name = "message"},
 })
@@ -295,7 +293,9 @@ MSG_SV_EXTRAPROJECTILE = engine.Msg_Register({
 
 MSG_SV_READYTOENTER = engine.Msg_Register({
 })
-]]
+
+
+
 --[[
 msg = engine.Msg_Create(MSG_SV_READYTOENTER)
 msg.x = y

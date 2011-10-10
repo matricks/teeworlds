@@ -39,6 +39,7 @@ public:
 
 	void DoFile(const char *pFilename);
 
+	void Error(const char *pFormat, ...); // will cause a long jump
 	void Assert(bool Check);
 
 	typedef int (*SCRIPTFUNC)(CScriptHost *pHost, void *pData);
@@ -109,34 +110,6 @@ class CScripting_SnapshotTypes
 {
 public:
 	CObjectTypes m_Types;
-	/*
-	class CSnapType
-	{
-	public:
-		class CField
-		{
-		public:
-			float m_Scale;
-			char m_aName[32];
-		};
-
-		CField m_aFields[32];
-		int m_NumFields;
-
-		int m_LastUsedIndex;
-	};
-
-	CSnapType m_aSnapTypes[64];
-	int m_NumSnapTypes;
-	
-	enum
-	{
-		NUM_SNAPOBJECTS = 16, // how many tables of each snapshot item type we should create
-	};
-
-	void GetSnapItemTable(CScriptHost *pHost, int iType);
-	void CreateSnapItemTable(CScriptHost *pHost, int iType);*/
-
 	static int LF_Snap_RegisterItemType(CScriptHost *pHost, void *pData);
 public:
 	CObjectTypes::CType *GetType(int iType) { return m_Types.GetType(iType); }
@@ -144,6 +117,22 @@ public:
 };
 
 class IClient;
+class IServer;
+
+class CScripting_Messaging
+{
+public:
+	IClient *m_pClient;
+	IServer *m_pServer;
+	CObjectTypes m_Types;
+	static int LF_Msg_Register(CScriptHost *pHost, void *pData);
+	static int LF_Msg_Create(CScriptHost *pHost, void *pData);
+	static int LF_Msg_Send(CScriptHost *pHost, void *pData);
+public:
+	CObjectTypes::CType *GetType(int iType) { return m_Types.GetType(iType); }
+	void Register(CScriptHost *pHost, IClient *pClient, IServer *pServer);
+};
+
 
 class CScripting_SnapshotClient
 {
