@@ -36,6 +36,7 @@ public:
 	lua_State *Lua() { return m_pLua; }
 
 	void Reset();
+	void RunGC();
 
 	void DoFile(const char *pFilename);
 

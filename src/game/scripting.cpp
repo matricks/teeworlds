@@ -174,6 +174,8 @@ void CScriptHost::Reset()
 	}
 
 	m_pLua = lua_newstate(LuaAllocator, this);
+	lua_checkstack(m_pLua, 128);
+
 	lua_atpanic(m_pLua, LF_ErrorFunc);
 	luaopen_base(m_pLua);
 	luaopen_math(m_pLua);
@@ -193,6 +195,11 @@ void CScriptHost::Reset()
 	// register functions
 	lua_newtable(m_pLua); // create snaps table
 	lua_setglobal(m_pLua, "engine");
+}
+
+void CScriptHost::RunGC()
+{
+	lua_gc(m_pLua, LUA_GCCOLLECT, 0);
 }
 
 void CScriptHost::DoFile(const char *pFilename)
@@ -484,6 +491,10 @@ int CScripting_Messaging::LF_Msg_Send(CScriptHost *pHost, void *pData)
 	{
 		int ClientId = lua_tointeger(pHost->Lua(), 2);
 		pThis->m_pServer->SendMsg(&Packer, MSGFLAG_VITAL, ClientId);
+	}
+	else
+	{
+		// error here
 	}
 
 		/*

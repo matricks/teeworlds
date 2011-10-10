@@ -1,12 +1,16 @@
 #include <engine/shared/protocol.h>
 #include <engine/server.h>
+#include <engine/map.h>
 #include <game/scripting.h>
+#include <game/mapitems.h>
 
 class CGameServer_Lua : public IGameServer
 {
 public:
 	MACRO_INTERFACE("gameserver", 0)
 protected:
+	IServer *m_pServer;
+
 	CScriptHost m_Script;
 	CScripting_Resources m_Scripting_Resources;
 	CScripting_SnapshotTypes m_Scripting_SnapshotTypes;
@@ -16,6 +20,27 @@ protected:
 public:
 	virtual void OnInit()
 	{
+		m_pServer = Kernel()->RequestInterface<IServer>();
+
+		// dig out the images that the map uses
+		{
+			IMap *pMap = Kernel()->RequestInterface<IMap>();
+			int Start, Count;
+			pMap->GetType(MAPITEMTYPE_IMAGE, &Start, &Count);
+
+			// load new textures
+			for(int i = 0; i < Count; i++)
+			{
+				CMapItemImage *pImg = (CMapItemImage *)pMap->GetItem(Start+i, 0, 0);
+				if(pImg->m_External)
+				{
+					char Buf[256];
+					str_format(Buf, sizeof(Buf), "mapres/%s.png", (char *)pMap->GetData(pImg->m_ImageName));
+					m_pServer->LoadResource(Buf);
+				}
+			}
+		}
+			
 		m_Script.Reset();
 		//m_Scripting_Resources.Register(&m_Script, m_pResources);
 		m_Scripting_SnapshotTypes.Register(&m_Script);
