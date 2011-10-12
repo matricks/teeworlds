@@ -555,7 +555,6 @@ void CScripting_SnapshotClient::FillSnapItem(CScriptHost *pHost, int iType, cons
 
 		lua_pushlstring(pLua, pFieldName, str_length(pFieldName));
 		lua_pushnumber(pLua, pData[i] / pType->m_aFields[i].m_Scale);
-
 		lua_rawset(pLua, -3);
 	}
 }
@@ -604,6 +603,69 @@ void CScripting_SnapshotClient::Register(CScriptHost *pHost, IClient *pClient, C
 	pHost->RegisterFunction("Snap_NumItems", LF_Snap_NumItems, this);
 	pHost->RegisterFunction("Snap_GetItem", LF_Snap_GetItem, this);
 }
+
+
+int CScripting_SnapshotServer::LF_Snap_NewId(CScriptHost *pHost, void *pData)
+{
+	CScripting_SnapshotServer *pThis = (CScripting_SnapshotServer *)pData;
+	lua_pushinteger(pHost->Lua(), pThis->m_pServer->SnapNewID());
+	return 1;
+}
+
+//static int LF_Snap_FreeId(CScriptHost *pHost, void *pData); // GC:ed?
+int CScripting_SnapshotServer::LF_Snap_CreateItem(CScriptHost *pHost, void *pData)
+{
+	// TODO: Error checking
+	CScripting_SnapshotServer *pThis = (CScripting_SnapshotServer *)pData;
+	pThis->m_pScriptingSnapshotTypes->m_Types.PushCachedTable(pHost, lua_tointeger(pHost->Lua(), 1));
+	lua_pushinteger(pHost->Lua(), lua_tointeger(pHost->Lua(), 1));
+	lua_setfield(pHost->Lua(), -2, "_snapid");
+	return 1;
+}
+
+int CScripting_SnapshotServer::LF_Snap_CommitItem(CScriptHost *pHost, void *pData)
+{
+	CScripting_SnapshotServer *pThis = (CScripting_SnapshotServer *)pData;
+
+	lua_getfield(pHost->Lua(), 1, "_type");
+	int TypeId = lua_tointeger(pHost->Lua(), -1);
+	lua_pop(pHost->Lua(), 1);
+
+	lua_getfield(pHost->Lua(), 1, "_snapid");
+	int SnapId = lua_tointeger(pHost->Lua(), -1);
+	lua_pop(pHost->Lua(), 1);
+
+	CObjectTypes::CType *pType = pThis->m_pScriptingSnapshotTypes->m_Types.GetType(TypeId);
+
+	if(!pType)
+		pHost->Error("unknown object type %d", TypeId);
+
+	int *pItem = (int *)pThis->m_pServer->SnapNewItem(TypeId, SnapId, pType->m_NumFields);
+
+	// fill the item
+	for(int i = 0; i < pType->m_NumFields; i++)
+	{
+		lua_getfield(pHost->Lua(), 1, pType->m_aFields[i].m_aName);
+		float FloatValue = (float)lua_tonumber(pHost->Lua(), -1);
+		int IntValue = (int)(FloatValue / pType->m_aFields[i].m_Scale);
+		lua_pop(pHost->Lua(), 1);
+
+		*pItem++ = IntValue;
+	}
+
+
+	return 0;
+}
+
+void CScripting_SnapshotServer::Register(CScriptHost *pHost,  IServer *pServer, CScripting_SnapshotTypes *pScriptingSnapshotTypes)
+{
+	m_pServer = pServer;
+	m_pScriptingSnapshotTypes = pScriptingSnapshotTypes;
+	pHost->RegisterFunction("Snap_NewId", LF_Snap_NewId, this);
+	pHost->RegisterFunction("Snap_CreateItem", LF_Snap_CreateItem, this);
+	pHost->RegisterFunction("Snap_CommitItem", LF_Snap_CommitItem, this);
+}
+
 
 /*******************************/
 

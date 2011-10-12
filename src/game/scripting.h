@@ -107,16 +107,6 @@ public:
 	void PushNewTable(CScriptHost *pHost, int iType);
 };
 
-class CScripting_SnapshotTypes
-{
-public:
-	CObjectTypes m_Types;
-	static int LF_Snap_RegisterItemType(CScriptHost *pHost, void *pData);
-public:
-	CObjectTypes::CType *GetType(int iType) { return m_Types.GetType(iType); }
-	void Register(CScriptHost *pHost);
-};
-
 class IClient;
 class IServer;
 
@@ -134,6 +124,15 @@ public:
 	void Register(CScriptHost *pHost, IClient *pClient, IServer *pServer);
 };
 
+class CScripting_SnapshotTypes
+{
+public:
+	CObjectTypes m_Types;
+	static int LF_Snap_RegisterItemType(CScriptHost *pHost, void *pData);
+public:
+	CObjectTypes::CType *GetType(int iType) { return m_Types.GetType(iType); }
+	void Register(CScriptHost *pHost);
+};
 
 class CScripting_SnapshotClient
 {
@@ -147,6 +146,21 @@ class CScripting_SnapshotClient
 public:
 	void Register(CScriptHost *pHost, IClient *pClient, CScripting_SnapshotTypes *pScriptingSnapshotTypes);
 };
+
+
+class CScripting_SnapshotServer
+{
+	CScripting_SnapshotTypes *m_pScriptingSnapshotTypes;
+	IServer *m_pServer;
+
+	static int LF_Snap_NewId(CScriptHost *pHost, void *pData); // GC takes care of freeing it?
+	//static int LF_Snap_FreeId(CScriptHost *pHost, void *pData); // GC:ed?
+	static int LF_Snap_CreateItem(CScriptHost *pHost, void *pData); // itemtype, id
+	static int LF_Snap_CommitItem(CScriptHost *pHost, void *pData); // item
+public:
+	void Register(CScriptHost *pHost, IServer *pServer, CScripting_SnapshotTypes *pScriptingSnapshotTypes);
+};
+
 
 
 class IResources;
