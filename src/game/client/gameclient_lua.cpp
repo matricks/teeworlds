@@ -4,7 +4,6 @@
 
 #include "gameclient_lua.h"
 
-
 class CUnpacker;
 
 class CServerScripting

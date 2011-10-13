@@ -1,6 +1,10 @@
 dofile("data/games/teeworlds/base.lua") -- TODO: fix the path
 
+TestId = 0
+
 function OnInit()
+	TestId = engine.Snap_NewId()
+	print(SNAPITEM_PICKUP, TestId)
 end
 
 function OnTick()
@@ -10,6 +14,14 @@ function OnPreSnap()
 end
 
 function OnSnap(client_id)
+	local item = engine.Snap_CreateItem(SNAPITEM_PICKUP, TestId)
+	--for k,v in pairs(item) do
+	--	print(k,v)
+	--end
+	item.x = 150
+	item.y = 150
+	item.type = 0 -- health
+	engine.Snap_CommitItem(item)
 end
 
 function OnPostSnap()

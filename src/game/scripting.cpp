@@ -618,8 +618,8 @@ int CScripting_SnapshotServer::LF_Snap_CreateItem(CScriptHost *pHost, void *pDat
 	// TODO: Error checking
 	CScripting_SnapshotServer *pThis = (CScripting_SnapshotServer *)pData;
 	pThis->m_pScriptingSnapshotTypes->m_Types.PushCachedTable(pHost, lua_tointeger(pHost->Lua(), 1));
-	lua_pushinteger(pHost->Lua(), lua_tointeger(pHost->Lua(), 1));
-	lua_setfield(pHost->Lua(), -2, "_snapid");
+	lua_pushinteger(pHost->Lua(), lua_tointeger(pHost->Lua(), 2));
+	lua_setfield(pHost->Lua(), -2, "_itemid");
 	return 1;
 }
 
@@ -631,7 +631,7 @@ int CScripting_SnapshotServer::LF_Snap_CommitItem(CScriptHost *pHost, void *pDat
 	int TypeId = lua_tointeger(pHost->Lua(), -1);
 	lua_pop(pHost->Lua(), 1);
 
-	lua_getfield(pHost->Lua(), 1, "_snapid");
+	lua_getfield(pHost->Lua(), 1, "_itemid");
 	int SnapId = lua_tointeger(pHost->Lua(), -1);
 	lua_pop(pHost->Lua(), 1);
 
@@ -640,7 +640,8 @@ int CScripting_SnapshotServer::LF_Snap_CommitItem(CScriptHost *pHost, void *pDat
 	if(!pType)
 		pHost->Error("unknown object type %d", TypeId);
 
-	int *pItem = (int *)pThis->m_pServer->SnapNewItem(TypeId, SnapId, pType->m_NumFields);
+	//dbg_msg("scripting", "%d %d %d", TypeId, SnapId, pType->m_NumFields);
+	int *pItem = (int *)pThis->m_pServer->SnapNewItem(TypeId, SnapId, pType->m_NumFields*sizeof(int));
 
 	// fill the item
 	for(int i = 0; i < pType->m_NumFields; i++)
@@ -650,7 +651,8 @@ int CScripting_SnapshotServer::LF_Snap_CommitItem(CScriptHost *pHost, void *pDat
 		int IntValue = (int)(FloatValue / pType->m_aFields[i].m_Scale);
 		lua_pop(pHost->Lua(), 1);
 
-		*pItem++ = IntValue;
+		//dbg_msg("scripting", "%s %d", pType->m_aFields[i].m_aName, IntValue);
+		pItem[i] = IntValue;
 	}
 
 

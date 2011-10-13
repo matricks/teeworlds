@@ -4,6 +4,11 @@
 #include <game/scripting.h>
 #include <game/mapitems.h>
 
+// this is needed for now
+#include <game/generated/protocol.h>
+
+
+
 class CGameServer_Lua : public IGameServer
 {
 public:
@@ -14,9 +19,12 @@ protected:
 	CScriptHost m_Script;
 	CScripting_Resources m_Scripting_Resources;
 	CScripting_SnapshotTypes m_Scripting_SnapshotTypes;
+	CScripting_SnapshotServer m_Scripting_SnapshotServer;
 	CScripting_Physics m_Scripting_Physics;
 	CScripting_Messaging m_Scripting_Messaging;
 
+	// this is needed for now, we need the sizes of the snap objects.... crap
+	CNetObjHandler m_NetObjHandler;
 public:
 	virtual void OnInit()
 	{
@@ -40,12 +48,17 @@ public:
 				}
 			}
 		}
-			
+
+		// do this for now, should be moved into the scripting parts
+		for(int i = 0; i < NUM_NETOBJTYPES; i++)
+			m_pServer->SnapSetStaticsize(i, m_NetObjHandler.GetObjSize(i));
+
 		m_Script.Reset();
 		//m_Scripting_Resources.Register(&m_Script, m_pResources);
 		m_Scripting_SnapshotTypes.Register(&m_Script);
+		m_Scripting_SnapshotServer.Register(&m_Script, m_pServer, &m_Scripting_SnapshotTypes);
 		m_Scripting_Physics.Register(&m_Script);
-		m_Scripting_Messaging.Register(&m_Script, NULL, Kernel()->RequestInterface<IServer>());
+		m_Scripting_Messaging.Register(&m_Script, NULL, m_pServer);
 
 		m_Script.SetVariableInt("server", 1);
 		m_Script.SetVariableFloat("time_servertickspeed", SERVER_TICK_SPEED);
