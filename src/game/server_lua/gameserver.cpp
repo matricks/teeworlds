@@ -7,7 +7,7 @@
 // this is needed for now
 #include <game/generated/protocol.h>
 
-
+#include <game/layers.h> // for map layers
 
 class CGameServer_Lua : public IGameServer
 {
@@ -22,6 +22,9 @@ protected:
 	CScripting_SnapshotServer m_Scripting_SnapshotServer;
 	CScripting_Physics m_Scripting_Physics;
 	CScripting_Messaging m_Scripting_Messaging;
+	CScripting_Map m_Scripting_Map;
+
+	CLayers m_Layers;
 
 	// this is needed for now, we need the sizes of the snap objects.... crap
 	CNetObjHandler m_NetObjHandler;
@@ -30,9 +33,13 @@ public:
 	{
 		m_pServer = Kernel()->RequestInterface<IServer>();
 
+		m_Layers.Init(Kernel());
+
+		IMap *pMap = Kernel()->RequestInterface<IMap>();
+
 		// dig out the images that the map uses
 		{
-			IMap *pMap = Kernel()->RequestInterface<IMap>();
+			
 			int Start, Count;
 			pMap->GetType(MAPITEMTYPE_IMAGE, &Start, &Count);
 
@@ -59,6 +66,9 @@ public:
 		m_Scripting_SnapshotServer.Register(&m_Script, m_pServer, &m_Scripting_SnapshotTypes);
 		m_Scripting_Physics.Register(&m_Script);
 		m_Scripting_Messaging.Register(&m_Script, NULL, m_pServer);
+
+		CMapItemLayerTilemap *pTileMap = m_Layers.GameLayer();
+		m_Scripting_Map.Register(&m_Script, pTileMap, (CTile *)pMap->GetData(pTileMap->m_Data));
 
 		m_Script.SetVariableInt("server", 1);
 		m_Script.SetVariableFloat("time_servertickspeed", SERVER_TICK_SPEED);

@@ -185,7 +185,7 @@ public:
 
 	static void *GenerateLightData(unsigned Type, int Index)
 	{
-		return (void *)(Type | (Index&LD_INDEXMASK));
+		return (void *)(size_t)(Type | (Index&LD_INDEXMASK));
 	}
 
 	static int LF_Resource_Get(CScriptHost *pHost, void *pData);
@@ -220,3 +220,17 @@ public:
 	// TODO: add the needed physics object
 	void Register(CScriptHost *pHost);
 };
+
+class CMapItemLayerTilemap;
+class CTile;
+
+class CScripting_Map
+{
+	CMapItemLayerTilemap *m_pTileMap;
+	CTile *m_pTiles;
+	static int LF_Map_GetSize(CScriptHost *pHost, void *pData);
+	static int LF_Map_GetTile(CScriptHost *pHost, void *pData);
+public:
+	void Register(CScriptHost *pHost, CMapItemLayerTilemap *pTileMap, CTile *pTiles);
+};
+

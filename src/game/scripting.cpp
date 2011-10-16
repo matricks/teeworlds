@@ -254,7 +254,7 @@ void CScriptHost::SetVariableFloat(const char *pName, float Value)
 
 void CScriptHost::Call(const char *pFunctionName, const char *pArgs, ...)
 {
-	unsigned Before = m_Mem_Calls;
+	//unsigned Before = m_Mem_Calls;
 
 	// call global on render function
 	lua_getglobal(m_pLua, "__errorfunc");
@@ -288,8 +288,8 @@ void CScriptHost::Call(const char *pFunctionName, const char *pArgs, ...)
 		//LF_ErrorFunc(m_pLua);
 	}
 
-	if(Before != m_Mem_Calls)
-		dbg_msg("script", "Warning: %s called the memory allocator %u times", pFunctionName, m_Mem_Calls - Before);
+	//if(Before != m_Mem_Calls)
+	//	dbg_msg("script", "Warning: %s called the memory allocator %u times", pFunctionName, m_Mem_Calls - Before);
 }
 
 
@@ -799,3 +799,42 @@ void CScripting_Physics::Register(CScriptHost *pHost)
 	pHost->RegisterFunction("Physics_CheckPoint", LF_Physics_CheckPoint, this);
 	pHost->RegisterFunction("Physics_MoveBox", LF_Physics_MoveBox, this);
 }	
+
+#include <game/mapitems.h>
+
+int CScripting_Map::LF_Map_GetSize(CScriptHost *pHost, void *pData)
+{
+	CScripting_Map *pThis = (CScripting_Map *)pData;
+	lua_pushinteger(pHost->Lua(), pThis->m_pTileMap->m_Width);
+	lua_pushinteger(pHost->Lua(), pThis->m_pTileMap->m_Height);
+	return 2;
+}
+
+int CScripting_Map::LF_Map_GetTile(CScriptHost *pHost, void *pData)
+{
+	CScripting_Map *pThis = (CScripting_Map *)pData;
+
+	int x = lua_tointeger(pHost->Lua(), 1);
+	int y = lua_tointeger(pHost->Lua(), 2);
+
+	if(x < 0 || x >= pThis->m_pTileMap->m_Width || y < 0 || y >= pThis->m_pTileMap->m_Height)
+		pHost->Error("out of bounds");
+
+	int Index = pThis->m_pTiles[y*pThis->m_pTileMap->m_Width + x].m_Index;
+	if(Index >= ENTITY_OFFSET)
+		lua_pushinteger(pHost->Lua(), Index-ENTITY_OFFSET);
+	else
+		lua_pushinteger(pHost->Lua(), 0);
+	return 1;
+}
+
+void CScripting_Map::Register(CScriptHost *pHost, CMapItemLayerTilemap *pTileMap, CTile *pTiles)
+{
+	m_pTileMap = pTileMap;
+	m_pTiles = pTiles;
+
+	pHost->RegisterFunction("Map_GetSize", LF_Map_GetSize, this);
+	pHost->RegisterFunction("Map_GetTile", LF_Map_GetTile, this);
+}
+
+

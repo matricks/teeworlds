@@ -7,6 +7,35 @@ function TableLock(tbl)
 	setmetatable(tbl, mt)
 end
 
+function TableDeepCopy(object)
+	local lookup_table = {}
+	local function _copy(object)
+		if type(object) ~= "table" then
+			return object
+		elseif lookup_table[object] then
+			return lookup_table[object]
+		end
+		local new_table = {}
+		lookup_table[object] = new_table
+		for index, value in pairs(object) do
+			new_table[_copy(index)] = _copy(value)
+		end
+		return setmetatable(new_table, getmetatable(object))
+	end
+	return _copy(object)
+end
+
+function DefineClass(table)
+	local newstruct = {
+		t = table,
+		New = function(self)
+			local new = TableDeepCopy(self.t)
+			return new
+		end
+	}
+	TableLock(newstruct)
+	return newstruct
+end
 
 data = {}
 if engine.client then -- for now
@@ -52,6 +81,19 @@ WEAPON_GUN = 1
 WEAPON_SHOTGUN = 2
 WEAPON_GRENADE = 3
 WEAPON_RIFLE = 4
+
+MAPTILE_ENTITY_NULL = 0
+MAPTILE_ENTITY_SPAWN = 1
+MAPTILE_ENTITY_SPAWN_RED = 2
+MAPTILE_ENTITY_SPAWN_BLUE = 3
+MAPTILE_ENTITY_FLAGSTAND_RED = 4
+MAPTILE_ENTITY_FLAGSTAND_BLUE = 5
+MAPTILE_ENTITY_ARMOR_1 = 6
+MAPTILE_ENTITY_HEALTH_1 = 7
+MAPTILE_ENTITY_WEAPON_SHOTGUN = 8
+MAPTILE_ENTITY_WEAPON_GRENADE = 9
+MAPTILE_ENTITY_POWERUP_NINJA = 10
+MAPTILE_ENTITY_WEAPON_RIFLE = 11
 
 -- TUNING ----------------------------------------------------------------------
 
