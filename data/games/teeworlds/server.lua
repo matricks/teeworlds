@@ -1,31 +1,26 @@
 dofile("data/games/teeworlds/base.lua") -- TODO: fix the path
 
 
--- class implementation, shamelessly ripped from love2d (SECS)
--- QUESTION: Am I happy with this system? some thing more advanced?
--- PROBLEM: there is no distiction between a class and an instance
--- PROBLEM: creating an entity type will cause an extra snapid to be allocated, might be a deal breaker
+-- CLASS SYSTEM
+-- Lookups are fast, creation is not
+-- :Init is called when it's created
 
-local class_metatable = {}
+CClass = {}
 
-function class_metatable:__index(key)
-	return self.super[key]
+function CClass:Subclass()
+	return TableDeepCopy(self)
 end
-
-CClass = setmetatable({ super = {} }, class_metatable)
 
 function CClass:New(...)
-	local c = {}
-	c.super = self
-	setmetatable(c, getmetatable(self))
-	if c.Init then
-		c:Init(...)
+	local instance = TableDeepCopy(self)
+	if instance.Init then
+		instance:Init(...)
 	end
-	return c
+	return instance
 end
 
 
-CClient = CClass:New()
+CClient = CClass:Subclass()
 CClient.id = 0
 CClient.name = ""
 CClient.view_x = 0
@@ -33,7 +28,7 @@ CClient.view_y = 0
 
 
 
-CEntity = CClass:New()
+CEntity = CClass:Subclass()
 CEntity.id = 0
 CEntity.x = 0
 CEntity.y = 0
@@ -54,8 +49,7 @@ end
 function CEntity:Snap(client)
 end
 
-
-CEntity_Pickup = CEntity:New()
+CEntity_Pickup = CEntity:Subclass()
 CEntity_Pickup.type = 0
 
 function CEntity_Pickup:Init(x, y, pickuptype)
@@ -67,7 +61,7 @@ function CEntity_Pickup:Snap(client)
 	local item = engine.Snap_CreateItem(SNAPITEM_PICKUP, self.id)
 	item.x = self.x
 	item.y = self.y
-	item.type = self.pickuptype
+	item.type = self.type
 	engine.Snap_CommitItem(item)
 end
 
@@ -90,6 +84,8 @@ function OnInit()
 			local ent = 0
 			if tile == MAPTILE_ENTITY_HEALTH_1 then
 				ent = CEntity_Pickup:New(x, y, 0)
+			elseif tile == MAPTILE_ENTITY_ARMOR_1 then
+				ent = CEntity_Pickup:New(x, y, 1)
 			end
 
 			if not (ent == 0) then
