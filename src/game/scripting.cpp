@@ -252,41 +252,58 @@ void CScriptHost::SetVariableFloat(const char *pName, float Value)
 
 #include <stdarg.h>
 
+
+void CScriptHost::CallSetup(const char *pFunctionName)
+{
+	lua_getglobal(m_pLua, "__errorfunc");
+	lua_getglobal(m_pLua, pFunctionName);
+	m_pCallFunctionName = pFunctionName;
+	m_CallNumArgs = 0;
+}
+
+void CScriptHost::CallIntegerArg(int Value)
+{
+	lua_pushinteger(m_pLua, Value);
+	m_CallNumArgs++;
+}
+
+void CScriptHost::CallFloatArg(float Value)
+{
+	lua_pushnumber(m_pLua, Value);
+	m_CallNumArgs++;
+}
+
+void CScriptHost::CallPerform()
+{
+	if(lua_pcall(m_pLua, m_CallNumArgs, 0, -2 - m_CallNumArgs) != 0)
+	{
+		dbg_msg("script", "error calling: %s\n\t%s", m_pCallFunctionName, lua_tostring(m_pLua, -1));
+		//LF_ErrorFunc(m_pLua);
+	}
+}
+
 void CScriptHost::Call(const char *pFunctionName, const char *pArgs, ...)
 {
 	//unsigned Before = m_Mem_Calls;
 
-	// call global on render function
-	lua_getglobal(m_pLua, "__errorfunc");
-	lua_getglobal(m_pLua, pFunctionName);
-	int NumArgs = 0;
+	CallSetup(pFunctionName);
 
+	va_list ArgList;
+	va_start(ArgList, pArgs);
+	for(int i = 0; pArgs[i]; i++)
 	{
-		va_list ArgList;
-
-		va_start(ArgList, pArgs);
-		for(int i = 0; pArgs[i]; i++)
+		if(pArgs[i] == 'i')
+			CallIntegerArg(va_arg(ArgList, int));
+		else if(pArgs[i] == 'f')
+			CallFloatArg((float)va_arg(ArgList, double));
+		else
 		{
-			if(pArgs[i] == 'i')
-				lua_pushinteger(m_pLua, va_arg(ArgList, int));
-			else if(pArgs[i] == 'f')
-				lua_pushnumber(m_pLua, va_arg(ArgList, double));
-			else
-			{
-				dbg_assert(false, "invalid type");
-			}
-			NumArgs++;
+			dbg_assert(false, "invalid type");
 		}
-
-		va_end(ArgList);
 	}
+	va_end(ArgList);
 
-
-	if(lua_pcall(m_pLua, NumArgs, 0, -2 - NumArgs) != 0)
-	{
-		dbg_msg("script", "error calling: %s\n\t%s", pFunctionName, lua_tostring(m_pLua, -1));
-		//LF_ErrorFunc(m_pLua);
-	}
+	CallPerform();
 
 	//if(Before != m_Mem_Calls)
 	//	dbg_msg("script", "Warning: %s called the memory allocator %u times", pFunctionName, m_Mem_Calls - Before);
@@ -392,7 +409,23 @@ void CObjectTypes::PushCachedTable(CScriptHost *pHost, int iType)
 	lua_remove(pLua, -2); // remove __snaps
 
 	pHost->Assert(lua_istable(pLua, -1));
-	
+}
+
+void CObjectTypes::PushCachedTableWithData(CScriptHost *pHost, int iType, const int *pData, int Count)
+{
+	PushCachedTable(pHost, iType);
+	CType *pType = m_lpTypes[iType];
+
+	pHost->Assert(pType->m_NumFields == Count);
+
+	Count = pType->m_NumFields < Count ? pType->m_NumFields : Count;
+	for(int i = 0; i < Count; i++)
+	{
+		const char *pFieldName = pType->m_aFields[i].m_aName;
+		lua_pushlstring(pHost->Lua(), pFieldName, str_length(pFieldName));
+		lua_pushnumber(pHost->Lua(), pData[i] / pType->m_aFields[i].m_Scale);
+		lua_rawset(pHost->Lua(), -3);
+	}
 }
 
 void CObjectTypes::Register(CScriptHost *pHost, const char *pCacheTableName)
@@ -538,6 +571,37 @@ void CScripting_Messaging::Register(CScriptHost *pHost, IClient *pClient, IServe
 	lua_pop(pHost->Lua(), 1);
 }
 
+int CScripting_Input::LF_Input_Register(CScriptHost *pHost, void *pData)
+{
+	CScripting_Input *pThis = (CScripting_Input *)pData;
+	pThis->m_Types.Reset();
+	lua_pushinteger(pHost->Lua(), pThis->m_Types.RegisterType(pHost));
+	return 1;	
+}
+
+int CScripting_Input::LF_Input_Create(CScriptHost *pHost, void *pData)
+{
+	CScripting_Messaging *pThis = (CScripting_Messaging *)pData;
+	pThis->m_Types.PushCachedTable(pHost, 0);
+	return 1;
+}
+
+void CScripting_Input::PushInput(CScriptHost *pHost, const int *pData, int Count)
+{
+	m_Types.PushCachedTableWithData(pHost, 0, pData, Count);
+}
+
+void CScripting_Input::Register(CScriptHost *pHost, IClient *pClient, IServer *pServer)
+{
+	m_pClient = pClient;
+	m_pServer = pServer;
+
+	pHost->RegisterFunction("Input_Register", LF_Input_Register, this);
+	pHost->RegisterFunction("Input_Create", LF_Input_Create, this);
+	m_Types.Register(pHost, "__input");
+}
+
+
 /*******************************/
 
 #include <engine/client.h>
@@ -580,16 +644,18 @@ int CScripting_SnapshotClient::LF_Snap_GetItem(CScriptHost *pHost, void *pData)
 
 	if(pOldItemData)
 	{
-		pThis->m_pScriptingSnapshotTypes->m_Types.PushCachedTable(pHost, Item.m_Type);
-		pThis->FillSnapItem(pHost, Item.m_Type, pOldItemData, Item.m_DataSize/4);
+		pThis->m_pScriptingSnapshotTypes->m_Types.PushCachedTableWithData(pHost, Item.m_Type, pOldItemData, Item.m_DataSize/4);
+		//pThis->m_pScriptingSnapshotTypes->m_Types.PushCachedTable(pHost, Item.m_Type);
+		//pThis->FillSnapItem(pHost, Item.m_Type, pOldItemData, Item.m_DataSize/4);
 	}
 	else
 		lua_pushnil(pLua);			
 
 	if(pItemData)
 	{
-		pThis->m_pScriptingSnapshotTypes->m_Types.PushCachedTable(pHost, Item.m_Type);
-		pThis->FillSnapItem(pHost, Item.m_Type, pItemData, Item.m_DataSize/4);
+		pThis->m_pScriptingSnapshotTypes->m_Types.PushCachedTableWithData(pHost, Item.m_Type, pItemData, Item.m_DataSize/4);
+		//pThis->m_pScriptingSnapshotTypes->m_Types.PushCachedTable(pHost, Item.m_Type);
+		//pThis->FillSnapItem(pHost, Item.m_Type, pItemData, Item.m_DataSize/4);
 	}
 	else
 		lua_pushnil(pLua);

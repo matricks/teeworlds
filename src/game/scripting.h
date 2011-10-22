@@ -31,6 +31,9 @@ class CScriptHost
 	/* error function */
 	static int LF_ErrorFunc(lua_State *L);
 	static int LF_Wrapper(lua_State *pLua);
+
+	int m_CallNumArgs;
+	const char *m_pCallFunctionName;
 public:
 	CScriptHost();
 	lua_State *Lua() { return m_pLua; }
@@ -50,6 +53,12 @@ public:
 	void SetVariableDouble(const char *pName, double Value);
 	void SetVariableInt(const char *pName, int Value);
 	void SetVariableFloat(const char *pName, float Value);
+
+	void CallSetup(const char *pFunctionName);
+	void CallIntegerArg(int Value);
+	void CallFloatArg(float Value);
+	void CallCustomArg() { m_CallNumArgs++; }
+	void CallPerform();
 
 	void Call(const char *pFunctionName, const char *pArgs, ...);
 };
@@ -99,12 +108,15 @@ public:
 	//void GetObjectTable(CScriptHost *pHost, int iType);
 	int RegisterType(CScriptHost *pHost);
 public:
+	void Reset() { m_lpTypes.delete_all(); }
 	void Register(CScriptHost *pHost, const char *pCacheTableName);
 	int RegisterObjectType(CScriptHost *pHost);
 
 	CType *GetType(int iType) { return iType >= 0 && iType < m_lpTypes.size() ? m_lpTypes[iType] : 0x0; }
 	void PushCachedTable(CScriptHost *pHost, int iType);
 	void PushNewTable(CScriptHost *pHost, int iType);
+
+	void PushCachedTableWithData(CScriptHost *pHost, int iType, const int *pData, int Count);
 };
 
 class IClient;
@@ -234,3 +246,16 @@ public:
 	void Register(CScriptHost *pHost, CMapItemLayerTilemap *pTileMap, CTile *pTiles);
 };
 
+class CScripting_Input
+{
+public:
+	IClient *m_pClient;
+	IServer *m_pServer;
+	CObjectTypes m_Types;
+	static int LF_Input_Register(CScriptHost *pHost, void *pData);
+	static int LF_Input_Create(CScriptHost *pHost, void *pData);
+public:
+	CObjectTypes::CType *GetType(int iType) { return m_Types.GetType(iType); }
+	void Register(CScriptHost *pHost, IClient *pClient, IServer *pServer);
+	void PushInput(CScriptHost *pHost, const int *pData, int Count);
+};

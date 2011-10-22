@@ -25,8 +25,10 @@ CClient.id = 0
 CClient.name = ""
 CClient.view_x = 0
 CClient.view_y = 0
+CClient.entity = false
+CClient.input = false
 
-
+-- BASE ENTITY ----------------------------------------------------------------------
 
 CEntity = CClass:Subclass()
 CEntity.id = 0
@@ -49,6 +51,8 @@ end
 function CEntity:Snap(client)
 end
 
+-- PICKUP ENTITY ----------------------------------------------------------------------
+
 CEntity_Pickup = CEntity:Subclass()
 CEntity_Pickup.type = 0
 
@@ -65,8 +69,66 @@ function CEntity_Pickup:Snap(client)
 	engine.Snap_CommitItem(item)
 end
 
+-- CHARACTER ENTITY ----------------------------------------------------------------------
 
--- 
+CEntity_Character = CEntity:Subclass()
+local coretable = engine.Snap_CreateItem(SNAPITEM_CHARACTERCORE, 0) -- gotta clean this up
+CEntity_Character.core = TableDeepCopy(coretable)
+CEntity_Character.vel_x = 0
+CEntity_Character.vel_y = 0
+
+function CEntity_Character:Tick()
+	self.core.x = self.x
+	self.core.y = self.y
+
+	--[[local input = false
+	for k,client in pairs(clients) do
+		if client.ent == self then
+			input = client.input
+			print("got input")
+			break
+		end
+	end]]
+
+	Character_Tick(self.core, self.input)
+	Character_Move(self.core)
+	Character_Quantize(self.core)
+
+	self.x = self.core.x
+	self.y = self.core.y
+end
+
+function CEntity_Character:Snap(client)
+	local item = engine.Snap_CreateItem(SNAPITEM_CHARACTER, self.id)
+
+	item.tick = engine.time_gametick
+	item.x = self.x
+	item.y = self.y
+	item.vel_x = self.core.vel_x
+	item.vel_y = self.core.vel_y
+	item.angle = self.core.angle
+	item.direction = self.core.direction
+	item.jumped = self.core.jumped
+	item.hookedplayer = self.core.hookedplayer
+	item.hookedstate = self.core.hookedstate
+	item.hooktick = self.core.hooktick
+	item.hook_x = self.core.hook_x
+	item.hook_y = self.core.hook_y
+	item.hook_dx = self.core.hook_dx
+	item.hook_dy = self.core.hook_dy
+	item.playerflags = 0
+	item.health = 5
+	item.armor = 5
+	item.ammocount = 5
+	item.weapon = 0
+	item.emote = -1
+	item.attacktick = 0
+
+	engine.Snap_CommitItem(item)
+end
+
+--  ----------------------------------------------------------------------
+
 clients = {}
 world = {}
 world.entities = {}
@@ -97,6 +159,9 @@ function OnInit()
 end
 
 function OnTick()
+	for _,ent in pairs(world.entities) do
+		ent:Tick(client)
+	end
 end
 
 function OnPreSnap()
@@ -122,6 +187,11 @@ function OnClientConnected(client_id)
 	clients[client.id] = client
 	print(client_id, "connected")
 
+	local ent = CEntity_Character:New(150, 150)
+	world.entities[ent.id] = ent
+	client.entity = ent
+	
+
 	-- send enter message
 	local msg = engine.Msg_Create(MSG_SV_READYTOENTER)
 	engine.Msg_Send(msg, client_id)
@@ -134,4 +204,8 @@ end
 function OnClientDrop(client_id)
 	print(client_id, "dropped")
 	clients[client_id] = nil
+end
+
+function OnClientPredictedInput(client_id, input)
+	clients[client_id].entity.input = input
 end

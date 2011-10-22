@@ -8,6 +8,7 @@
 #include <game/generated/protocol.h>
 
 #include <game/layers.h> // for map layers
+#include <game/collision.h> // for map layers
 
 class CGameServer_Lua : public IGameServer
 {
@@ -23,8 +24,10 @@ protected:
 	CScripting_Physics m_Scripting_Physics;
 	CScripting_Messaging m_Scripting_Messaging;
 	CScripting_Map m_Scripting_Map;
+	CScripting_Input m_Scripting_Input;
 
 	CLayers m_Layers;
+	CCollision m_Collision;
 
 	// this is needed for now, we need the sizes of the snap objects.... crap
 	CNetObjHandler m_NetObjHandler;
@@ -34,6 +37,7 @@ public:
 		m_pServer = Kernel()->RequestInterface<IServer>();
 
 		m_Layers.Init(Kernel());
+		m_Collision.Init(&m_Layers);
 
 		IMap *pMap = Kernel()->RequestInterface<IMap>();
 
@@ -66,6 +70,7 @@ public:
 		m_Scripting_SnapshotServer.Register(&m_Script, m_pServer, &m_Scripting_SnapshotTypes);
 		m_Scripting_Physics.Register(&m_Script);
 		m_Scripting_Messaging.Register(&m_Script, NULL, m_pServer);
+		m_Scripting_Input.Register(&m_Script, NULL, m_pServer);
 
 		CMapItemLayerTilemap *pTileMap = m_Layers.GameLayer();
 		m_Scripting_Map.Register(&m_Script, pTileMap, (CTile *)pMap->GetData(pTileMap->m_Data));
@@ -88,6 +93,9 @@ public:
 
 	virtual void OnTick()
 	{
+		m_Script.SetVariableInt("time_gametick", m_pServer->Tick());
+		m_Script.SetVariableFloat("time_servertickspeed", m_pServer->TickSpeed());
+
 		m_Script.Call("OnTick", "");
 	}
 
@@ -96,9 +104,9 @@ public:
 		m_Script.Call("OnPreSnap", "");
 	}
 
-	virtual void OnSnap(int ClientID)
+	virtual void OnSnap(int ClientId)
 	{
-		m_Script.Call("OnSnap", "i", ClientID);
+		m_Script.Call("OnSnap", "i", ClientId);
 	}
 
 	virtual void OnPostSnap()
@@ -106,31 +114,36 @@ public:
 		m_Script.Call("OnPostSnap", "");
 	}
 
-	virtual void OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
+	virtual void OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientId)
 	{
 	}
 
-	virtual void OnClientConnected(int ClientID)
+	virtual void OnClientConnected(int ClientId)
 	{
-		m_Script.Call("OnClientConnected", "i", ClientID);
+		m_Script.Call("OnClientConnected", "i", ClientId);
 	}
 
-	virtual void OnClientEnter(int ClientID)
+	virtual void OnClientEnter(int ClientId)
 	{
-		m_Script.Call("OnClientEnter", "i", ClientID);
+		m_Script.Call("OnClientEnter", "i", ClientId);
 	}
 
-	virtual void OnClientDrop(int ClientID, const char *pReason)
+	virtual void OnClientDrop(int ClientId, const char *pReason)
 	{
-		m_Script.Call("OnClientDrop", "i", ClientID); // TODO: add reason
+		m_Script.Call("OnClientDrop", "i", ClientId); // TODO: add reason
 	}
 
-	virtual void OnClientDirectInput(int ClientID, void *pInput)
+	virtual void OnClientDirectInput(int ClientId, void *pInput, int Count)
 	{
 	}
 
-	virtual void OnClientPredictedInput(int ClientID, void *pInput)
+	virtual void OnClientPredictedInput(int ClientId, void *pInput, int Count)
 	{
+		m_Script.CallSetup("OnClientPredictedInput");
+		m_Script.CallIntegerArg(ClientId);
+		m_Scripting_Input.PushInput(&m_Script, (int *)pInput, Count);
+		m_Script.CallCustomArg();
+		m_Script.CallPerform();
 	}
 
 	virtual bool IsClientReady(int ClientID)
@@ -138,7 +151,7 @@ public:
 		return true;
 	}
 
-	virtual bool IsClientPlayer(int ClientID)
+	virtual bool IsClientPlayer(int ClientId)
 	{
 		return false;
 	}

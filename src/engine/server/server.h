@@ -81,6 +81,7 @@ public:
 		{
 		public:
 			int m_aData[MAX_INPUT_SIZE];
+			int m_Size;
 			int m_GameTick; // the tick that was chosen for the input
 		};
 

@@ -912,6 +912,7 @@ void CServer::ProcessClientPacket(CNetChunk *pPacket)
 				IntendedTick = Tick()+1;
 
 			pInput->m_GameTick = IntendedTick;
+			pInput->m_Size = Size/4;
 
 			for(int i = 0; i < Size/4; i++)
 				pInput->m_aData[i] = Unpacker.GetInt();
@@ -923,7 +924,7 @@ void CServer::ProcessClientPacket(CNetChunk *pPacket)
 
 			// call the mod with the fresh input data
 			if(m_aClients[ClientID].m_State == CClient::STATE_INGAME)
-				GameServer()->OnClientDirectInput(ClientID, m_aClients[ClientID].m_LatestInput.m_aData);
+				GameServer()->OnClientDirectInput(ClientID, m_aClients[ClientID].m_LatestInput.m_aData, Size/4);
 		}
 		else if(Msg == NETMSG_RCON_CMD)
 		{
@@ -1443,7 +1444,7 @@ int CServer::Run()
 						if(m_aClients[c].m_aInputs[i].m_GameTick == Tick())
 						{
 							if(m_aClients[c].m_State == CClient::STATE_INGAME)
-								GameServer()->OnClientPredictedInput(c, m_aClients[c].m_aInputs[i].m_aData);
+								GameServer()->OnClientPredictedInput(c, m_aClients[c].m_aInputs[i].m_aData, m_aClients[c].m_aInputs[i].m_Size);
 							break;
 						}
 					}

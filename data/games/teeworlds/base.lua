@@ -336,7 +336,18 @@ MSG_SV_EXTRAPROJECTILE = engine.Msg_Register({
 MSG_SV_READYTOENTER = engine.Msg_Register({
 })
 
-
+engine.Input_Register({
+	{name = "direction"},
+	{name = "target_x"},
+	{name = "target_y"},
+	{name = "jump"},
+	{name = "fire"},
+	{name = "hook"},
+	{name = "playerflags"},
+	{name = "wantedweapon"},
+	{name = "nextweapon"},
+	{name = "prevweapon"},
+})
 
 --[[
 msg = engine.Msg_Create(MSG_SV_READYTOENTER)
@@ -624,7 +635,7 @@ function Character_Tick(char, input, use_input)
 		end
 
 		if input.target_x < 0 then
-			a = a + pi
+			a = a + math.pi
 		end
 
 		char.angle = a*256.0
