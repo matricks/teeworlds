@@ -13,6 +13,7 @@ end
 
 function CClass:New(...)
 	local instance = TableDeepCopy(self)
+	instance.class = self
 	if instance.Init then
 		instance:Init(...)
 	end
@@ -28,12 +29,25 @@ CClient.view_y = 0
 CClient.entity = false
 CClient.input = false
 
+function CClient:Snap(client)
+	local item = engine.Snap_CreateItem(SNAPITEM_PLAYERINFO, self.id)
+
+	item.islocal = 1
+	item.clientid = self.id
+	item.team = 0
+	item.score = 0
+	item.latency = 0
+
+	engine.Snap_CommitItem(item)
+end
+
 -- BASE ENTITY ----------------------------------------------------------------------
 
 CEntity = CClass:Subclass()
 CEntity.id = 0
 CEntity.x = 0
 CEntity.y = 0
+CEntity.proximity_radius = 32
 
 function CEntity:Init(x, y)
 	self.x = x
@@ -54,19 +68,53 @@ end
 -- PICKUP ENTITY ----------------------------------------------------------------------
 
 CEntity_Pickup = CEntity:Subclass()
-CEntity_Pickup.type = 0
+CEntity_Pickup.pickupsnaptype = 0
+CEntity_Pickup.spawn_tick = -1
+CEntity.proximity_radius = 14
 
-function CEntity_Pickup:Init(x, y, pickuptype)
+function CEntity_Pickup:Init(x, y, pickupsnaptype)
 	CEntity.Init(self, x, y) -- why can't I do self.super.Init??
-	self.type = pickuptype
+	self.pickupsnaptype = pickupsnaptype
+end
+
+function CEntity_Pickup:SetRespawn(time)
+	self.spawn_tick = engine.time_gametick + engine.time_tickspeed*time
+end
+
+function CEntity_Pickup:IsSpawned()
+	return engine.time_gametick > self.spawn_tick
+end
+
+function CEntity_Pickup:Pickup(character)
+	self:SetRespawn(1)
 end
 
 function CEntity_Pickup:Snap(client)
-	local item = engine.Snap_CreateItem(SNAPITEM_PICKUP, self.id)
-	item.x = self.x
-	item.y = self.y
-	item.type = self.type
-	engine.Snap_CommitItem(item)
+	if self:IsSpawned() then
+		local item = engine.Snap_CreateItem(SNAPITEM_PICKUP, self.id)
+		item.x = self.x
+		item.y = self.y
+		item.type = self.pickupsnaptype
+		engine.Snap_CommitItem(item)
+	end
+end
+
+-----
+
+CEntity_Pickup_Armor = CEntity_Pickup:Subclass()
+function CEntity_Pickup_Armor:Pickup(character)
+	if character.armor < 10 then
+		character.armor = character.armor + 1
+		self:SetRespawn(15)
+	end
+end
+
+CEntity_Pickup_Health = CEntity_Pickup:Subclass()
+function CEntity_Pickup_Health:Pickup(character)
+	if character.health < 10 then
+		character.health = character.health + 1
+		self:SetRespawn(15)
+	end
 end
 
 -- CHARACTER ENTITY ----------------------------------------------------------------------
@@ -74,6 +122,7 @@ end
 CEntity_Character = CEntity:Subclass()
 local coretable = engine.Snap_CreateItem(SNAPITEM_CHARACTERCORE, 0) -- gotta clean this up
 CEntity_Character.core = TableDeepCopy(coretable)
+CEntity_Character.client = 0
 CEntity_Character.vel_x = 0
 CEntity_Character.vel_y = 0
 
@@ -96,10 +145,20 @@ function CEntity_Character:Tick()
 
 	self.x = self.core.x
 	self.y = self.core.y
+
+	-- check for collisions, do this here fo rnow
+	for _,ent in pairs(world.entities) do
+		if vLength(self.x - ent.x, self.y - ent.y) < self.proximity_radius+ent.proximity_radius then
+			-- check for pickup
+			if ent.class == CEntity_Pickup and ent:IsSpawned() then
+				ent:Pickup(self)
+			end
+		end
+	end	
 end
 
 function CEntity_Character:Snap(client)
-	local item = engine.Snap_CreateItem(SNAPITEM_CHARACTER, self.id)
+	local item = engine.Snap_CreateItem(SNAPITEM_CHARACTER, client.id)
 
 	item.tick = engine.time_gametick
 	item.x = self.x
@@ -145,9 +204,9 @@ function OnInit()
 
 			local ent = 0
 			if tile == MAPTILE_ENTITY_HEALTH_1 then
-				ent = CEntity_Pickup:New(x, y, 0)
+				ent = CEntity_Pickup_Health:New(x, y)
 			elseif tile == MAPTILE_ENTITY_ARMOR_1 then
-				ent = CEntity_Pickup:New(x, y, 1)
+				ent = CEntity_Pickup_Armor:New(x, y)
 			end
 
 			if not (ent == 0) then
@@ -168,11 +227,15 @@ function OnPreSnap()
 end
 
 function OnSnap(client_id)
-	local client = clients[client_id]
+	local snapclient = clients[client_id]
+
+	for _,client in pairs(clients) do
+		client:Snap(snapclient)
+	end
 
 	for _,ent in pairs(world.entities) do
-		if not ent:NetworkClip(client) then
-			ent:Snap(client)
+		if not ent:NetworkClip(snapclient) then
+			ent:Snap(snapclient)
 		end
 	end
 end
@@ -190,6 +253,7 @@ function OnClientConnected(client_id)
 	local ent = CEntity_Character:New(150, 150)
 	world.entities[ent.id] = ent
 	client.entity = ent
+	ent.client = client
 	
 
 	-- send enter message
@@ -207,5 +271,10 @@ function OnClientDrop(client_id)
 end
 
 function OnClientPredictedInput(client_id, input)
+	clients[client_id].entity.input = input
+end
+
+
+function OnClientDirectInput(client_id, input)
 	clients[client_id].entity.input = input
 end

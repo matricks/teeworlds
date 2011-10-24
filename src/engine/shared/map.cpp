@@ -9,6 +9,41 @@ class CMap : public IEngineMap
 {
 	CDataFileReader m_DataFile;
 public:
+	/*
+	class CResource_Map : public IResource
+	{
+	public:
+		CDataFileReader m_DataFile;
+
+		CResource_Map()
+		{}
+
+		virtual ~CResource_Map()
+		{
+		}
+
+
+
+		void *GetData(int Index) { return m_DataFile.GetData(Index); }
+		void *GetDataSwapped(int Index) { return m_DataFile.GetDataSwapped(Index); }
+		void UnloadData(int Index) { m_DataFile.UnloadData(Index); }
+		void *GetItem(int Index, int *pType, int *pID) { return m_DataFile.GetItem(Index, pType, pID); }
+		void GetType(int Type, int *pStart, int *pNum) { m_DataFile.GetType(Type, pStart, pNum); }
+		void *FindItem(int Type, int ID) { return m_DataFile.FindItem(Type, ID); }
+		int NumItems() { return m_DataFile.NumItems(); }
+	};
+
+	class CResourceHandler : public IResources::IHandler
+	{
+	public:
+		CSound *m_pSound;
+		virtual IResource *Create(IResources::CResourceId Id);
+		virtual bool Load(IResource *pResource, void *pData, unsigned DataSize);
+		virtual bool Insert(IResource *pResource);
+		virtual bool Destroy(IResource *pResource);
+	};*/
+
+
 	CMap() {}
 
 	virtual void *GetData(int Index) { return m_DataFile.GetData(Index); }

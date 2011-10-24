@@ -62,6 +62,34 @@ public:
 
 	void Call(const char *pFunctionName, const char *pArgs, ...);
 };
+/*
+class CResource_Script : public IResource
+{
+	char *m_pSource;
+public:
+	CResource_Script()
+	{
+		m_pSource = 0;
+	}
+
+	virtual ~CResource_Script()
+	{
+		delete [] m_pSource;
+	}
+};
+
+class CResourceHandler_Scripting : public IResources::IHandler
+{
+public:
+	virtual IResource *Create(IResources::CResourceId Id) { return new CResource_Script(); }
+	virtual bool Load(IResource *pResource, void *pData, unsigned DataSize)
+	{
+		CResource_Script 
+	}
+
+	virtual bool Insert(IResource *pResource);
+	virtual bool Destroy(IResource *pResource);
+};*/
 
 class CObjectTypes
 {

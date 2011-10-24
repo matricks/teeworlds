@@ -94,7 +94,7 @@ public:
 	virtual void OnTick()
 	{
 		m_Script.SetVariableInt("time_gametick", m_pServer->Tick());
-		m_Script.SetVariableFloat("time_servertickspeed", m_pServer->TickSpeed());
+		m_Script.SetVariableFloat("time_tickspeed", m_pServer->TickSpeed());
 
 		m_Script.Call("OnTick", "");
 	}
@@ -135,6 +135,11 @@ public:
 
 	virtual void OnClientDirectInput(int ClientId, void *pInput, int Count)
 	{
+		m_Script.CallSetup("OnClientDirectInput");
+		m_Script.CallIntegerArg(ClientId);
+		m_Scripting_Input.PushInput(&m_Script, (int *)pInput, Count);
+		m_Script.CallCustomArg();
+		m_Script.CallPerform();
 	}
 
 	virtual void OnClientPredictedInput(int ClientId, void *pInput, int Count)

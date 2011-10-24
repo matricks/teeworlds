@@ -231,7 +231,7 @@ SNAPITEM_CHARACTER = engine.Snap_RegisterItemType({
 })
 
 SNAPITEM_PLAYERINFO = engine.Snap_RegisterItemType({
-	{name = "local"},
+	{name = "islocal"},
 	{name = "clientid"},
 	{name = "team"},
 	{name = "score"},
