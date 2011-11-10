@@ -1,3 +1,6 @@
+
+--[[ Table Functions ]]--
+
 function TableLock(tbl)
 	local mt = getmetatable(tbl)
 	if not mt then mt = {} end
@@ -24,6 +27,31 @@ function TableDeepCopy(object)
 	end
 	return _copy(object)
 end
+
+--[[ Bit Operations ]]--
+
+-- Found these functions over at lua-users.org, forwarded to 
+--   http://ricilake.blogspot.com/2007/10/iterating-bits-in-lua.html
+
+
+function Bit(p)
+	return 2 ^ (p - 1)  -- 1-based indexing
+end
+
+-- Typical call:  if hasbit(x, bit(3)) then ...
+function HasBit(x, p)
+	return x % (p + p) >= p       
+end
+
+function SetBit(x, p)
+	return HasBit(x, p) and x or x + p
+end
+
+function ClearBit(x, p)
+	return HasBit(x, p) and x - p or x
+end
+
+--[[ Class System ]]--
 
 function DefineClass(table)
 	local newstruct = {
@@ -593,7 +621,6 @@ end
 
 function Character_Tick(char, input, use_input)
 	local PHYS_SIZE = 28.0
-	--m_TriggeredEvents = 0;
 
 	-- get ground state
 	local grounded = false
@@ -603,7 +630,6 @@ function Character_Tick(char, input, use_input)
 		grounded = true
 	end
 	
-
 	local target_dir_x = 1
 	local target_dir_y = 0
 	if input then
@@ -622,7 +648,7 @@ function Character_Tick(char, input, use_input)
 		friction = tuning.groundfriction
 	end
 
-	--[[ handle input ]]--
+	-- handle input
 	if input then
 		char.direction = input.direction;
 
@@ -641,28 +667,24 @@ function Character_Tick(char, input, use_input)
 		char.angle = a*256.0
 
 		-- handle jump
-		--[[
-		if(input.jump)
-		{
-			if(!(m_Jumped&1))
-			{
-				if(Grounded)
-				{
+		-- bit1 == set if we have jumped
+		-- bit2 == set if we have used airjump
+		if input.jump > 0 then
+			if not HasBit(char.jumped, Bit(1)) then
+				if grounded then
 					--m_TriggeredEvents |= COREEVENT_GROUND_JUMP;
-					m_Vel.y = -m_pWorld->m_Tuning.m_GroundJumpImpulse;
-					m_Jumped |= 1;
-				}
-				else if(!(m_Jumped&2))
-				{
-					m_TriggeredEvents |= COREEVENT_AIR_JUMP;
-					m_Vel.y = -m_pWorld->m_Tuning.m_AirJumpImpulse;
-					m_Jumped |= 3;
-				}
-			}
-		}
+					char.vel_y = -tuning.groundjumpimpulse;
+					char.jumped = SetBit(char.jumped, Bit(1))
+				elseif not HasBit(char.jumped, Bit(2)) then -- else if(!(m_Jumped&2))
+					--m_TriggeredEvents |= COREEVENT_AIR_JUMP;
+					char.vel_y = -tuning.airjumpimpulse;
+					char.jumped = SetBit(char.jumped, Bit(1))
+					char.jumped = SetBit(char.jumped, Bit(2))
+				end
+			end
 		else
-			m_Jumped &= ~1;
-		]]
+			char.jumped = ClearBit(char.jumped, Bit(1))
+		end
 
 		-- handle hook
 		--[[
@@ -699,10 +721,11 @@ function Character_Tick(char, input, use_input)
 	-- 1 bit = to keep track if a jump has been made on this input
 	-- 2 bit = to keep track if a air-jump has been made
 	if grounded then
+		char.jumped = ClearBit(char.jumped, Bit(2))
 		-- char.jumped &= ~2
-		if char.jumped > 1 then
-			char.jumped = char.jumped - 2
-		end
+		-- if char.jumped > 1 then
+		--	char.jumped = char.jumped - 2
+		-- end
 	end
 
 	--[[
