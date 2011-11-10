@@ -51,19 +51,7 @@ function ClearBit(x, p)
 	return HasBit(x, p) and x - p or x
 end
 
---[[ Class System ]]--
-
-function DefineClass(table)
-	local newstruct = {
-		t = table,
-		New = function(self)
-			local new = TableDeepCopy(self.t)
-			return new
-		end
-	}
-	TableLock(newstruct)
-	return newstruct
-end
+----------
 
 data = {}
 if engine.client then -- for now

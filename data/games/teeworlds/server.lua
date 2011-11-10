@@ -72,9 +72,8 @@ CEntity_Pickup.pickupsnaptype = 0
 CEntity_Pickup.spawn_tick = -1
 CEntity.proximity_radius = 14
 
-function CEntity_Pickup:Init(x, y, pickupsnaptype)
+function CEntity_Pickup:Init(x, y)
 	CEntity.Init(self, x, y) -- why can't I do self.super.Init??
-	self.pickupsnaptype = pickupsnaptype
 end
 
 function CEntity_Pickup:SetRespawn(time)
@@ -102,6 +101,7 @@ end
 -----
 
 CEntity_Pickup_Armor = CEntity_Pickup:Subclass()
+CEntity_Pickup_Armor.pickupsnaptype = 1
 function CEntity_Pickup_Armor:Pickup(character)
 	if character.armor < 10 then
 		character.armor = character.armor + 1
@@ -110,6 +110,7 @@ function CEntity_Pickup_Armor:Pickup(character)
 end
 
 CEntity_Pickup_Health = CEntity_Pickup:Subclass()
+CEntity_Pickup_Health.pickupsnaptype = 0
 function CEntity_Pickup_Health:Pickup(character)
 	if character.health < 10 then
 		character.health = character.health + 1
@@ -125,6 +126,9 @@ CEntity_Character.core = TableDeepCopy(coretable)
 CEntity_Character.client = 0
 CEntity_Character.vel_x = 0
 CEntity_Character.vel_y = 0
+
+CEntity_Character.health = 10
+CEntity_Character.armor = 0
 
 function CEntity_Character:Tick()
 	self.core.x = self.x
@@ -150,7 +154,7 @@ function CEntity_Character:Tick()
 	for _,ent in pairs(world.entities) do
 		if vLength(self.x - ent.x, self.y - ent.y) < self.proximity_radius+ent.proximity_radius then
 			-- check for pickup
-			if ent.class == CEntity_Pickup and ent:IsSpawned() then
+			if ent.Pickup and ent:IsSpawned() then
 				ent:Pickup(self)
 			end
 		end
@@ -176,8 +180,8 @@ function CEntity_Character:Snap(client)
 	item.hook_dx = self.core.hook_dx
 	item.hook_dy = self.core.hook_dy
 	item.playerflags = 0
-	item.health = 5
-	item.armor = 5
+	item.health = self.health
+	item.armor = self.armor
 	item.ammocount = 5
 	item.weapon = 0
 	item.emote = -1
