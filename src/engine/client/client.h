@@ -3,6 +3,10 @@
 #ifndef ENGINE_CLIENT_CLIENT_H
 #define ENGINE_CLIENT_CLIENT_H
 
+#include "source_gameserver.h"
+#include "source_cache.h"
+
+
 class CGraph
 {
 public:
@@ -173,7 +177,13 @@ class CClient : public IClient, public CDemoPlayer::IListner
 		class CHostLookup m_VersionServeraddr;
 	} m_VersionInfo;
 
+
 public:
+	// TODO: move these
+	CSource_GameServer m_SourceGameServer;
+	CSource_Disk m_SourceDisk;
+	CSource_Cache m_SourceCache;
+
 	IEngine *Engine() { return m_pEngine; }
 	IEngineGraphics *Graphics() { return m_pGraphics; }
 	IEngineInput *Input() { return m_pInput; }
