@@ -10,6 +10,7 @@
 #include <engine/storage.h>
 #include <engine/sound.h>
 #include <engine/serverbrowser.h>
+#include <engine/loader.h>
 #include <engine/shared/demo.h>
 #include <engine/shared/config.h>
 
@@ -106,6 +107,7 @@ void CGameClient::OnConsoleInit()
 	m_pServerBrowser = Kernel()->RequestInterface<IServerBrowser>();
 	m_pEditor = Kernel()->RequestInterface<IEditor>();
 	m_pFriends = Kernel()->RequestInterface<IFriends>();
+	m_pResources = Kernel()->RequestInterface<IResources>();
 
 	// setup pointers
 	m_pBinds = &::gs_Binds;
@@ -130,15 +132,15 @@ void CGameClient::OnConsoleInit()
 	m_pMapLayersForeGround = &::gs_MapLayersForeGround;
 
 	// make a list of all the systems, make sure to add them in the corrent render order
-	m_All.Add(m_pSkins);
-	m_All.Add(m_pCountryFlags);
+	m_All.Add(m_pSkins);		// #0: 51ms load time
+	m_All.Add(m_pCountryFlags);	// #1: 142ms
 	m_All.Add(m_pMapimages);
 	m_All.Add(m_pEffects); // doesn't render anything, just updates effects
 	m_All.Add(m_pParticles);
 	m_All.Add(m_pBinds);
 	m_All.Add(m_pControls);
 	m_All.Add(m_pCamera);
-	m_All.Add(m_pSounds);
+	m_All.Add(m_pSounds);		// #8 300ms load time
 	m_All.Add(m_pVoting);
 	m_All.Add(m_pParticles); // doesn't render anything, just updates all the particles
 
@@ -248,12 +250,32 @@ void CGameClient::OnInit()
 
 	// init all components
 	for(int i = m_All.m_Num-1; i >= 0; --i)
+	{
+		int64 Start = time_get();
 		m_All.m_paComponents[i]->OnInit();
+		int64 End = time_get();
+		dbg_msg("gameclient", "#%d %p = %.2fms", i, m_All.m_paComponents[i], ((End-Start)*1000)/(float)time_freq());
+	}
 
-	// setup load amount// load textures
+	// setup load amount
+	// load textures
 	for(int i = 0; i < g_pData->m_NumImages; i++)
 	{
-		g_pData->m_aImages[i].m_Id = Graphics()->LoadTexture(g_pData->m_aImages[i].m_pFilename, IStorage::TYPE_ALL, CImageInfo::FORMAT_AUTO, 0);
+		// testing stuff
+		/*
+		IResources::CResourceId Id;
+		int Length = str_length(g_pData->m_aImages[i].m_pFilename);
+		if(Length)
+		{
+			void *pName = mem_alloc(Length+1, 1);
+			Id.m_pName = (char *)pName;
+			mem_copy(pName, g_pData->m_aImages[i].m_pFilename, Length+1);
+			Id.m_NameHash = 0;
+			Id.m_ContentHash = 0;
+			m_pResources->GetResource(Id);
+		}*/
+
+		g_pData->m_aImages[i].m_pResource = Graphics()->LoadTexture(g_pData->m_aImages[i].m_pFilename, IStorage::TYPE_ALL, CImageInfo::FORMAT_AUTO, 0);
 		g_GameClient.m_pMenus->RenderLoading();
 	}
 
@@ -542,12 +564,15 @@ void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker)
 
 		// don't enqueue pseudo-global sounds from demos (created by PlayAndRecord)
 		CNetMsg_Sv_SoundGlobal *pMsg = (CNetMsg_Sv_SoundGlobal *)pRawMsg;
+		/*
+		// TODO: this should perhaps be handled on the server side
 		if(pMsg->m_SoundID == SOUND_CTF_DROP || pMsg->m_SoundID == SOUND_CTF_RETURN ||
 			pMsg->m_SoundID == SOUND_CTF_CAPTURE || pMsg->m_SoundID == SOUND_CTF_GRAB_EN ||
 			pMsg->m_SoundID == SOUND_CTF_GRAB_PL)
 			g_GameClient.m_pSounds->Enqueue(CSounds::CHN_GLOBAL, pMsg->m_SoundID);
 		else
-			g_GameClient.m_pSounds->Play(CSounds::CHN_GLOBAL, pMsg->m_SoundID, 1.0f, vec2(0,0));
+		*/
+		m_pSounds->Play(CSounds::CHN_GLOBAL, Client()->GetResource(pMsg->m_SoundID), 1.0f, vec2(0,0));
 	}
 }
 
@@ -622,7 +647,7 @@ void CGameClient::ProcessEvents()
 		else if(Item.m_Type == NETEVENTTYPE_SOUNDWORLD)
 		{
 			CNetEvent_SoundWorld *ev = (CNetEvent_SoundWorld *)pData;
-			g_GameClient.m_pSounds->Play(CSounds::CHN_WORLD, ev->m_SoundID, 1.0f, vec2(ev->m_X, ev->m_Y));
+			g_GameClient.m_pSounds->Play(CSounds::CHN_WORLD, Client()->GetResource(ev->m_SoundID), 1.0f, vec2(ev->m_X, ev->m_Y));
 		}
 	}
 }
@@ -715,10 +740,10 @@ void CGameClient::OnNewSnapshot()
 				}
 
 				if(m_aClients[ClientID].m_UseCustomColor)
-					m_aClients[ClientID].m_SkinInfo.m_Texture = g_GameClient.m_pSkins->Get(m_aClients[ClientID].m_SkinID)->m_ColorTexture;
+					m_aClients[ClientID].m_SkinInfo.m_pTexture = g_GameClient.m_pSkins->Get(m_aClients[ClientID].m_SkinID)->m_pColorTexture;
 				else
 				{
-					m_aClients[ClientID].m_SkinInfo.m_Texture = g_GameClient.m_pSkins->Get(m_aClients[ClientID].m_SkinID)->m_OrgTexture;
+					m_aClients[ClientID].m_SkinInfo.m_pTexture = g_GameClient.m_pSkins->Get(m_aClients[ClientID].m_SkinID)->m_pOrgTexture;
 					m_aClients[ClientID].m_SkinInfo.m_ColorBody = vec4(1,1,1,1);
 					m_aClients[ClientID].m_SkinInfo.m_ColorFeet = vec4(1,1,1,1);
 				}
@@ -1029,7 +1054,7 @@ void CGameClient::CClientData::UpdateRenderInfo()
 	// force team colors
 	if(g_GameClient.m_Snap.m_pGameInfoObj && g_GameClient.m_Snap.m_pGameInfoObj->m_GameFlags&GAMEFLAG_TEAMS)
 	{
-		m_RenderInfo.m_Texture = g_GameClient.m_pSkins->Get(m_SkinID)->m_ColorTexture;
+		m_RenderInfo.m_pTexture = g_GameClient.m_pSkins->Get(m_SkinID)->m_pColorTexture;
 		const int TeamColors[2] = {65387, 10223467};
 		if(m_Team >= TEAM_RED && m_Team <= TEAM_BLUE)
 		{
@@ -1056,7 +1081,7 @@ void CGameClient::CClientData::Reset()
 	m_EmoticonStart = -1;
 	m_Active = false;
 	m_ChatIgnore = false;
-	m_SkinInfo.m_Texture = g_GameClient.m_pSkins->Get(0)->m_ColorTexture;
+	m_SkinInfo.m_pTexture = g_GameClient.m_pSkins->Get(0)->m_pColorTexture;
 	m_SkinInfo.m_ColorBody = vec4(1,1,1,1);
 	m_SkinInfo.m_ColorFeet = vec4(1,1,1,1);
 	UpdateRenderInfo();

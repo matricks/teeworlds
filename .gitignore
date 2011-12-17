@@ -16,7 +16,9 @@ map_resave*
 map_version*
 mastersrv*
 packetgen*
-teeworlds*
-teeworlds_srv*
+/teeworlds
+/teeworlds_srv
+/teeworlds_d
+/teeworlds_srv_d
 tileset_borderfix*
 versionsrv*

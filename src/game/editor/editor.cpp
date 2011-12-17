@@ -23,10 +23,10 @@
 #include "auto_map.h"
 #include "editor.h"
 
-int CEditor::ms_CheckerTexture;
-int CEditor::ms_BackgroundTexture;
-int CEditor::ms_CursorTexture;
-int CEditor::ms_EntitiesTexture;
+IResource *CEditor::ms_pCheckerTexture = 0;
+IResource *CEditor::ms_pBackgroundTexture = 0;
+IResource *CEditor::ms_pCursorTexture = 0;
+IResource *CEditor::ms_pEntitiesTexture = 0;
 const void* CEditor::ms_pUiGotContext;
 
 enum
@@ -36,7 +36,7 @@ enum
 
 CEditorImage::~CEditorImage()
 {
-	m_pEditor->Graphics()->UnloadTexture(m_TexID);
+	m_pEditor->Graphics()->UnloadTexture(m_pTexture);
 }
 
 CLayerGroup::CLayerGroup()
@@ -562,7 +562,7 @@ void CEditor::RenderGrid(CLayerGroup *pGroup)
 	int XGridOffset = XOffset % m_GridFactor;
 	int YGridOffset = YOffset % m_GridFactor;
 
-	Graphics()->TextureSet(-1);
+	Graphics()->TextureSet(0);
 	Graphics()->LinesBegin();
 
 	for(int i = 0; i < (int)w; i++)
@@ -587,9 +587,9 @@ void CEditor::RenderGrid(CLayerGroup *pGroup)
 	Graphics()->LinesEnd();
 }
 
-void CEditor::RenderBackground(CUIRect View, int Texture, float Size, float Brightness)
+void CEditor::RenderBackground(CUIRect View, IResource *pTexture, float Size, float Brightness)
 {
-	Graphics()->TextureSet(Texture);
+	Graphics()->TextureSet(pTexture);
 	Graphics()->BlendNormal();
 	Graphics()->QuadsBegin();
 	Graphics()->SetColor(Brightness, Brightness, Brightness, 1.0f);
@@ -1403,7 +1403,7 @@ void CEditor::DoQuadPoint(CQuad *pQuad, int QuadIndex, int V)
 	Graphics()->QuadsDraw(&QuadItem, 1);
 }
 
-void CEditor::DoQuadEnvelopes(CQuad *pQuad, int Index, int TexID)
+void CEditor::DoQuadEnvelopes(CQuad *pQuad, int Index, IResource *pTexture)
 {
 	CEnvelope *pEnvelope = 0x0;
 	if(pQuad->m_PosEnv >= 0 && pQuad->m_PosEnv < m_Map.m_lEnvelopes.size())
@@ -1415,7 +1415,7 @@ void CEditor::DoQuadEnvelopes(CQuad *pQuad, int Index, int TexID)
 	CPoint *pPoints = pQuad->m_aPoints;
 
 	//Draw Lines
-	Graphics()->TextureSet(-1);
+	Graphics()->TextureSet(0x0);
 	Graphics()->LinesBegin();
 		Graphics()->SetColor(80.0f/255, 150.0f/255, 230.f/255, 0.5f);
 		for(int i = 0; i < pEnvelope->m_lPoints.size()-1; i++)
@@ -1437,7 +1437,7 @@ void CEditor::DoQuadEnvelopes(CQuad *pQuad, int Index, int TexID)
 	//Draw Quads
 	for(int i = 0; i < pEnvelope->m_lPoints.size(); i++)
 	{
-		Graphics()->TextureSet(TexID);
+		Graphics()->TextureSet(pTexture);
 		Graphics()->QuadsBegin();
 		
 		//Calc Env Position
@@ -1488,7 +1488,7 @@ void CEditor::DoQuadEnvelopes(CQuad *pQuad, int Index, int TexID)
 
 		Graphics()->QuadsEnd();
 		
-		Graphics()->TextureSet(-1);
+		Graphics()->TextureSet(0);
 		Graphics()->QuadsBegin();
 		DoQuadEnvPoint(pQuad, Index, i);
 		Graphics()->QuadsEnd();
@@ -1680,7 +1680,7 @@ void CEditor::DoMapEditor(CUIRect View, CUIRect ToolBar)
 		if(t)
 		{
 			m_TilesetPicker.m_Image = t->m_Image;
-			m_TilesetPicker.m_TexID = t->m_TexID;
+			m_TilesetPicker.m_pTexture = t->m_pTexture;
 			m_TilesetPicker.Render();
 			if(m_ShowTileInfo)
 				m_TilesetPicker.ShowInfo();
@@ -1725,7 +1725,7 @@ void CEditor::DoMapEditor(CUIRect View, CUIRect ToolBar)
 					IGraphics::CLineItem(w, 0, w, h),
 					IGraphics::CLineItem(w, h, 0, h),
 					IGraphics::CLineItem(0, h, 0, 0)};
-				Graphics()->TextureSet(-1);
+				Graphics()->TextureSet(0);
 				Graphics()->LinesBegin();
 				Graphics()->LinesDraw(Array, 4);
 				Graphics()->LinesEnd();
@@ -1889,7 +1889,7 @@ void CEditor::DoMapEditor(CUIRect View, CUIRect ToolBar)
 							IGraphics::CLineItem(w, 0, w, h),
 							IGraphics::CLineItem(w, h, 0, h),
 							IGraphics::CLineItem(0, h, 0, 0)};
-						Graphics()->TextureSet(-1);
+						Graphics()->TextureSet(0);
 						Graphics()->LinesBegin();
 						Graphics()->LinesDraw(Array, 4);
 						Graphics()->LinesEnd();
@@ -1916,7 +1916,7 @@ void CEditor::DoMapEditor(CUIRect View, CUIRect ToolBar)
 						if(!m_ShowEnvelopePreview)
 							m_ShowEnvelopePreview = 2;
 
-						Graphics()->TextureSet(-1);
+						Graphics()->TextureSet(0);
 						Graphics()->QuadsBegin();
 						for(int i = 0; i < pLayer->m_lQuads.size(); i++)
 						{
@@ -1970,7 +1970,7 @@ void CEditor::DoMapEditor(CUIRect View, CUIRect ToolBar)
 		CLayerGroup *g = m_Map.m_pGameGroup;
 		g->MapScreen();
 
-		Graphics()->TextureSet(-1);
+		Graphics()->TextureSet(0);
 		Graphics()->LinesBegin();
 
 			CUIRect r;
@@ -1996,7 +1996,7 @@ void CEditor::DoMapEditor(CUIRect View, CUIRect ToolBar)
 		CLayerGroup *g = m_Map.m_pGameGroup;
 		g->MapScreen();
 
-		Graphics()->TextureSet(-1);
+		Graphics()->TextureSet(0);
 		Graphics()->LinesBegin();
 
 		float aLastPoints[4];
@@ -2078,14 +2078,14 @@ void CEditor::DoMapEditor(CUIRect View, CUIRect ToolBar)
 		GetSelectedGroup()->MapScreen();
 
 		CLayerQuads *pLayer = (CLayerQuads*)GetSelectedLayer(0);
-		int TexID = -1;
+		IResource *pTexture = 0;
 		if(pLayer->m_Image >= 0 && pLayer->m_Image < m_Map.m_lImages.size())
-			TexID = m_Map.m_lImages[pLayer->m_Image]->m_TexID;
+			pTexture = m_Map.m_lImages[pLayer->m_Image]->m_pTexture;
 
 		for(int i = 0; i < pLayer->m_lQuads.size(); i++)
 		{
 			if((m_ShowEnvelopePreview == 1 && pLayer->m_lQuads[i].m_PosEnv == m_SelectedEnvelope) || m_ShowEnvelopePreview == 2)
-				DoQuadEnvelopes(&pLayer->m_lQuads[i], i, TexID);
+				DoQuadEnvelopes(&pLayer->m_lQuads[i], i, pTexture);
 		}
 
 		m_ShowEnvelopePreview = 0;
@@ -2416,12 +2416,12 @@ void CEditor::ReplaceImage(const char *pFileName, int StorageType, void *pUser)
 
 	CEditorImage *pImg = pEditor->m_Map.m_lImages[pEditor->m_SelectedImage];
 	int External = pImg->m_External;
-	pEditor->Graphics()->UnloadTexture(pImg->m_TexID);
+	pEditor->Graphics()->UnloadTexture(pImg->m_pTexture);
 	*pImg = ImgInfo;
 	pImg->m_External = External;
 	pEditor->ExtractName(pFileName, pImg->m_aName, sizeof(pImg->m_aName));
 	pImg->m_AutoMapper.Load(pImg->m_aName);
-	pImg->m_TexID = pEditor->Graphics()->LoadTextureRaw(ImgInfo.m_Width, ImgInfo.m_Height, ImgInfo.m_Format, ImgInfo.m_pData, CImageInfo::FORMAT_AUTO, 0);
+	pImg->m_pTexture = pEditor->Graphics()->LoadTextureRaw(ImgInfo.m_Width, ImgInfo.m_Height, ImgInfo.m_Format, ImgInfo.m_pData, CImageInfo::FORMAT_AUTO, 0);
 	pEditor->SortImages();
 	for(int i = 0; i < pEditor->m_Map.m_lImages.size(); ++i)
 	{
@@ -2449,7 +2449,7 @@ void CEditor::AddImage(const char *pFileName, int StorageType, void *pUser)
 
 	CEditorImage *pImg = new CEditorImage(pEditor);
 	*pImg = ImgInfo;
-	pImg->m_TexID = pEditor->Graphics()->LoadTextureRaw(ImgInfo.m_Width, ImgInfo.m_Height, ImgInfo.m_Format, ImgInfo.m_pData, CImageInfo::FORMAT_AUTO, 0);
+	pImg->m_pTexture = pEditor->Graphics()->LoadTextureRaw(ImgInfo.m_Width, ImgInfo.m_Height, ImgInfo.m_Format, ImgInfo.m_pData, CImageInfo::FORMAT_AUTO, 0);
 	pImg->m_External = 1;	// external by default
 	str_copy(pImg->m_aName, aBuf, sizeof(pImg->m_aName));
 	pImg->m_AutoMapper.Load(pImg->m_aName);
@@ -2671,7 +2671,7 @@ void CEditor::RenderImages(CUIRect ToolBox, CUIRect ToolBar, CUIRect View)
 				float Max = (float)(max(m_Map.m_lImages[i]->m_Width, m_Map.m_lImages[i]->m_Height));
 				r.w *= m_Map.m_lImages[i]->m_Width/Max;
 				r.h *= m_Map.m_lImages[i]->m_Height/Max;
-				Graphics()->TextureSet(m_Map.m_lImages[i]->m_TexID);
+				Graphics()->TextureSet(m_Map.m_lImages[i]->m_pTexture);
 				Graphics()->BlendNormal();
 				Graphics()->QuadsBegin();
 				IGraphics::CQuadItem QuadItem(r.x, r.y, r.w, r.h);
@@ -2685,7 +2685,7 @@ void CEditor::RenderImages(CUIRect ToolBox, CUIRect ToolBar, CUIRect View)
 		ToolBox.HSplitTop(5.0f, &Slot, &ToolBox);
 		ImageCur += 5.0f;
 		IGraphics::CLineItem LineItem(Slot.x, Slot.y+Slot.h/2, Slot.x+Slot.w, Slot.y+Slot.h/2);
-		Graphics()->TextureSet(-1);
+		Graphics()->TextureSet(0);
 		Graphics()->LinesBegin();
 		Graphics()->LinesDraw(&LineItem, 1);
 		Graphics()->LinesEnd();
@@ -2741,7 +2741,7 @@ void CEditor::AddFileDialogEntry(int Index, CUIRect *pView)
 	Button.VSplitLeft(Button.h, &FileIcon, &Button);
 	Button.VSplitLeft(5.0f, 0, &Button);
 
-	Graphics()->TextureSet(g_pData->m_aImages[IMAGE_FILEICONS].m_Id);
+	Graphics()->TextureSet(g_pData->m_aImages[IMAGE_FILEICONS].m_pResource);
 	Graphics()->QuadsBegin();
 	RenderTools()->SelectSprite(m_FileList[Index].m_IsDir?SPRITE_FILE_FOLDER:SPRITE_FILE_MAP2);
 	IGraphics::CQuadItem QuadItem(FileIcon.x, FileIcon.y, FileIcon.w, FileIcon.h);
@@ -3155,10 +3155,10 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 		ShowColorBar = true;
 		View.HSplitTop(20.0f, &ColorBar, &View);
 		ColorBar.Margin(2.0f, &ColorBar);
-		RenderBackground(ColorBar, ms_CheckerTexture, 16.0f, 1.0f);
+		RenderBackground(ColorBar, ms_pCheckerTexture, 16.0f, 1.0f);
 	}
 
-	RenderBackground(View, ms_CheckerTexture, 32.0f, 0.1f);
+	RenderBackground(View, ms_pCheckerTexture, 32.0f, 0.1f);
 
 	if(pEnvelope)
 	{
@@ -3257,7 +3257,7 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 		// render lines
 		{
 			UI()->ClipEnable(&View);
-			Graphics()->TextureSet(-1);
+			Graphics()->TextureSet(0);
 			Graphics()->LinesBegin();
 			for(int c = 0; c < pEnvelope->m_Channels; c++)
 			{
@@ -3317,7 +3317,7 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 		// render colorbar
 		if(ShowColorBar)
 		{
-			Graphics()->TextureSet(-1);
+			Graphics()->TextureSet(0);
 			Graphics()->QuadsBegin();
 			for(int i = 0; i < pEnvelope->m_lPoints.size()-1; i++)
 			{
@@ -3356,7 +3356,7 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 		{
 			int CurrentValue = 0, CurrentTime = 0;
 
-			Graphics()->TextureSet(-1);
+			Graphics()->TextureSet(0);
 			Graphics()->QuadsBegin();
 			for(int c = 0; c < pEnvelope->m_Channels; c++)
 			{
@@ -3598,7 +3598,7 @@ void CEditor::Render()
 	m_pTooltip = 0;
 
 	// render checker
-	RenderBackground(View, ms_CheckerTexture, 32.0f, 1.0f);
+	RenderBackground(View, ms_pCheckerTexture, 32.0f, 1.0f);
 
 	CUIRect MenuBar, CModeBar, ToolBar, StatusBar, EnvelopeEditor, ToolBox;
 	m_ShowPicker = Input()->KeyPressed(KEY_SPACE) != 0 && m_Dialog == DIALOG_NONE;
@@ -3651,17 +3651,17 @@ void CEditor::Render()
 	if(m_GuiActive)
 	{
 		float Brightness = 0.25f;
-		RenderBackground(MenuBar, ms_BackgroundTexture, 128.0f, Brightness*0);
+		RenderBackground(MenuBar, ms_pBackgroundTexture, 128.0f, Brightness*0);
 		MenuBar.Margin(2.0f, &MenuBar);
 
-		RenderBackground(ToolBox, ms_BackgroundTexture, 128.0f, Brightness);
+		RenderBackground(ToolBox, ms_pBackgroundTexture, 128.0f, Brightness);
 		ToolBox.Margin(2.0f, &ToolBox);
 
-		RenderBackground(ToolBar, ms_BackgroundTexture, 128.0f, Brightness);
+		RenderBackground(ToolBar, ms_pBackgroundTexture, 128.0f, Brightness);
 		ToolBar.Margin(2.0f, &ToolBar);
 		ToolBar.VSplitLeft(100.0f, &CModeBar, &ToolBar);
 
-		RenderBackground(StatusBar, ms_BackgroundTexture, 128.0f, Brightness);
+		RenderBackground(StatusBar, ms_pBackgroundTexture, 128.0f, Brightness);
 		StatusBar.Margin(2.0f, &StatusBar);
 
 		// do the toolbar
@@ -3670,7 +3670,7 @@ void CEditor::Render()
 
 		if(m_ShowEnvelopeEditor)
 		{
-			RenderBackground(EnvelopeEditor, ms_BackgroundTexture, 128.0f, Brightness);
+			RenderBackground(EnvelopeEditor, ms_pBackgroundTexture, 128.0f, Brightness);
 			EnvelopeEditor.Margin(2.0f, &EnvelopeEditor);
 		}
 	}
@@ -3738,7 +3738,7 @@ void CEditor::Render()
 		// render butt ugly mouse cursor
 		float mx = UI()->MouseX();
 		float my = UI()->MouseY();
-		Graphics()->TextureSet(ms_CursorTexture);
+		Graphics()->TextureSet(ms_pCursorTexture);
 		Graphics()->QuadsBegin();
 		if(ms_pUiGotContext == UI()->HotItem())
 			Graphics()->SetColor(1,0,0,1);
@@ -3754,7 +3754,7 @@ void CEditor::Reset(bool CreateDefault)
 
 	// create default layers
 	if(CreateDefault)
-		m_Map.CreateDefault(ms_EntitiesTexture);
+		m_Map.CreateDefault(ms_pEntitiesTexture);
 
 	/*
 	{
@@ -3844,7 +3844,7 @@ void CEditorMap::MakeGameLayer(CLayer *pLayer)
 {
 	m_pGameLayer = (CLayerGame *)pLayer;
 	m_pGameLayer->m_pEditor = m_pEditor;
-	m_pGameLayer->m_TexID = m_pEditor->ms_EntitiesTexture;
+	m_pGameLayer->m_pTexture = m_pEditor->ms_pEntitiesTexture;
 }
 
 void CEditorMap::MakeGameGroup(CLayerGroup *pGroup)
@@ -3868,7 +3868,7 @@ void CEditorMap::Clean()
 	m_Modified = false;
 }
 
-void CEditorMap::CreateDefault(int EntitiesTexture)
+void CEditorMap::CreateDefault(IResource *pEntitiesTexture)
 {
 	// add background
 	CLayerGroup *pGroup = NewGroup();
@@ -3910,10 +3910,10 @@ void CEditor::Init()
 	m_UI.SetGraphics(m_pGraphics, m_pTextRender);
 	m_Map.m_pEditor = this;
 
-	ms_CheckerTexture = Graphics()->LoadTexture("editor/checker.png", IStorage::TYPE_ALL, CImageInfo::FORMAT_AUTO, 0);
-	ms_BackgroundTexture = Graphics()->LoadTexture("editor/background.png", IStorage::TYPE_ALL, CImageInfo::FORMAT_AUTO, 0);
-	ms_CursorTexture = Graphics()->LoadTexture("editor/cursor.png", IStorage::TYPE_ALL, CImageInfo::FORMAT_AUTO, 0);
-	ms_EntitiesTexture = Graphics()->LoadTexture("editor/entities.png", IStorage::TYPE_ALL, CImageInfo::FORMAT_AUTO, 0);
+	ms_pCheckerTexture = Graphics()->LoadTexture("editor/checker.png", IStorage::TYPE_ALL, CImageInfo::FORMAT_AUTO, 0);
+	ms_pBackgroundTexture = Graphics()->LoadTexture("editor/background.png", IStorage::TYPE_ALL, CImageInfo::FORMAT_AUTO, 0);
+	ms_pCursorTexture = Graphics()->LoadTexture("editor/cursor.png", IStorage::TYPE_ALL, CImageInfo::FORMAT_AUTO, 0);
+	ms_pEntitiesTexture = Graphics()->LoadTexture("editor/entities.png", IStorage::TYPE_ALL, CImageInfo::FORMAT_AUTO, 0);
 
 	m_TilesetPicker.m_pEditor = this;
 	m_TilesetPicker.MakePalette();

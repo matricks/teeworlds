@@ -22,6 +22,7 @@
 #include <engine/sound.h>
 #include <engine/storage.h>
 #include <engine/textrender.h>
+#include <engine/loader.h>
 
 #include <engine/shared/config.h>
 #include <engine/shared/compression.h>
@@ -48,6 +49,53 @@
 	#include <windows.h>
 #endif
 
+
+// this list is almost like the CResourceList  on the server
+class CResourceMapping
+{
+public:
+	enum
+	{
+		MAX_RESOURCES = 1024*4,
+	};
+
+	IResource *m_aList[MAX_RESOURCES];
+
+	CResourceMapping()
+	{
+		mem_zero(m_aList, sizeof(m_aList));
+	}
+
+	void Clear()
+	{
+		for(int i = 0; i < MAX_RESOURCES; i++)
+		{
+			if(m_aList[i])
+				m_aList[i]->Destroy();
+		}
+
+		mem_zero(m_aList, sizeof(m_aList));
+	}
+
+	void Set(CResourceIndex Idx, IResource *pResource)
+	{
+		if(Idx.Id() < 0 || Idx.Id() >= MAX_RESOURCES)
+			return;
+
+		if(m_aList[Idx.Id()])
+			m_aList[Idx.Id()]->Destroy();
+		m_aList[Idx.Id()] = pResource;
+	}
+
+	IResource *Get(CResourceIndex Idx)
+	{
+		if(Idx.Id() < 0 || Idx.Id() >= MAX_RESOURCES)
+			return 0x0;
+		return m_aList[Idx.Id()];
+	}
+};
+
+CResourceMapping m_ResourceMapping;
 
 void CGraph::Init(float Min, float Max)
 {
@@ -87,12 +135,12 @@ void CGraph::Add(float v, float r, float g, float b)
 	m_aColors[m_Index][2] = b;
 }
 
-void CGraph::Render(IGraphics *pGraphics, int Font, float x, float y, float w, float h, const char *pDescription)
+void CGraph::Render(IGraphics *pGraphics, IResource *pFontTexture, float x, float y, float w, float h, const char *pDescription)
 {
 	//m_pGraphics->BlendNormal();
 
 
-	pGraphics->TextureSet(-1);
+	pGraphics->TextureSet(0);
 
 	pGraphics->QuadsBegin();
 	pGraphics->SetColor(0, 0, 0, 0.75f);
@@ -129,7 +177,7 @@ void CGraph::Render(IGraphics *pGraphics, int Font, float x, float y, float w, f
 	}
 	pGraphics->LinesEnd();
 
-	pGraphics->TextureSet(Font);
+	pGraphics->TextureSet(pFontTexture);
 	pGraphics->QuadsText(x+2, y+h-16, 16, 1,1,1,1, pDescription);
 
 	char aBuf[32];
@@ -232,6 +280,231 @@ void CSmoothTime::Update(CGraph *pGraph, int64 Target, int TimeLeft, int AdjustD
 		UpdateInt(Target);
 }
 
+class CSource_GameServer : public IResources::CSource
+{
+public:
+	class CChunk
+	{
+	public:
+		unsigned m_DataSize;
+		char m_aData[];
+
+		static CChunk *Create(const void *pData, unsigned DataSize)
+		{
+			CChunk *pChunk = (CChunk *)(new char[sizeof(CChunk)+ DataSize]);
+			if(pData)
+				mem_copy(pChunk->m_aData, pData, DataSize);
+			pChunk->m_DataSize = DataSize;
+			return pChunk;
+		}
+	};
+protected:
+	ringbuffer_swsr<CChunk*, 64> m_lpInputChunks; // main thread writes, source thread reads
+	ringbuffer_swsr<CChunk*, 64> m_lpOutputChunks; // source thread writes, main thread reads
+
+	volatile int m_Active; // main thread writes, source thread reads
+	semaphore m_Activity;
+
+	unsigned m_DataOffset;
+	bool m_Done;
+
+	CLoadOrder *m_pOrder;
+
+	void SendMsg(CMsgPacker *pMsg)
+	{
+		m_lpOutputChunks.push(CChunk::Create(pMsg->Data(), pMsg->Size()));
+	}
+
+	void SendNextFetch()
+	{
+		CMsgPacker Msg(NETMSG_REQUEST_RES_DATA);
+		Msg.AddInt(m_pOrder->m_pResource->NameHash());
+		Msg.AddInt(m_pOrder->m_pResource->ContentHash());
+		Msg.AddInt(m_DataOffset);
+		SendMsg(&Msg);
+	}
+
+	bool ProcessChunk(CChunk *pChunk)
+	{
+		CUnpacker Unpacker;
+		Unpacker.Reset(pChunk->m_aData, pChunk->m_DataSize);
+
+		// unpack msgid and system flag
+		// TODO: hate that this has to be done here as well
+		int Msg = Unpacker.GetInt();
+		int Sys = Msg&1;
+		Msg >>= 1;
+
+		if(!Sys) // should never happen
+			return false;
+
+		switch(Msg)
+		{
+		case NETMSG_RES_DATA:
+			{
+				int ContentHash = Unpacker.GetInt();
+				int ContentSize = Unpacker.GetInt();
+				unsigned BlockOffset = (unsigned)Unpacker.GetInt();
+				int BlockSize = Unpacker.GetInt();
+				const unsigned char *pBlockData = Unpacker.GetRaw(BlockSize);
+
+				// TODO: loads of sane checks here! LOADS OF EM!
+				(void)ContentHash;
+
+				// check for errors
+				if(Unpacker.Error() || BlockSize <= 0/* || MapCRC != m_MapdownloadCrc || Chunk != m_MapdownloadChunk || !m_MapdownloadFile*/)
+					return false; // TODO: must bail nicly, this isn't
+
+				if(ContentSize > 16*1024*1024 || ContentSize <= 0)
+					return false; // TODO: must bail nicly, this isn't
+
+				if(BlockOffset != m_DataOffset)
+					return false; // TODO: must bail nicly, this isn't
+
+				// allocate the data if needed
+				if(m_pOrder->m_pData == NULL)
+				{
+					m_pOrder->m_pData = mem_alloc(ContentSize, sizeof(void*));
+					m_pOrder->m_DataSize = ContentSize;
+				}
+
+				if(m_DataOffset + BlockSize > m_pOrder->m_DataSize)
+					return false;
+
+				mem_copy(((char *)m_pOrder->m_pData) + m_DataOffset, pBlockData, BlockSize);
+
+				// advance offset
+				m_DataOffset += BlockSize;
+
+				if(m_DataOffset == m_pOrder->m_DataSize)
+				{
+					// TODO: crc check data
+					unsigned HashValue = hash_crc32(0, m_pOrder->m_pData, m_pOrder->m_DataSize);
+					if(HashValue != (unsigned)ContentHash)
+						return false;
+					m_Done = true;
+				}
+				else
+					SendNextFetch();
+			} break;
+		}
+
+		return true;
+	}
+
+	virtual bool Load(CLoadOrder *pOrder)
+	{
+		if(!m_Active)
+			return false;
+
+			// setup and send initial fetch
+		m_pOrder = pOrder;
+		m_DataOffset = 0;
+		m_Done = false;
+		SendNextFetch();
+		//dbg_msg("resources", "[%s] starting transfer of '%s'", Name(), m_pOrder->m_pResource->Name());
+
+		// send chunks
+		while(true)
+		{
+			m_Activity.wait();
+
+			if(!m_Active)
+				return false;
+
+			bool Error = false;
+
+			// pump input network messages
+			while(m_lpInputChunks.size())
+			{
+				CChunk *pChunk = m_lpInputChunks.pop();
+				if(!ProcessChunk(pChunk))
+					Error = true;
+				delete pChunk;
+			}
+
+			// check for errors
+			if(Error)
+				return false;
+
+			// check if we are done
+			if(m_Done)
+				return true;
+		}
+
+		return false;
+	}
+public:
+	CSource_GameServer()
+	: CSource("gameserver")
+	{
+		m_Active = 0;
+	}
+
+	void SetActive(bool Active)
+	{
+		m_Active = Active;
+		m_Activity.signal();
+	}
+
+	void QueueChunk(const void *pData, unsigned DataSize)
+	{
+		CChunk *pChunk = CChunk::Create(pData, DataSize);
+		m_lpInputChunks.push(pChunk);
+		m_Activity.signal();
+	}
+
+	CChunk *PopOutputChunk()
+	{
+		if(m_lpOutputChunks.size() == 0)
+			return 0;
+		return m_lpOutputChunks.pop();
+	}
+};
+
+CSource_GameServer m_SourceGameServer;
+
+class CSource_Cache : public CSource_Disk
+{
+protected:
+	void GetCacheName(char *pBuffer, int BufferSize, IResource *pResource)
+	{
+		str_format(pBuffer, BufferSize, "%s/%08x_%08x", m_aBaseDirectory,pResource->NameHash(), pResource->ContentHash());
+	}
+
+	virtual bool Load(CLoadOrder *pOrder)
+	{
+		if(pOrder->m_pResource->ContentHash() == 0)
+			return false;
+
+		char aFilename[512];
+		GetCacheName(aFilename, sizeof(aFilename), pOrder->m_pResource);
+		return LoadWholeFile(aFilename, &pOrder->m_pData, &pOrder->m_DataSize) == 0;
+	}
+
+	virtual void Feedback(CLoadOrder *pOrder)
+	{
+		char aFilename[512];
+		GetCacheName(aFilename, sizeof(aFilename), pOrder->m_pResource);
+
+		IOHANDLE hFile = io_open(aFilename, IOFLAG_WRITE);
+		if(hFile)
+		{
+			io_write(hFile, pOrder->m_pData, pOrder->m_DataSize);
+			io_close(hFile);
+			dbg_msg("resources", "[%s] saved '%s' to '%s'", Name(), pOrder->m_pResource->Name(), aFilename);
+		}
+		else
+		{
+			dbg_msg("resources", "[%s] error opening '%s'", Name(), aFilename);
+		}
+	}	
+public:
+	CSource_Cache(const char *pBase = 0)
+	: CSource_Disk("cache", pBase)
+	{
+	}
+};
 
 CClient::CClient() : m_DemoPlayer(&m_SnapshotDelta), m_DemoRecorder(&m_SnapshotDelta)
 {
@@ -302,7 +575,7 @@ int CClient::SendMsg(CMsgPacker *pMsg, int Flags)
 	return SendMsgEx(pMsg, Flags, false);
 }
 
-int CClient::SendMsgEx(CMsgPacker *pMsg, int Flags, bool System)
+int CClient::SendMsgRaw(void *pData, unsigned DataSize, int Flags, bool System)
 {
 	CNetChunk Packet;
 
@@ -312,8 +585,8 @@ int CClient::SendMsgEx(CMsgPacker *pMsg, int Flags, bool System)
 	mem_zero(&Packet, sizeof(CNetChunk));
 
 	Packet.m_ClientID = 0;
-	Packet.m_pData = pMsg->Data();
-	Packet.m_DataSize = pMsg->Size();
+	Packet.m_pData = pData;
+	Packet.m_DataSize = DataSize;
 
 	// HACK: modify the message id in the packet and store the system flag
 	if(*((unsigned char*)Packet.m_pData) == 1 && System && Packet.m_DataSize == 1)
@@ -337,6 +610,11 @@ int CClient::SendMsgEx(CMsgPacker *pMsg, int Flags, bool System)
 	if(!(Flags&MSGFLAG_NOSEND))
 		m_NetClient.Send(&Packet);
 	return 0;
+}
+
+int CClient::SendMsgEx(CMsgPacker *pMsg, int Flags, bool System)
+{
+	return SendMsgRaw((void*)pMsg->Data(), pMsg->Size(), Flags, System);
 }
 
 void CClient::SendInfo()
@@ -536,6 +814,9 @@ void CClient::Connect(const char *pAddress)
 
 void CClient::DisconnectWithReason(const char *pReason)
 {
+	// turn off the game server source
+	m_SourceGameServer.SetActive(false);
+
 	char aBuf[512];
 	str_format(aBuf, sizeof(aBuf), "disconnecting. reason='%s'", pReason?pReason:"unknown");
 	m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "client", aBuf);
@@ -589,7 +870,7 @@ void CClient::ServerInfoRequest()
 
 int CClient::LoadData()
 {
-	m_DebugFont = Graphics()->LoadTexture("debug_font.png", IStorage::TYPE_ALL, CImageInfo::FORMAT_AUTO, IGraphics::TEXLOAD_NORESAMPLE);
+	m_pDebugFont = Graphics()->LoadTexture("debug_font.png", IStorage::TYPE_ALL, CImageInfo::FORMAT_AUTO, IGraphics::TEXLOAD_NORESAMPLE);
 	return 1;
 }
 
@@ -664,7 +945,7 @@ void CClient::DebugRender()
 		return;
 
 	//m_pGraphics->BlendNormal();
-	Graphics()->TextureSet(m_DebugFont);
+	Graphics()->TextureSet(m_pDebugFont);
 	Graphics()->MapScreen(0,0,Graphics()->ScreenWidth(),Graphics()->ScreenHeight());
 
 	if(time_get()-LastSnap > time_freq())
@@ -681,14 +962,14 @@ void CClient::DebugRender()
 		total = 42
 	*/
 	FrameTimeAvg = FrameTimeAvg*0.9f + m_FrameTime*0.1f;
-	str_format(aBuffer, sizeof(aBuffer), "ticks: %8d %8d mem %dk %d gfxmem: %dk fps: %3d",
+	str_format(aBuffer, sizeof(aBuffer), "jobs: %8d/%8d ticks: %8d %8d mem %dk %d gfxmem: %dk fps: %3d",
+		g_JobHandler.m_WorkDone, g_JobHandler.m_WorkTurns,
 		m_CurGameTick, m_PredTick,
 		mem_stats()->allocated/1024,
 		mem_stats()->total_allocations,
 		Graphics()->MemoryUsage()/1024,
 		(int)(1.0f/FrameTimeAvg));
 	Graphics()->QuadsText(2, 2, 16, 1,1,1,1, aBuffer);
-
 
 	{
 		int SendPackets = (Current.sent_packets-Prev.sent_packets);
@@ -737,9 +1018,9 @@ void CClient::DebugRender()
 
 		m_FpsGraph.ScaleMax();
 		m_FpsGraph.ScaleMin();
-		m_FpsGraph.Render(Graphics(), m_DebugFont, x, sp*5, w, h, "FPS");
-		m_InputtimeMarginGraph.Render(Graphics(), m_DebugFont, x, sp*5+h+sp, w, h, "Prediction Margin");
-		m_GametimeMarginGraph.Render(Graphics(), m_DebugFont, x, sp*5+h+sp+h+sp, w, h, "Gametime Margin");
+		m_FpsGraph.Render(Graphics(), m_pDebugFont, x, sp*5, w, h, "FPS");
+		m_InputtimeMarginGraph.Render(Graphics(), m_pDebugFont, x, sp*5+h+sp, w, h, "Prediction Margin");
+		m_GametimeMarginGraph.Render(Graphics(), m_pDebugFont, x, sp*5+h+sp+h+sp, w, h, "Gametime Margin");
 	}
 }
 
@@ -1377,6 +1658,35 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket)
 				}
 			}
 		}
+		else if(Msg == NETMSG_RES_SET)
+		{
+			// activate the game server source
+			m_SourceGameServer.SetActive(true);
+
+			int ResourceId = Unpacker.GetInt();
+			const char *pName = Unpacker.GetString();
+			unsigned ContentHash = Unpacker.GetInt();
+			int ContentSize = Unpacker.GetInt();
+			if(Unpacker.Error() == 0)
+			{
+				dbg_msg("client", "resource #%d = '%s' (size=%d hash=%08x)", ResourceId, pName, ContentSize, ContentHash);
+				IResources::CResourceId Id;
+				Id.m_pName = pName;
+				Id.m_NameHash = str_quickhash(pName);
+				Id.m_ContentHash = ContentHash;
+				IResource *pResource = m_pResources->GetResource(Id);
+				m_ResourceMapping.Set(CResourceIndex(ResourceId), pResource);
+			}
+		}
+		else if(Msg == NETMSG_RES_DATA)
+		{
+			//
+			m_SourceGameServer.QueueChunk(pPacket->m_pData, pPacket->m_DataSize);
+		}
+		else
+		{
+			dbg_msg("client", "unknown system message %d", Msg);
+		}
 	}
 	else
 	{
@@ -1388,8 +1698,31 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket)
 	}
 }
 
+
+IResource *CClient::GetResource(const char *pName)
+{
+}
+
+// resources
+IResource *CClient::GetResource(CResourceIndex Idx)
+{
+	return m_ResourceMapping.Get(Idx);
+}
+
+
 void CClient::PumpNetwork()
 {
+	// pump network parts for data
+	while(true)
+	{
+		CSource_GameServer::CChunk *pChunk = m_SourceGameServer.PopOutputChunk();
+		if(!pChunk)
+			break;
+		SendMsgRaw(pChunk->m_aData, pChunk->m_DataSize, MSGFLAG_VITAL|MSGFLAG_FLUSH, true);
+		delete pChunk;
+	}
+
+	//
 	m_NetClient.Update();
 
 	if(State() != IClient::STATE_DEMOPLAYBACK)
@@ -1682,6 +2015,7 @@ void CClient::InitInterfaces()
 	m_pMap = Kernel()->RequestInterface<IEngineMap>();
 	m_pMasterServer = Kernel()->RequestInterface<IEngineMasterServer>();
 	m_pStorage = Kernel()->RequestInterface<IStorage>();
+	m_pResources = Kernel()->RequestInterface<IResources>();
 
 	//
 	m_ServerBrowser.SetBaseInfo(&m_NetClient, m_pGameClient->NetVersion());
@@ -1758,6 +2092,9 @@ void CClient::Run()
 	{
 		int64 FrameStartTime = time_get();
 		m_Frames++;
+
+		// handle pending resources
+		m_pResources->Update();
 
 		//
 		VersionUpdate();
@@ -2185,6 +2522,8 @@ static CClient *CreateClient()
 		Upstream latency
 */
 
+
+
 #if defined(CONF_PLATFORM_MACOSX)
 extern "C" int SDL_main(int argc, const char **argv) // ignore_convention
 #else
@@ -2212,6 +2551,7 @@ int main(int argc, const char **argv) // ignore_convention
 	IConsole *pConsole = CreateConsole(CFGFLAG_CLIENT);
 	IStorage *pStorage = CreateStorage("Teeworlds", argc, argv); // ignore_convention
 	IConfig *pConfig = CreateConfig();
+	IResources *pResources = IResources::CreateInstance();
 	IEngineGraphics *pEngineGraphics = CreateEngineGraphics();
 	IEngineSound *pEngineSound = CreateEngineSound();
 	IEngineInput *pEngineInput = CreateEngineInput();
@@ -2225,6 +2565,7 @@ int main(int argc, const char **argv) // ignore_convention
 		RegisterFail = RegisterFail || !pKernel->RegisterInterface(pEngine);
 		RegisterFail = RegisterFail || !pKernel->RegisterInterface(pConsole);
 		RegisterFail = RegisterFail || !pKernel->RegisterInterface(pConfig);
+		RegisterFail = RegisterFail || !pKernel->RegisterInterface(pResources);
 
 		RegisterFail = RegisterFail || !pKernel->RegisterInterface(static_cast<IEngineGraphics*>(pEngineGraphics)); // register graphics as both
 		RegisterFail = RegisterFail || !pKernel->RegisterInterface(static_cast<IGraphics*>(pEngineGraphics));
@@ -2251,6 +2592,12 @@ int main(int argc, const char **argv) // ignore_convention
 		if(RegisterFail)
 			return -1;
 	}
+
+	CSource_Disk SourceDisk("data");
+	CSource_Cache SourceCache("cache"); // temp temp temp
+	pResources->AddSource(&SourceDisk);
+	pResources->AddSource(&SourceCache);
+	pResources->AddSource(&m_SourceGameServer);
 
 	pEngine->Init();
 	pConfig->Init();

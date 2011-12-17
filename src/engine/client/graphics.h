@@ -3,9 +3,14 @@
 #ifndef ENGINE_CLIENT_GRAPHICS_H
 #define ENGINE_CLIENT_GRAPHICS_H
 
+#include <base/tl/ringbuffer.h>
+
+#include <engine/loader.h>
+
 class CGraphics_OpenGL : public IEngineGraphics
 {
 protected:
+	class IResources *m_pResources;
 	class IStorage *m_pStorage;
 	class IConsole *m_pConsole;
 
@@ -48,19 +53,42 @@ protected:
 	float m_ScreenX1;
 	float m_ScreenY1;
 
-	int m_InvalidTexture;
+	IResource *m_pInvalidTexture;
 
-	struct CTexture
+	int m_TextureMemoryUsage;
+
+	class CResource_Texture : public IResource
 	{
-		GLuint m_Tex;
+		friend class CGraphics_OpenGL;
+		void SetLoaded() { m_State = IResource::STATE_LOADED; }
+	public:
+		CResource_Texture()
+		{
+			m_TexId = 0;
+			mem_zero(&m_ImageInfo, sizeof(m_ImageInfo));
+		}
+
+		GLuint m_TexId;
 		int m_MemSize;
 		int m_Flags;
-		int m_Next;
+
+		// used for loading the texture
+		// TODO: should perhaps just be stored at load time
+		CImageInfo m_ImageInfo;
 	};
 
-	CTexture m_aTextures[MAX_TEXTURES];
-	int m_FirstFreeTexture;
-	int m_TextureMemoryUsage;
+	class CTextureHandler : public IResources::IHandler
+	{
+	public:
+		CGraphics_OpenGL *m_pGL;
+		static unsigned int PngReadFunc(void *pOutput, unsigned long size, unsigned long numel, void *pUserPtr);
+		virtual IResource *Create(IResources::CResourceId Id);
+		virtual bool Load(IResource *pResource, void *pData, unsigned DataSize);
+		virtual bool Insert(IResource *pResource);
+		virtual bool Destroy(IResource *pResource);
+	};
+
+	CTextureHandler m_TextureHandler;
 
 	void Flush();
 	void AddVertices(int Count);
@@ -68,7 +96,11 @@ protected:
 
 	static unsigned char Sample(int w, int h, const unsigned char *pData, int u, int v, int Offset, int ScaleW, int ScaleH, int Bpp);
 	static unsigned char *Rescale(int Width, int Height, int NewWidth, int NewHeight, int Format, const unsigned char *pData);
+
+	//int GetTextureSlot();
+	IResource *LoadTextureRawToResource(IResource *pResource, int Width, int Height, int Format, const void *pData, int StoreFormat, int Flags);
 public:
+
 	CGraphics_OpenGL();
 
 	virtual void ClipEnable(int x, int y, int w, int h);
@@ -87,16 +119,17 @@ public:
 	virtual void LinesEnd();
 	virtual void LinesDraw(const CLineItem *pArray, int Num);
 
-	virtual int UnloadTexture(int Index);
-	virtual int LoadTextureRaw(int Width, int Height, int Format, const void *pData, int StoreFormat, int Flags);
+	virtual int UnloadTexture(IResource *pTexture);
+	virtual IResource *LoadTextureRaw(int Width, int Height, int Format, const void *pData, int StoreFormat, int Flags);
 
 	// simple uncompressed RGBA loaders
-	virtual int LoadTexture(const char *pFilename, int StorageType, int StoreFormat, int Flags);
+	virtual IResource *LoadTexture(const char *pFilename, int StorageType, int StoreFormat, int Flags);
 	virtual int LoadPNG(CImageInfo *pImg, const char *pFilename, int StorageType);
 
 	void ScreenshotDirect(const char *pFilename);
 
-	virtual void TextureSet(int TextureID);
+	//virtual void TextureSet(int TextureID);
+	virtual void TextureSet(IResource *pResource);
 
 	virtual void Clear(float r, float g, float b);
 

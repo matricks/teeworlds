@@ -154,6 +154,85 @@ void CSnapIDPool::FreeID(int ID)
 	}
 }
 
+class CResourceList
+{
+public:
+	enum
+	{
+		MAX_RESOURCES = 1024*4,
+	};
+
+	struct CEntry
+	{
+		const char *m_pName;
+		void *m_pData;
+		unsigned m_NameHash;
+		unsigned m_DataSize;
+		unsigned m_ContentHash;
+	};
+
+	CEntry m_aList[MAX_RESOURCES];
+
+	CResourceList()
+	{
+		mem_zero(m_aList, sizeof(m_aList));
+	}
+
+	void Clear()
+	{
+		for(int i = 0; i < MAX_RESOURCES; i++)
+		{
+			if(m_aList[i].m_pData)
+				mem_free(m_aList[i].m_pData);
+			if(m_aList[i].m_pName)
+				mem_free((void *)m_aList[i].m_pName);
+			m_aList[i].m_pData = 0;
+			m_aList[i].m_pName = 0;
+			m_aList[i].m_DataSize = 0;
+			m_aList[i].m_NameHash = 0;
+			m_aList[i].m_ContentHash = 0;
+		}
+	}
+
+	CEntry *Find(unsigned NameHash, unsigned ContentHash)
+	{
+		// TODO: bad performance, linear search
+		for(int i = 0; i < MAX_RESOURCES; i++)
+		{
+			if(m_aList[i].m_pData != 0 && m_aList[i].m_NameHash == NameHash && m_aList[i].m_ContentHash == ContentHash)
+				return &m_aList[i];
+		}
+
+		return NULL;
+	}
+
+	int Add(const char *pName, void *pData, unsigned DataSize)
+	{
+		if(pData == 0)
+			return -1;
+
+		// TODO: bad performance, linear search
+		for(int i = 0; i < MAX_RESOURCES; i++)
+			if(m_aList[i].m_pData == 0)
+			{
+				int NameSize = str_length(pName) + 1;
+				void *pNameCpy = mem_alloc(NameSize, sizeof(void*));
+				mem_copy(pNameCpy, pName, NameSize);
+				m_aList[i].m_pName = (const char *)pNameCpy;
+				m_aList[i].m_NameHash = str_quickhash(m_aList[i].m_pName);
+				m_aList[i].m_pData = pData;
+				m_aList[i].m_DataSize = DataSize;
+				m_aList[i].m_ContentHash = hash_crc32(0, pData, DataSize);
+				return i;
+			}
+
+		return -1;
+	}
+};
+
+CResourceList m_ResourceList;
+
+
 void CServer::CClient::Reset()
 {
 	// reset input
@@ -730,6 +809,7 @@ void CServer::ProcessClientPacket(CNetChunk *pPacket)
 				}
 
 				m_aClients[ClientID].m_State = CClient::STATE_CONNECTING;
+				SendResourceList(ClientID);
 				SendMap(ClientID);
 			}
 		}
@@ -940,6 +1020,44 @@ void CServer::ProcessClientPacket(CNetChunk *pPacket)
 			CMsgPacker Msg(NETMSG_PING_REPLY);
 			SendMsgEx(&Msg, 0, ClientID, true);
 		}
+		else if(Msg == NETMSG_REQUEST_RES_DATA)
+		{
+			unsigned NameHash = Unpacker.GetInt();
+			unsigned ContentHash = Unpacker.GetInt();
+			unsigned DataOffset = Unpacker.GetInt();
+
+			if(Unpacker.Error() == 0)
+			{
+				// calculate a decent blocksize
+				CResourceList::CEntry *pEntry = m_ResourceList.Find(NameHash, ContentHash);
+
+				if(pEntry && DataOffset <= pEntry->m_DataSize)
+				{
+					int BlockSize = pEntry->m_DataSize - DataOffset;
+					if(BlockSize > 1024-128) // TODO: what is a good value here?
+						BlockSize = 1024-128;
+
+					CMsgPacker Msg(NETMSG_RES_DATA);
+					Msg.AddInt(pEntry->m_ContentHash);
+					Msg.AddInt(pEntry->m_DataSize);
+					Msg.AddInt(DataOffset);
+					Msg.AddInt(BlockSize);
+					Msg.AddRaw(((const char *)pEntry->m_pData) + DataOffset, BlockSize);
+					SendMsgEx(&Msg, MSGFLAG_VITAL|MSGFLAG_FLUSH, ClientID, true);
+				}
+				else
+				{
+					// respond with a faulty packet
+					CMsgPacker Msg(NETMSG_RES_DATA);
+					Msg.AddInt(ContentHash);
+					Msg.AddInt(-1);
+					Msg.AddInt(-1);
+					Msg.AddInt(-1);
+					Msg.AddRaw(NULL, 0);
+					SendMsgEx(&Msg, MSGFLAG_VITAL|MSGFLAG_FLUSH, ClientID, true);
+				}
+			}
+		}		
 		else
 		{
 			if(g_Config.m_Debug)
@@ -1112,6 +1230,52 @@ char *CServer::GetMapName()
 	return pMapShortName;
 }
 
+CResourceIndex CServer::LoadResource(const char *pName)
+{
+	// load the complete file into memory
+	IOHANDLE hFile = m_pStorage->OpenFile(pName, IOFLAG_READ, IStorage::TYPE_ALL) ;
+	if(hFile == 0)
+	{
+		dbg_msg("server", "failed to load resource '%s'", pName);
+		return CResourceIndex();
+	}
+
+	unsigned DataSize = io_length(hFile);
+	void *pData = mem_alloc(DataSize, sizeof(void*)); // TOOD: stream buffer perhaps
+	long int Result = io_read(hFile, pData, DataSize);
+	io_close(hFile);
+
+	if(Result != DataSize)
+	{
+		dbg_msg("server", "failed to load resource '%s'", pName);
+		mem_free(pData);
+		return CResourceIndex();
+	}
+
+	int Id = m_ResourceList.Add(pName, pData, DataSize);
+	//int Id = m_ResourceList.Add(pName, pData, DataSize);
+	dbg_msg("server", "loaded resource #%d = [%08x] '%s'", Id, m_ResourceList.m_aList[Id].m_ContentHash, pName);
+	return CResourceIndex(Id);
+}
+
+void CServer::SendResource(int ClientID, int ResourceId)
+{
+	CMsgPacker Msg(NETMSG_RES_SET);
+	Msg.AddInt(ResourceId);
+	Msg.AddString(m_ResourceList.m_aList[ResourceId].m_pName, 0);
+	Msg.AddInt(m_ResourceList.m_aList[ResourceId].m_ContentHash);
+	Msg.AddInt(m_ResourceList.m_aList[ResourceId].m_DataSize);
+	dbg_msg("server", "sending %d %s %08x %d", ResourceId, m_ResourceList.m_aList[ResourceId].m_pName, m_ResourceList.m_aList[ResourceId].m_ContentHash, m_ResourceList.m_aList[ResourceId].m_DataSize);
+	SendMsgEx(&Msg, MSGFLAG_VITAL|MSGFLAG_FLUSH, ClientID, true);
+}
+
+void CServer::SendResourceList(int ClientID)
+{
+	for(int i = 0; i < CResourceList::MAX_RESOURCES; i++)
+		if(m_ResourceList.m_aList[i].m_pData != 0)
+			SendResource(ClientID, i);
+}
+
 int CServer::LoadMap(const char *pMapName)
 {
 	//DATAFILE *df;
@@ -1157,6 +1321,9 @@ int CServer::LoadMap(const char *pMapName)
 		io_read(File, m_pCurrentMapData, m_CurrentMapSize);
 		io_close(File);
 	}
+
+	// clear the resource list
+	m_ResourceList.Clear();
 	return 1;
 }
 
@@ -1170,6 +1337,7 @@ int CServer::Run()
 	m_pGameServer = Kernel()->RequestInterface<IGameServer>();
 	m_pMap = Kernel()->RequestInterface<IEngineMap>();
 	m_pStorage = Kernel()->RequestInterface<IStorage>();
+	m_pResources = Kernel()->RequestInterface<IResources>();	
 
 	//
 	m_PrintCBIndex = Console()->RegisterPrintCallback(g_Config.m_ConsoleOutputLevel, SendRconLineAuthed, this);
@@ -1710,10 +1878,19 @@ int main(int argc, const char **argv) // ignore_convention
 	IGameServer *pGameServer = CreateGameServer();
 	IConsole *pConsole = CreateConsole(CFGFLAG_SERVER);
 	IEngineMasterServer *pEngineMasterServer = CreateEngineMasterServer();
+	IResources *pResources = IResources::CreateInstance();
 	IStorage *pStorage = CreateStorage("Teeworlds", argc, argv); // ignore_convention
 	IConfig *pConfig = CreateConfig();
 
 	pServer->InitRegister(&pServer->m_NetServer, pEngineMasterServer, pConsole);
+
+	// TEMP: add the game dir
+	if(true)
+	{
+		char aBuf[256];
+		str_format(aBuf, sizeof(aBuf), "%s/games/teeworlds", pStorage->GetDataPath());
+		pStorage->AddPath(aBuf);
+	}
 
 	{
 		bool RegisterFail = false;
@@ -1726,6 +1903,7 @@ int main(int argc, const char **argv) // ignore_convention
 		RegisterFail = RegisterFail || !pKernel->RegisterInterface(pConsole);
 		RegisterFail = RegisterFail || !pKernel->RegisterInterface(pStorage);
 		RegisterFail = RegisterFail || !pKernel->RegisterInterface(pConfig);
+		RegisterFail = RegisterFail || !pKernel->RegisterInterface(pResources);
 		RegisterFail = RegisterFail || !pKernel->RegisterInterface(static_cast<IEngineMasterServer*>(pEngineMasterServer)); // register as both
 		RegisterFail = RegisterFail || !pKernel->RegisterInterface(static_cast<IMasterServer*>(pEngineMasterServer));
 

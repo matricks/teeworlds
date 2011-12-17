@@ -182,9 +182,9 @@ void CGameContext::CreateDeath(vec2 Pos, int ClientID)
 	}
 }
 
-void CGameContext::CreateSound(vec2 Pos, int Sound, int Mask)
+void CGameContext::CreateSound(vec2 Pos, CResourceIndex Sound, int Mask)
 {
-	if (Sound < 0)
+	if(!Sound.IsValid())
 		return;
 
 	// create a sound
@@ -197,9 +197,9 @@ void CGameContext::CreateSound(vec2 Pos, int Sound, int Mask)
 	}
 }
 
-void CGameContext::CreateSoundGlobal(int Sound, int Target)
+void CGameContext::CreateSoundGlobal(CResourceIndex Sound, int Target)
 {
-	if (Sound < 0)
+	if(!Sound.IsValid())
 		return;
 
 	CNetMsg_Sv_SoundGlobal Msg;
@@ -1343,6 +1343,68 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 	m_pConsole = Kernel()->RequestInterface<IConsole>();
 	m_World.SetGameServer(this);
 	m_Events.SetGameServer(this);
+
+	// dig out the images that the map uses
+	{
+		IMap *pMap = Kernel()->RequestInterface<IMap>();
+		int Start, Count;
+		pMap->GetType(MAPITEMTYPE_IMAGE, &Start, &Count);
+
+		// load new textures
+		for(int i = 0; i < Count; i++)
+		{
+			CMapItemImage *pImg = (CMapItemImage *)pMap->GetItem(Start+i, 0, 0);
+			if(pImg->m_External)
+			{
+				char Buf[256];
+				str_format(Buf, sizeof(Buf), "mapres/%s.png", (char *)pMap->GetData(pImg->m_ImageName));
+				m_pServer->LoadResource(Buf);
+			}
+		}
+	}
+
+	// load the other resources
+
+	LoadSet(&m_Sound_WeaponSwitch, "audio/wp_switch-%02d.wv");
+
+	LoadSet(&m_Sound_NinjaHit, "audio/wp_ninja_hit-%02d.wv");
+	LoadSet(&m_Sound_NoAmmo, "audio/wp_noammo-%02d.wv");
+
+	LoadSet(&m_Sound_WeaponSpawn, "audio/sfx_spawn_wpn-%02d.wv");
+	LoadSet(&m_Sound_PickupHealth, "audio/sfx_pickup_hrt-%02d.wv");
+	LoadSet(&m_Sound_PickupArmor, "audio/sfx_pickup_arm-%02d.wv");
+	LoadSet(&m_Sound_PickupShotgun, "audio/sfx_pickup_sg.wv");
+	LoadSet(&m_Sound_PickupGrenade, "audio/sfx_pickup_launcher.wv");
+	LoadSet(&m_Sound_PickupNinja, "audio/sfx_pickup_ninja.wv");
+
+	LoadSet(&m_Sound_HammerFire, "audio/wp_hammer_swing-%02d.wv");
+	LoadSet(&m_Sound_GunFire, "audio/wp_gun_fire-%02d.wv");
+	LoadSet(&m_Sound_ShotgunFire, "audio/wp_shotty_fire-%02d.wv");
+	LoadSet(&m_Sound_GrenadeFire, "audio/wp_flump_launch-%02d.wv");
+	LoadSet(&m_Sound_RifleFire, "audio/wp_rifle_fire-%02d.wv");
+	LoadSet(&m_Sound_NinjaFire, "audio/wp_ninja_attack-%02d.wv");
+
+/*
+"audio/wp_hammer_hit-%02d.wv"
+"audio/foley_land-%02d.wv"
+"audio/foley_dbljump-%02d.wv"
+"audio/vo_teefault_spawn-%02d.wv"
+"audio/sfx_skid-%02d.wv"
+"audio/vo_teefault_cry-%02d.wv"
+"audio/hook_loop-%02d.wv"*/
+
+	LoadSet(&m_Sound_RifleBounce, "audio/wp_rifle_bnce-%02d.wv");
+
+	LoadSet(&m_Sound_PlayerJump, "audio/foley_foot_left-%02d.wv"); //  + "audio/foley_foot_right-%02d.wv"
+	LoadSet(&m_Sound_PlayerHit, "audio/sfx_hit_weak-%02d.wv");
+	LoadSet(&m_Sound_PlayerDie, "audio/foley_body_splat-%02d.wv");
+	LoadSet(&m_Sound_PlayerPainLong, "audio/vo_teefault_pain_long-%02d.wv");
+	LoadSet(&m_Sound_PlayerPainShort, "audio/vo_teefault_pain_short-%02d.wv");
+	LoadSet(&m_Sound_HookAttachPlayer, "audio/foley_body_impact-%02d.wv");
+	LoadSet(&m_Sound_HookAttachGround, "audio/hook_attach-%02d.wv");
+	LoadSet(&m_Sound_HookAttachNone, "audio/hook_noattach-%02d.wv");
+
+	LoadSet(&m_Sound_GrenadeExplode, "audio/wp_flump_explo-%02d.wv");
 
 	//if(!data) // only load once
 		//data = load_data_from_memory(internal_data);

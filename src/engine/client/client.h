@@ -23,7 +23,7 @@ public:
 	void ScaleMin();
 
 	void Add(float v, float r, float g, float b);
-	void Render(IGraphics *pGraphics, int Font, float x, float y, float w, float h, const char *pDescription);
+	void Render(IGraphics *pGraphics, IResource *pFontTexture, float x, float y, float w, float h, const char *pDescription);
 };
 
 
@@ -64,6 +64,7 @@ class CClient : public IClient, public CDemoPlayer::IListner
 	IConsole *m_pConsole;
 	IStorage *m_pStorage;
 	IEngineMasterServer *m_pMasterServer;
+	IResources *m_pResources;
 
 	enum
 	{
@@ -83,7 +84,7 @@ class CClient : public IClient, public CDemoPlayer::IListner
 	unsigned m_SnapshotParts;
 	int64 m_LocalStartTime;
 
-	int m_DebugFont;
+	IResource *m_pDebugFont;
 	float m_FrameTimeLow;
 	float m_FrameTimeHigh;
 	int m_Frames;
@@ -186,6 +187,7 @@ public:
 	// ----- send functions -----
 	virtual int SendMsg(CMsgPacker *pMsg, int Flags);
 
+	int SendMsgRaw(void *pData, unsigned DataSize, int Flags, bool System);
 	int SendMsgEx(CMsgPacker *pMsg, int Flags, bool System=true);
 	void SendInfo();
 	void SendEnterGame();
@@ -200,7 +202,7 @@ public:
 
 	virtual bool SoundInitFailed() { return m_SoundInitFailed; }
 
-	virtual int GetDebugFont() { return m_DebugFont; }
+	virtual IResource *GetDebugFont() { return m_pDebugFont; }
 
 	void DirectInput(int *pInput, int Size);
 	void SendInput();
@@ -258,6 +260,10 @@ public:
 
 	virtual void OnDemoPlayerSnapshot(void *pData, int Size);
 	virtual void OnDemoPlayerMessage(void *pData, int Size);
+
+	// resources
+	virtual IResource *GetResource(const char *pName);
+	virtual IResource *GetResource(CResourceIndex Idx);
 
 	void Update();
 

@@ -168,6 +168,24 @@ class Pointer(BaseType):
 	def EmitDefinition(self, name):
 		return ["&"+self.target.TargetName()]
 
+class Resource(BaseType):
+	def __init__(self):
+		BaseType.__init__(self, "class IResource*")
+		#self.target = target
+	#def Set(self, target):
+	#	self.target = target
+	def EmitDefinition(self, name):
+		return ["0x0"]
+
+class ResourceIndex(BaseType):
+	def __init__(self):
+		BaseType.__init__(self, "CResourceIndex")
+		#self.target = target
+	#def Set(self, target):
+	#	self.target = target
+	def EmitDefinition(self, name):
+		return ["CResourceIndex()"]
+
 # helper functions
 
 def EmitTypeDeclaration(root):
@@ -319,6 +337,14 @@ class NetIntRange(NetIntAny):
 		return ["ClampInt(\"%s\", pObj->%s, %s, %s);"%(self.name,self.name, self.min, self.max)]
 	def emit_unpack_check(self):
 		return ["if(pMsg->%s < %s || pMsg->%s > %s) { m_pMsgFailedOn = \"%s\"; break; }" % (self.name, self.min, self.name, self.max, self.name)]
+
+class NetResourceIndex(NetVariable):
+	def emit_declaration(self):
+		return ["CResourceIndex %s;"%self.name]
+	def emit_unpack(self):
+		return ["pMsg->%s = CResourceIndex(pUnpacker->GetInt());" % self.name]
+	def emit_pack(self):
+		return ["pPacker->AddInt(%s.Id());" % self.name]
 
 class NetBool(NetIntRange):
 	def __init__(self, name):

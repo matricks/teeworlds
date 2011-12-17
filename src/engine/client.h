@@ -5,6 +5,7 @@
 #include "kernel.h"
 
 #include "message.h"
+#include "loader.h" // kinda ugly
 
 class IClient : public IInterface
 {
@@ -101,6 +102,10 @@ public:
 	// server info
 	virtual void GetServerInfo(class CServerInfo *pServerInfo) = 0;
 
+	// resources
+	virtual IResource *GetResource(const char *pResource) = 0;
+	virtual IResource *GetResource(CResourceIndex Idx) = 0;
+
 	// snapshot interface
 
 	enum
@@ -135,7 +140,7 @@ public:
 
 	virtual bool SoundInitFailed() = 0;
 
-	virtual int GetDebugFont() = 0;
+	virtual IResource *GetDebugFont() = 0;
 };
 
 class IGameClient : public IInterface

@@ -15,6 +15,20 @@
 #include "gameworld.h"
 #include "player.h"
 
+template<int TSIZE>
+class CResourceSet
+{
+public:
+	CResourceIndex m_aResources[TSIZE];
+	int m_Last;
+
+	CResourceIndex Get()
+	{
+		m_Last = (m_Last+1)%TSIZE; // lazy ass cycle through the sounds, good enough for now
+		return m_aResources[m_Last];
+	}
+};
+
 /*
 	Tick
 		Game Context (CGameContext::tick)
@@ -111,14 +125,57 @@ public:
 	CVoteOptionServer *m_pVoteOptionFirst;
 	CVoteOptionServer *m_pVoteOptionLast;
 
+	// resources
+	CResourceSet<3> m_Sound_WeaponSwitch;
+	CResourceSet<4> m_Sound_NinjaHit;
+	CResourceSet<5> m_Sound_NoAmmo;
+
+	CResourceSet<3> m_Sound_WeaponSpawn;
+	CResourceSet<1> m_Sound_PickupHealth;
+	CResourceSet<1> m_Sound_PickupArmor;
+	CResourceSet<1> m_Sound_PickupShotgun;
+	CResourceSet<1> m_Sound_PickupGrenade;
+	CResourceSet<1> m_Sound_PickupNinja;
+
+	CResourceSet<3> m_Sound_HammerFire;
+	CResourceSet<3> m_Sound_GunFire;
+	CResourceSet<3> m_Sound_ShotgunFire;
+	CResourceSet<3> m_Sound_GrenadeFire;
+	CResourceSet<3> m_Sound_RifleFire;
+	CResourceSet<4> m_Sound_NinjaFire;
+
+	CResourceSet<3> m_Sound_RifleBounce;
+
+	CResourceSet<4> m_Sound_PlayerJump;
+	CResourceSet<3> m_Sound_PlayerHit;
+	CResourceSet<4> m_Sound_PlayerDie;
+	CResourceSet<2> m_Sound_PlayerPainLong;
+	CResourceSet<12> m_Sound_PlayerPainShort;
+	CResourceSet<3> m_Sound_HookAttachPlayer;
+	CResourceSet<3> m_Sound_HookAttachGround;
+	CResourceSet<2> m_Sound_HookAttachNone;
+
+	CResourceSet<3> m_Sound_GrenadeExplode;
+
+	template<int TSIZE>
+	void LoadSet(CResourceSet<TSIZE> *pSet, const char *pFilename)
+	{
+		for(int i = 0; i < TSIZE; i++)
+		{
+			char aBuf[256];
+			str_format(aBuf, sizeof(aBuf), pFilename, i+1);
+			pSet->m_aResources[i] = Server()->LoadResource(aBuf);
+		}
+	}
+
 	// helper functions
 	void CreateDamageInd(vec2 Pos, float AngleMod, int Amount);
 	void CreateExplosion(vec2 Pos, int Owner, int Weapon, bool NoDamage);
 	void CreateHammerHit(vec2 Pos);
 	void CreatePlayerSpawn(vec2 Pos);
 	void CreateDeath(vec2 Pos, int Who);
-	void CreateSound(vec2 Pos, int Sound, int Mask=-1);
-	void CreateSoundGlobal(int Sound, int Target=-1);
+	void CreateSound(vec2 Pos, CResourceIndex Sound, int Mask=-1);
+	void CreateSoundGlobal(CResourceIndex Sound, int Target=-1);
 
 
 	enum

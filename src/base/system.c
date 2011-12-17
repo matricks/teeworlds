@@ -358,7 +358,7 @@ int io_flush(IOHANDLE io)
 	return 0;
 }
 
-void *thread_create(void (*threadfunc)(void *), void *u)
+void *thread_create(void (*threadfunc)(void *), void *u, const char *name)
 {
 #if defined(CONF_FAMILY_UNIX)
 	pthread_t id;

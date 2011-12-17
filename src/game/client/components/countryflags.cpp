@@ -14,6 +14,8 @@
 
 void CCountryFlags::LoadCountryflagsIndexfile()
 {
+	int64 Start = time_get();
+
 	IOHANDLE File = Storage()->OpenFile("countryflags/index.txt", IOFLAG_READ, IStorage::TYPE_ALL);
 	if(!File)
 	{
@@ -71,13 +73,8 @@ void CCountryFlags::LoadCountryflagsIndexfile()
 		CCountryFlag CountryFlag;
 		CountryFlag.m_CountryCode = CountryCode;
 		str_copy(CountryFlag.m_aCountryCodeString, aOrigin, sizeof(CountryFlag.m_aCountryCodeString));
-		CountryFlag.m_Texture = Graphics()->LoadTextureRaw(Info.m_Width, Info.m_Height, Info.m_Format, Info.m_pData, Info.m_Format, 0);
+		CountryFlag.m_pTexture = Graphics()->LoadTextureRaw(Info.m_Width, Info.m_Height, Info.m_Format, Info.m_pData, Info.m_Format, 0);
 		mem_free(Info.m_pData);
-		if(g_Config.m_Debug)
-		{
-			str_format(aBuf, sizeof(aBuf), "loaded country flag '%s'", aOrigin);
-			Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "countryflags", aBuf);
-		}
 		m_aCountryFlags.add(CountryFlag);
 	}
 	io_close(File);
@@ -85,6 +82,9 @@ void CCountryFlags::LoadCountryflagsIndexfile()
 	mem_zero(m_CodeIndexLUT, sizeof(m_CodeIndexLUT));
 	for(int i = 0; i < m_aCountryFlags.size(); ++i)
 		m_CodeIndexLUT[max(0, (m_aCountryFlags[i].m_CountryCode-CODE_LB)%CODE_RANGE)] = i+1;
+
+	int64 Elapsed = time_get() - Start;
+	dbg_msg("countryflags", "%d", (int)((Elapsed*1000) / time_freq()));
 }
 
 void CCountryFlags::OnInit()
@@ -97,7 +97,7 @@ void CCountryFlags::OnInit()
 		Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "countryflags", "failed to load country flags. folder='countryflags/'");
 		CCountryFlag DummyEntry;
 		DummyEntry.m_CountryCode = -1;
-		DummyEntry.m_Texture = -1;
+		DummyEntry.m_pTexture = 0x0;
 		mem_zero(DummyEntry.m_aCountryCodeString, sizeof(DummyEntry.m_aCountryCodeString));
 		m_aCountryFlags.add(DummyEntry);
 	}

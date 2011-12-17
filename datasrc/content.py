@@ -4,7 +4,7 @@ from datatypes import *
 class Sound(Struct):
 	def __init__(self, filename=""):
 		Struct.__init__(self, "CDataSound")
-		self.id = Int(0)
+		self.resource = Resource()
 		self.filename = String(filename)
 
 class SoundSet(Struct):
@@ -21,7 +21,7 @@ class Image(Struct):
 		Struct.__init__(self, "CDataImage")
 		self.name = String(name)
 		self.filename = String(filename)
-		self.id = Int(-1)
+		self.resource = Resource()
 
 class SpriteSet(Struct):
 	def __init__(self, name="", image=None, gridx=0, gridy=0):
@@ -172,56 +172,62 @@ def FileList(format, num):
 	return [format%(x+1) for x in range(0,num)]
 
 container = DataContainer()
-container.sounds.Add(SoundSet("gun_fire", FileList("audio/wp_gun_fire-%02d.wv", 3)))
-container.sounds.Add(SoundSet("shotgun_fire", FileList("audio/wp_shotty_fire-%02d.wv", 3)))
 
-container.sounds.Add(SoundSet("grenade_fire", FileList("audio/wp_flump_launch-%02d.wv", 3)))
-container.sounds.Add(SoundSet("hammer_fire", FileList("audio/wp_hammer_swing-%02d.wv", 3)))
-container.sounds.Add(SoundSet("hammer_hit", FileList("audio/wp_hammer_hit-%02d.wv", 3)))
-container.sounds.Add(SoundSet("ninja_fire", FileList("audio/wp_ninja_attack-%02d.wv", 3)))
-container.sounds.Add(SoundSet("grenade_explode", FileList("audio/wp_flump_explo-%02d.wv", 3)))
-container.sounds.Add(SoundSet("ninja_hit", FileList("audio/wp_ninja_hit-%02d.wv", 3)))
-container.sounds.Add(SoundSet("rifle_fire", FileList("audio/wp_rifle_fire-%02d.wv", 3)))
-container.sounds.Add(SoundSet("rifle_bounce", FileList("audio/wp_rifle_bnce-%02d.wv", 3)))
-container.sounds.Add(SoundSet("weapon_switch", FileList("audio/wp_switch-%02d.wv", 3)))
+# all these soundsets are requeried by the client due to prediction, can't remove em
+container.sounds.Add(SoundSet("hammer_hit", FileList("audio/wp_hammer_hit-%02d.wv", 3))) # client needs
+container.sounds.Add(SoundSet("player_airjump", FileList("audio/foley_dbljump-%02d.wv", 3))) # client needs
+container.sounds.Add(SoundSet("player_jump", FileList("audio/foley_foot_left-%02d.wv", 4) + FileList("audio/foley_foot_right-%02d.wv", 4))) # client needs
+container.sounds.Add(SoundSet("player_spawn", FileList("audio/vo_teefault_spawn-%02d.wv", 7))) # client needs
+container.sounds.Add(SoundSet("player_skid", FileList("audio/sfx_skid-%02d.wv", 4))) # client needs
+container.sounds.Add(SoundSet("hook_attach_ground", FileList("audio/hook_attach-%02d.wv", 3))) # client needs
+container.sounds.Add(SoundSet("hook_noattach", FileList("audio/hook_noattach-%02d.wv", 2))) # client needs
 
-container.sounds.Add(SoundSet("player_pain_short", FileList("audio/vo_teefault_pain_short-%02d.wv", 12)))
-container.sounds.Add(SoundSet("player_pain_long", FileList("audio/vo_teefault_pain_long-%02d.wv", 2)))
+#container.sounds.Add(SoundSet("chat_server", ["audio/sfx_msg-server.wv"])) # client needs
+#container.sounds.Add(SoundSet("chat_client", ["audio/sfx_msg-client.wv"])) # client needs
+#container.sounds.Add(SoundSet("chat_highlight", ["audio/sfx_msg-highlight.wv"])) # client needs
 
-container.sounds.Add(SoundSet("body_land", FileList("audio/foley_land-%02d.wv", 4)))
-container.sounds.Add(SoundSet("player_airjump", FileList("audio/foley_dbljump-%02d.wv", 3)))
-container.sounds.Add(SoundSet("player_jump", FileList("audio/foley_foot_left-%02d.wv", 4) + FileList("audio/foley_foot_right-%02d.wv", 4)))
-container.sounds.Add(SoundSet("player_die", FileList("audio/foley_body_splat-%02d.wv", 3)))
-container.sounds.Add(SoundSet("player_spawn", FileList("audio/vo_teefault_spawn-%02d.wv", 7)))
-container.sounds.Add(SoundSet("player_skid", FileList("audio/sfx_skid-%02d.wv", 4)))
-container.sounds.Add(SoundSet("tee_cry", FileList("audio/vo_teefault_cry-%02d.wv", 2)))
+#container.sounds.Add(SoundSet("menu", ["audio/music_menu.wv"])) # client needs
 
-container.sounds.Add(SoundSet("hook_loop", FileList("audio/hook_loop-%02d.wv", 2)))
+#container.sounds.Add(SoundSet("gun_fire", FileList("audio/wp_gun_fire-%02d.wv", 3)))
+#container.sounds.Add(SoundSet("shotgun_fire", FileList("audio/wp_shotty_fire-%02d.wv", 3)))
 
-container.sounds.Add(SoundSet("hook_attach_ground", FileList("audio/hook_attach-%02d.wv", 3)))
-container.sounds.Add(SoundSet("hook_attach_player", FileList("audio/foley_body_impact-%02d.wv", 3)))
-container.sounds.Add(SoundSet("hook_noattach", FileList("audio/hook_noattach-%02d.wv", 2)))
-container.sounds.Add(SoundSet("pickup_health", FileList("audio/sfx_pickup_hrt-%02d.wv", 2)))
-container.sounds.Add(SoundSet("pickup_armor", FileList("audio/sfx_pickup_arm-%02d.wv", 4)))
+#container.sounds.Add(SoundSet("grenade_fire", FileList("audio/wp_flump_launch-%02d.wv", 3)))
+#container.sounds.Add(SoundSet("hammer_fire", FileList("audio/wp_hammer_swing-%02d.wv", 3)))
 
-container.sounds.Add(SoundSet("pickup_grenade", ["audio/sfx_pickup_launcher.wv"]))
-container.sounds.Add(SoundSet("pickup_shotgun", ["audio/sfx_pickup_sg.wv"]))
-container.sounds.Add(SoundSet("pickup_ninja", ["audio/sfx_pickup_ninja.wv"]))
-container.sounds.Add(SoundSet("weapon_spawn", FileList("audio/sfx_spawn_wpn-%02d.wv", 3)))
-container.sounds.Add(SoundSet("weapon_noammo", FileList("audio/wp_noammo-%02d.wv", 5)))
+#container.sounds.Add(SoundSet("ninja_fire", FileList("audio/wp_ninja_attack-%02d.wv", 3)))
+#container.sounds.Add(SoundSet("grenade_explode", FileList("audio/wp_flump_explo-%02d.wv", 3)))
+#container.sounds.Add(SoundSet("ninja_hit", FileList("audio/wp_ninja_hit-%02d.wv", 3)))
+#container.sounds.Add(SoundSet("rifle_fire", FileList("audio/wp_rifle_fire-%02d.wv", 3)))
+#container.sounds.Add(SoundSet("rifle_bounce", FileList("audio/wp_rifle_bnce-%02d.wv", 3)))
+#container.sounds.Add(SoundSet("weapon_switch", FileList("audio/wp_switch-%02d.wv", 3)))
 
-container.sounds.Add(SoundSet("hit", FileList("audio/sfx_hit_weak-%02d.wv", 2)))
+#container.sounds.Add(SoundSet("player_pain_short", FileList("audio/vo_teefault_pain_short-%02d.wv", 12)))
+#container.sounds.Add(SoundSet("player_pain_long", FileList("audio/vo_teefault_pain_long-%02d.wv", 2)))
 
-container.sounds.Add(SoundSet("chat_server", ["audio/sfx_msg-server.wv"]))
-container.sounds.Add(SoundSet("chat_client", ["audio/sfx_msg-client.wv"]))
-container.sounds.Add(SoundSet("chat_highlight", ["audio/sfx_msg-highlight.wv"]))
-container.sounds.Add(SoundSet("ctf_drop", ["audio/sfx_ctf_drop.wv"]))
-container.sounds.Add(SoundSet("ctf_return", ["audio/sfx_ctf_rtn.wv"]))
-container.sounds.Add(SoundSet("ctf_grab_pl", ["audio/sfx_ctf_grab_pl.wv"]))
-container.sounds.Add(SoundSet("ctf_grab_en", ["audio/sfx_ctf_grab_en.wv"]))
-container.sounds.Add(SoundSet("ctf_capture", ["audio/sfx_ctf_cap_pl.wv"]))
+#container.sounds.Add(SoundSet("body_land", FileList("audio/foley_land-%02d.wv", 4)))
+#container.sounds.Add(SoundSet("player_die", FileList("audio/foley_body_splat-%02d.wv", 3)))
+#container.sounds.Add(SoundSet("tee_cry", FileList("audio/vo_teefault_cry-%02d.wv", 2)))
 
-container.sounds.Add(SoundSet("menu", ["audio/music_menu.wv"]))
+#container.sounds.Add(SoundSet("hook_loop", FileList("audio/hook_loop-%02d.wv", 2)))
+
+#container.sounds.Add(SoundSet("hook_attach_player", FileList("audio/foley_body_impact-%02d.wv", 3)))
+#container.sounds.Add(SoundSet("pickup_health", FileList("audio/sfx_pickup_hrt-%02d.wv", 2)))
+#container.sounds.Add(SoundSet("pickup_armor", FileList("audio/sfx_pickup_arm-%02d.wv", 4)))
+
+#container.sounds.Add(SoundSet("pickup_grenade", ["audio/sfx_pickup_launcher.wv"]))
+#container.sounds.Add(SoundSet("pickup_shotgun", ["audio/sfx_pickup_sg.wv"]))
+#container.sounds.Add(SoundSet("pickup_ninja", ["audio/sfx_pickup_ninja.wv"]))
+#container.sounds.Add(SoundSet("weapon_spawn", FileList("audio/sfx_spawn_wpn-%02d.wv", 3)))
+#container.sounds.Add(SoundSet("weapon_noammo", FileList("audio/wp_noammo-%02d.wv", 5)))
+
+#container.sounds.Add(SoundSet("hit", FileList("audio/sfx_hit_weak-%02d.wv", 2)))
+
+#container.sounds.Add(SoundSet("ctf_drop", ["audio/sfx_ctf_drop.wv"]))
+#container.sounds.Add(SoundSet("ctf_return", ["audio/sfx_ctf_rtn.wv"]))
+#container.sounds.Add(SoundSet("ctf_grab_pl", ["audio/sfx_ctf_grab_pl.wv"]))
+#container.sounds.Add(SoundSet("ctf_grab_en", ["audio/sfx_ctf_grab_en.wv"]))
+#container.sounds.Add(SoundSet("ctf_capture", ["audio/sfx_ctf_cap_pl.wv"]))
+
 
 image_null = Image("null", "")
 image_particles = Image("particles", "particles.png")

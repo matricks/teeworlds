@@ -5,6 +5,8 @@
 #include "kernel.h"
 #include "message.h"
 
+#include "loader.h" // TODO: kinda ugly
+
 class IServer : public IInterface
 {
 	MACRO_INTERFACE("server", 0)
@@ -59,6 +61,8 @@ public:
 	virtual void Kick(int ClientID, const char *pReason) = 0;
 
 	virtual void DemoRecorder_HandleAutoStart() = 0;
+
+	virtual CResourceIndex LoadResource(const char *pName) = 0;
 };
 
 class IGameServer : public IInterface
