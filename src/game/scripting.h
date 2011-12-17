@@ -261,7 +261,7 @@ public:
 	void Register(CScriptHost *pHost);
 };
 
-class CMapItemLayerTilemap;
+struct CMapItemLayerTilemap;
 class CTile;
 
 class CScripting_Map

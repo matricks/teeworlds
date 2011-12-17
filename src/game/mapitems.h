@@ -131,7 +131,7 @@ struct CMapItemLayer
 	int m_Version;
 	int m_Type;
 	int m_Flags;
-} ;
+};
 
 struct CMapItemLayerTilemap
 {
@@ -150,7 +150,7 @@ struct CMapItemLayerTilemap
 	int m_Data;
 
 	int m_aName[3];
-} ;
+};
 
 struct CMapItemLayerQuads
 {
