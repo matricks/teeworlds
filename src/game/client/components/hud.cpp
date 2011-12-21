@@ -114,7 +114,7 @@ void CHud::RenderScoreHud()
 					{
 						// draw flag
 						Graphics()->BlendNormal();
-						Graphics()->TextureSet(g_pData->m_aImages[IMAGE_GAME].m_pResource);
+						Graphics()->TextureSet(g_pData->m_aImages[IMAGE_GAME].m_Resource);
 						Graphics()->QuadsBegin();
 						RenderTools()->SelectSprite(t==0?SPRITE_FLAG_RED:SPRITE_FLAG_BLUE);
 						IGraphics::CQuadItem QuadItem(Whole-ScoreWidthMax-ImageSize, 246.0f+t*20, ImageSize/2, ImageSize);
@@ -337,7 +337,7 @@ void CHud::RenderCursor()
 		return;
 
 	MapscreenToGroup(m_pClient->m_pCamera->m_Center.x, m_pClient->m_pCamera->m_Center.y, Layers()->GameGroup());
-	Graphics()->TextureSet(g_pData->m_aImages[IMAGE_GAME].m_pResource);
+	Graphics()->TextureSet(g_pData->m_aImages[IMAGE_GAME].m_Resource);
 	Graphics()->QuadsBegin();
 
 	// render cursor
@@ -360,7 +360,7 @@ void CHud::RenderHealthAndAmmo(const CNetObj_Character *pCharacter)
 	// render ammo count
 	// render gui stuff
 
-	Graphics()->TextureSet(g_pData->m_aImages[IMAGE_GAME].m_pResource);
+	Graphics()->TextureSet(g_pData->m_aImages[IMAGE_GAME].m_Resource);
 
 	Graphics()->QuadsBegin();
 

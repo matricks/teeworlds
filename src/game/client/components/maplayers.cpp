@@ -216,9 +216,9 @@ void CMapLayers::OnRender()
 						Graphics()->TextureSet(0);
 					else
 					{
-						CResource *pResource = m_pClient->m_pMapimages->Get(pTMap->m_Image);
-						Loaded = pResource->IsLoaded();
-						Graphics()->TextureSet(pResource);
+						CResourceHandle Resource = m_pClient->m_pMapimages->Get(pTMap->m_Image);
+						Loaded = Resource->IsLoaded();
+						Graphics()->TextureSet(Resource);
 					}
 
 					if(Loaded || (pGroup == m_pLayers->GameGroup() && !(pLayer->m_Flags&LAYERFLAG_DETAIL)))
@@ -241,9 +241,9 @@ void CMapLayers::OnRender()
 						Graphics()->TextureSet(0);
 					else
 					{
-						CResource *pResource = m_pClient->m_pMapimages->Get(pQLayer->m_Image);
-						Loaded = pResource->IsLoaded();
-						Graphics()->TextureSet(pResource);
+						CResourceHandle Resource = m_pClient->m_pMapimages->Get(pQLayer->m_Image);
+						Loaded = Resource->IsLoaded();
+						Graphics()->TextureSet(Resource);
 					}
 
 					if(Loaded)

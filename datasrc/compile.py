@@ -64,6 +64,9 @@ if gen_server_content_header:
 
 
 if gen_client_content_header or gen_server_content_header:
+	# print some includes
+	print('#include <engine/loader.h>')
+
 	# emit the type declarations
 	contentlines = open("datasrc/content.py", "rb").readlines()
 	order = []

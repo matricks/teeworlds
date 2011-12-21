@@ -59,7 +59,7 @@ public:
 		MAX_RESOURCES = 1024*4,
 	};
 
-	CResource *m_aList[MAX_RESOURCES];
+	CResourceHandle m_aList[MAX_RESOURCES];
 
 	CResourceMapping()
 	{
@@ -69,28 +69,20 @@ public:
 	void Clear()
 	{
 		for(int i = 0; i < MAX_RESOURCES; i++)
-		{
-			if(m_aList[i])
-				m_aList[i]->Destroy();
-		}
-
-		mem_zero(m_aList, sizeof(m_aList));
+			m_aList[i] = 0x0;
 	}
 
-	void Set(CResourceIndex Idx, CResource *pResource)
+	void Set(CResourceIndex Idx, CResourceHandle Resource)
 	{
 		if(Idx.Id() < 0 || Idx.Id() >= MAX_RESOURCES)
 			return;
-
-		if(m_aList[Idx.Id()])
-			m_aList[Idx.Id()]->Destroy();
-		m_aList[Idx.Id()] = pResource;
+		m_aList[Idx.Id()] = Resource;
 	}
 
-	CResource *Get(CResourceIndex Idx)
+	CResourceHandle Get(CResourceIndex Idx)
 	{
 		if(Idx.Id() < 0 || Idx.Id() >= MAX_RESOURCES)
-			return 0x0;
+			return CResourceHandle();
 		return m_aList[Idx.Id()];
 	}
 };
@@ -135,7 +127,7 @@ void CGraph::Add(float v, float r, float g, float b)
 	m_aColors[m_Index][2] = b;
 }
 
-void CGraph::Render(IGraphics *pGraphics, CResource *pFontTexture, float x, float y, float w, float h, const char *pDescription)
+void CGraph::Render(IGraphics *pGraphics, CResourceHandle FontTexture, float x, float y, float w, float h, const char *pDescription)
 {
 	//m_pGraphics->BlendNormal();
 
@@ -177,7 +169,7 @@ void CGraph::Render(IGraphics *pGraphics, CResource *pFontTexture, float x, floa
 	}
 	pGraphics->LinesEnd();
 
-	pGraphics->TextureSet(pFontTexture);
+	pGraphics->TextureSet(FontTexture);
 	pGraphics->QuadsText(x+2, y+h-16, 16, 1,1,1,1, pDescription);
 
 	char aBuf[32];
@@ -280,7 +272,8 @@ void CSmoothTime::Update(CGraph *pGraph, int64 Target, int TimeLeft, int AdjustD
 		UpdateInt(Target);
 }
 
-CClient::CClient() : m_DemoPlayer(&m_SnapshotDelta), m_DemoRecorder(&m_SnapshotDelta)
+CClient::CClient()
+: m_DemoPlayer(&m_SnapshotDelta), m_DemoRecorder(&m_SnapshotDelta), m_SourceDisk("data"), m_SourceCache("cache")
 {
 	m_pEditor = 0;
 	m_pInput = 0;
@@ -644,7 +637,7 @@ void CClient::ServerInfoRequest()
 
 int CClient::LoadData()
 {
-	m_pDebugFont = Graphics()->LoadTexture("debug_font.png", IStorage::TYPE_ALL, CImageInfo::FORMAT_AUTO, IGraphics::TEXLOAD_NORESAMPLE);
+	m_DebugFont = Graphics()->LoadTexture("debug_font.png", IStorage::TYPE_ALL, CImageInfo::FORMAT_AUTO, IGraphics::TEXLOAD_NORESAMPLE);
 	return 1;
 }
 
@@ -719,7 +712,7 @@ void CClient::DebugRender()
 		return;
 
 	//m_pGraphics->BlendNormal();
-	Graphics()->TextureSet(m_pDebugFont);
+	Graphics()->TextureSet(m_DebugFont);
 	Graphics()->MapScreen(0,0,Graphics()->ScreenWidth(),Graphics()->ScreenHeight());
 
 	if(time_get()-LastSnap > time_freq())
@@ -792,9 +785,9 @@ void CClient::DebugRender()
 
 		m_FpsGraph.ScaleMax();
 		m_FpsGraph.ScaleMin();
-		m_FpsGraph.Render(Graphics(), m_pDebugFont, x, sp*5, w, h, "FPS");
-		m_InputtimeMarginGraph.Render(Graphics(), m_pDebugFont, x, sp*5+h+sp, w, h, "Prediction Margin");
-		m_GametimeMarginGraph.Render(Graphics(), m_pDebugFont, x, sp*5+h+sp+h+sp, w, h, "Gametime Margin");
+		m_FpsGraph.Render(Graphics(), m_DebugFont, x, sp*5, w, h, "FPS");
+		m_InputtimeMarginGraph.Render(Graphics(), m_DebugFont, x, sp*5+h+sp, w, h, "Prediction Margin");
+		m_GametimeMarginGraph.Render(Graphics(), m_DebugFont, x, sp*5+h+sp+h+sp, w, h, "Gametime Margin");
 	}
 }
 
@@ -1448,8 +1441,8 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket)
 				Id.m_pName = pName;
 				Id.m_NameHash = str_quickhash(pName);
 				Id.m_ContentHash = ContentHash;
-				CResource *pResource = m_pResources->GetResource(Id);
-				m_ResourceMapping.Set(CResourceIndex(ResourceId), pResource);
+				CResourceHandle Resource = m_pResources->GetResource(Id);
+				m_ResourceMapping.Set(CResourceIndex(ResourceId), Resource);
 			}
 		}
 		else if(Msg == NETMSG_RES_DATA)
@@ -1473,13 +1466,13 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket)
 }
 
 
-CResource *CClient::GetResource(const char *pName)
+CResourceHandle CClient::GetResource(const char *pName)
 {
-	return 0x0;
+	return CResourceHandle();
 }
 
 // resources
-CResource *CClient::GetResource(CResourceIndex Idx)
+CResourceHandle CClient::GetResource(CResourceIndex Idx)
 {
 	return m_ResourceMapping.Get(Idx);
 }
@@ -2367,6 +2360,7 @@ int main(int argc, const char **argv) // ignore_convention
 		if(RegisterFail)
 			return -1;
 	}
+
 
 	pResources->AddSource(&pClient->m_SourceDisk);
 	pResources->AddSource(&pClient->m_SourceCache);

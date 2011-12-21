@@ -151,7 +151,7 @@ void CParticles::RenderGroup(int Group)
 {
 	Graphics()->BlendNormal();
 	//gfx_blend_additive();
-	Graphics()->TextureSet(g_pData->m_aImages[IMAGE_PARTICLES].m_pResource);
+	Graphics()->TextureSet(g_pData->m_aImages[IMAGE_PARTICLES].m_Resource);
 	Graphics()->QuadsBegin();
 
 	int i = m_aFirstPart[Group];

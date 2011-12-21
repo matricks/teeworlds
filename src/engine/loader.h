@@ -69,6 +69,47 @@ private:
 extern CJobHandler g_JobHandler;
 
 class CResource;
+class CResourceHandle;
+
+class CResourceHandle
+{
+	class CResource *m_pResource;
+
+	inline void Release();
+	inline void Assign(CResource *pResource);
+public:
+	CResourceHandle()
+	: m_pResource(0)
+	{
+	}
+
+	CResourceHandle(CResource *pResource)
+	: m_pResource(0)
+	{
+		Assign(pResource);
+	}
+
+
+	CResourceHandle(const CResourceHandle &rOther)
+	: m_pResource(0)
+	{
+		Assign(rOther.m_pResource);
+	}
+
+	~CResourceHandle()
+	{
+		Release();
+	}
+
+	CResource *Get() { return m_pResource; }
+
+	bool IsValid() const { return m_pResource != 0x0; }
+
+	CResourceHandle &operator =(const CResourceHandle &rOther) { Assign(rOther.m_pResource); return *this; }
+	CResourceHandle &operator =(CResource *pResource) { Assign(pResource); return *this; }
+	CResource *operator->() { assert(m_pResource); return Get(); }
+};
+
 
 
 /*
@@ -179,9 +220,9 @@ public:
 
 	virtual void Update() = 0;
 
-	virtual CResource *GetResource(CResourceId Id) = 0;
+	virtual CResourceHandle GetResource(CResourceId Id) = 0;
 
-	CResource *GetResource(const char *pName)
+	CResourceHandle GetResource(const char *pName)
 	{
 		CResourceId Id;
 		Id.m_pName = pName;
@@ -216,6 +257,15 @@ class CResource
 {
 	friend class IResources;
 	friend class CResources;
+	friend class CResourceHandle;
+
+	unsigned m_RefCount;
+
+	// only the resource handle should destroy a resource
+	void Destroy()
+	{
+		m_pResources->Destroy(this);
+	}
 
 protected:
 	// only IResources can destory a resource for good
@@ -241,6 +291,7 @@ protected:
 	// only a handler should be able to create a resource
 	CResource()
 	{
+		m_RefCount = 0;
 		m_State = STATE_LOADING;
 		m_pResources = 0;
 		m_pHandler = 0;
@@ -248,11 +299,6 @@ protected:
 	}
 
 public:
-	void Destroy()
-	{
-		m_pResources->Destroy(this);
-	}
-
 	const char *Name() const { return m_Id.m_pName; }
 	unsigned NameHash() const { return m_Id.m_NameHash; }
 	unsigned ContentHash() const { return m_Id.m_ContentHash; }
@@ -260,6 +306,30 @@ public:
 	bool IsLoading() const { return m_State == STATE_LOADING; }
 	bool IsLoaded() const { return m_State == STATE_LOADED; }
 };
+
+
+
+void CResourceHandle::Release()
+{
+	if(m_pResource)
+	{
+		assert(m_pResource->m_RefCount > 0);
+		m_pResource->m_RefCount--;
+		if(m_pResource->m_RefCount == 0)
+			m_pResource->Destroy();
+		m_pResource = 0;
+	}
+}
+
+void CResourceHandle::Assign(CResource *pResource)
+{
+	Release();
+	if(pResource)
+	{
+		m_pResource = pResource;
+		m_pResource->m_RefCount++;
+	}
+}
 
 
 class CResourceIndex

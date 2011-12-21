@@ -24,7 +24,7 @@ static int LoadSoundsThread(void *pUser)
 	{
 		for(int i = 0; i < g_pData->m_aSounds[s].m_NumSounds; i++)
 		{
-			g_pData->m_aSounds[s].m_aSounds[i].m_pResource = pData->m_pGameClient->Sound()->LoadWV(g_pData->m_aSounds[s].m_aSounds[i].m_pFilename);
+			g_pData->m_aSounds[s].m_aSounds[i].m_Resource = pData->m_pGameClient->Sound()->LoadWV(g_pData->m_aSounds[s].m_aSounds[i].m_pFilename);
 			//g_pData->m_aSounds[s].m_aSounds[i].m_Id = Id;
 		}
 
@@ -100,7 +100,7 @@ void CSounds::OnRender()
 		int64 Now = time_get();
 		if(m_QueueWaitTime <= Now)
 		{
-			Play(m_aQueue[0].m_Channel, m_aQueue[0].m_pResource, 1.0f, vec2(0,0));
+			Play(m_aQueue[0].m_Channel, m_aQueue[0].m_Resource, 1.0f, vec2(0,0));
 			m_QueueWaitTime = Now+time_freq()*3/10; // wait 300ms before playing the next one
 			if(--m_QueuePos > 0)
 				mem_move(m_aQueue, m_aQueue+1, m_QueuePos*sizeof(QueueEntry));
@@ -115,7 +115,7 @@ void CSounds::ClearQueue()
 	m_QueueWaitTime = time_get();
 }
 
-void CSounds::Enqueue(int Channel, CResource *pResource)
+void CSounds::Enqueue(int Channel, CResourceHandle Resource)
 {
 	// add sound to the queue
 	if(m_QueuePos < QUEUE_SIZE)
@@ -123,7 +123,7 @@ void CSounds::Enqueue(int Channel, CResource *pResource)
 		if(Channel == CHN_MUSIC || !g_Config.m_ClEditor)
 		{
 			m_aQueue[m_QueuePos].m_Channel = Channel;
-			m_aQueue[m_QueuePos++].m_pResource = pResource;
+			m_aQueue[m_QueuePos++].m_Resource = Resource;
 		}
 	}
 }
@@ -139,16 +139,16 @@ void CSounds::PlayAndRecord(int Chn, int SetId, float Vol, vec2 Pos)
 	Play(Chn, SetId, Vol, Pos);
 }
 
-void CSounds::Play(int Channel, CResource *pResource, float Vol, vec2 Pos)
+void CSounds::Play(int Channel, CResourceHandle Resource, float Vol, vec2 Pos)
 {
-	if(!g_Config.m_SndEnable || !pResource || !Sound()->IsSoundEnabled() || (Channel == CHN_MUSIC && !g_Config.m_SndMusic))
+	if(!g_Config.m_SndEnable || !Resource.IsValid() || !Sound()->IsSoundEnabled() || (Channel == CHN_MUSIC && !g_Config.m_SndMusic))
 		return;
 
 	int Flags = 0;
 	if(Channel == CHN_MUSIC)
 		Flags = ISound::FLAG_LOOP;
 
-	Sound()->PlayAt(Channel, pResource, Flags, Pos.x, Pos.y);
+	Sound()->PlayAt(Channel, Resource, Flags, Pos.x, Pos.y);
 }
 
 
@@ -168,7 +168,7 @@ void CSounds::Play(int Chn, int SetId, float Vol, vec2 Pos)
 
 	if(pSet->m_NumSounds == 1)
 	{
-		Sound()->PlayAt(Chn, pSet->m_aSounds[0].m_pResource, Flags, Pos.x, Pos.y);
+		Sound()->PlayAt(Chn, pSet->m_aSounds[0].m_Resource, Flags, Pos.x, Pos.y);
 		return;
 	}
 
@@ -179,14 +179,14 @@ void CSounds::Play(int Chn, int SetId, float Vol, vec2 Pos)
 		Id = rand() % pSet->m_NumSounds;
 	}
 	while(Id == pSet->m_Last);
-	Sound()->PlayAt(Chn, pSet->m_aSounds[Id].m_pResource, Flags, Pos.x, Pos.y);
+	Sound()->PlayAt(Chn, pSet->m_aSounds[Id].m_Resource, Flags, Pos.x, Pos.y);
 	pSet->m_Last = Id;
 }
 
 
-void CSounds::Stop(CResource *pResource)
+void CSounds::Stop(CResourceHandle Resource)
 {
-	if(!pResource)
+	if(!Resource.IsValid())
 		return;
-	Sound()->Stop(pResource);
+	Sound()->Stop(Resource);
 }

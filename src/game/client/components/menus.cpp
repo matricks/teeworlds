@@ -70,8 +70,6 @@ CMenus::CMenus()
 	m_aCallvoteReason[0] = 0;
 
 	m_FriendlistSelectedIndex = -1;
-
-	m_pMusic = 0;
 }
 
 vec4 CMenus::ButtonColorMul(const void *pID)
@@ -85,7 +83,7 @@ vec4 CMenus::ButtonColorMul(const void *pID)
 
 int CMenus::DoButton_Icon(int ImageId, int SpriteId, const CUIRect *pRect)
 {
-	Graphics()->TextureSet(g_pData->m_aImages[ImageId].m_pResource);
+	Graphics()->TextureSet(g_pData->m_aImages[ImageId].m_Resource);
 
 	Graphics()->QuadsBegin();
 	RenderTools()->SelectSprite(SpriteId);
@@ -98,7 +96,7 @@ int CMenus::DoButton_Icon(int ImageId, int SpriteId, const CUIRect *pRect)
 
 int CMenus::DoButton_Toggle(const void *pID, int Checked, const CUIRect *pRect)
 {
-	Graphics()->TextureSet(g_pData->m_aImages[IMAGE_GUIBUTTONS].m_pResource);
+	Graphics()->TextureSet(g_pData->m_aImages[IMAGE_GUIBUTTONS].m_Resource);
 	Graphics()->QuadsBegin();
 	RenderTools()->SelectSprite(Checked?SPRITE_GUIBUTTON_ON:SPRITE_GUIBUTTON_OFF);
 	IGraphics::CQuadItem QuadItem(pRect->x, pRect->y, pRect->w, pRect->h);
@@ -687,7 +685,7 @@ void CMenus::RenderNews(CUIRect MainView)
 
 void CMenus::OnInit()
 {
-	m_pMusic = Resources()->GetResource("audio/music_menu.wv");
+	m_Music = Resources()->GetResource("audio/music_menu.wv");
 
 	/*
 	array<string> my_strings;
@@ -774,7 +772,7 @@ int CMenus::Render()
 			ServerBrowser()->Refresh(IServerBrowser::TYPE_LAN);
 		else if(g_Config.m_UiPage == PAGE_FAVORITES)
 			ServerBrowser()->Refresh(IServerBrowser::TYPE_FAVORITES);
-		m_pClient->m_pSounds->Enqueue(CSounds::CHN_MUSIC, m_pMusic);
+		m_pClient->m_pSounds->Enqueue(CSounds::CHN_MUSIC, m_Music);
 		s_First = false;
 	}
 
@@ -1133,7 +1131,7 @@ int CMenus::Render()
 					float OldWidth = Item.m_Rect.w;
 					Item.m_Rect.w = Item.m_Rect.h*2;
 					Item.m_Rect.x += (OldWidth-Item.m_Rect.w)/ 2.0f;
-					Graphics()->TextureSet(pEntry->m_pTexture);
+					Graphics()->TextureSet(pEntry->m_Texture);
 					Graphics()->QuadsBegin();
 					Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 					IGraphics::CQuadItem QuadItem(Item.m_Rect.x, Item.m_Rect.y, Item.m_Rect.w, Item.m_Rect.h);
@@ -1405,7 +1403,7 @@ void CMenus::OnStateChange(int NewState, int OldState)
 	if(NewState == IClient::STATE_OFFLINE)
 	{
 		if(OldState >= IClient::STATE_ONLINE)
-			m_pClient->m_pSounds->Play(CSounds::CHN_MUSIC, m_pMusic, 1.0f, vec2(0, 0));
+			m_pClient->m_pSounds->Play(CSounds::CHN_MUSIC, m_Music, 1.0f, vec2(0, 0));
 		m_Popup = POPUP_NONE;
 		if(Client()->ErrorString() && Client()->ErrorString()[0] != 0)
 		{
@@ -1524,7 +1522,7 @@ void CMenus::OnRender()
 		Render();
 
 	// render cursor
-	Graphics()->TextureSet(g_pData->m_aImages[IMAGE_CURSOR].m_pResource);
+	Graphics()->TextureSet(g_pData->m_aImages[IMAGE_CURSOR].m_Resource);
 	Graphics()->QuadsBegin();
 	Graphics()->SetColor(1,1,1,1);
 	IGraphics::CQuadItem QuadItem(mx, my, 24, 24);
@@ -1551,15 +1549,14 @@ void CMenus::OnRender()
 }
 
 // TODO: static variable, remove
-static CResource *gs_pTextureBlob = 0x0;
+static CResourceHandle gs_TextureBlob;
 
 void CMenus::RenderBackground()
 {
 	//Graphics()->Clear(1,1,1);
 	//render_sunrays(0,0);
-	if(gs_pTextureBlob == 0)
-		gs_pTextureBlob = Graphics()->LoadTexture("blob.png", IStorage::TYPE_ALL, CImageInfo::FORMAT_AUTO, 0);
-
+	if(!gs_TextureBlob.IsValid())
+		gs_TextureBlob = Graphics()->LoadTexture("blob.png", IStorage::TYPE_ALL, CImageInfo::FORMAT_AUTO, 0);
 
 	float sw = 300*Graphics()->ScreenAspect();
 	float sh = 300;
@@ -1597,7 +1594,7 @@ void CMenus::RenderBackground()
 	Graphics()->QuadsEnd();
 
 	// render border fade
-	Graphics()->TextureSet(gs_pTextureBlob);
+	Graphics()->TextureSet(gs_TextureBlob);
 	Graphics()->QuadsBegin();
 		Graphics()->SetColor(0,0,0,0.5f);
 		QuadItem = IGraphics::CQuadItem(-100, -100, sw+200, sh+200);

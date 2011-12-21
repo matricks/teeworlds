@@ -150,7 +150,6 @@ CGraphics_OpenGL::CGraphics_OpenGL()
 
 	m_Rotation = 0;
 	m_Drawing = 0;
-	m_pInvalidTexture = 0;
 
 	m_TextureMemoryUsage = 0;
 
@@ -257,12 +256,6 @@ void CGraphics_OpenGL::LinesDraw(const CLineItem *pArray, int Num)
 	AddVertices(2*Num);
 }
 
-int CGraphics_OpenGL::UnloadTexture(CResource *pTexture)
-{
-	pTexture->Destroy();
-	return 0;
-}
-
 CResource *CGraphics_OpenGL::LoadTextureRawToResource(CResource *pResource, int Width, int Height, int Format, const void *pData, int StoreFormat, int Flags)
 {
 	CResource_Texture *pTexture = static_cast<CResource_Texture*>(pResource);
@@ -353,7 +346,7 @@ CResource *CGraphics_OpenGL::LoadTextureRawToResource(CResource *pResource, int 
 	return pResource;
 }
 
-CResource *CGraphics_OpenGL::LoadTextureRaw(int Width, int Height, int Format, const void *pData, int StoreFormat, int Flags)
+CResourceHandle CGraphics_OpenGL::LoadTextureRaw(int Width, int Height, int Format, const void *pData, int StoreFormat, int Flags)
 {
 	IResources::CResourceId Id;
 	CResource *pResource = m_TextureHandler.Create(Id);
@@ -435,7 +428,7 @@ bool CGraphics_OpenGL::CTextureHandler::Destroy(CResource *pResource)
 }
 
 // simple uncompressed RGBA loaders
-CResource *CGraphics_OpenGL::LoadTexture(const char *pFilename, int StorageType, int StoreFormat, int Flags)
+CResourceHandle CGraphics_OpenGL::LoadTexture(const char *pFilename, int StorageType, int StoreFormat, int Flags)
 {
 	(void)StorageType;
 	(void)StoreFormat;
@@ -533,12 +526,12 @@ void CGraphics_OpenGL::ScreenshotDirect(const char *pFilename)
 	mem_free(pPixelData);
 }
 
-void CGraphics_OpenGL::TextureSet(CResource *pResource)
+void CGraphics_OpenGL::TextureSet(CResourceHandle Resource)
 {
 	dbg_assert(m_Drawing == 0, "called Graphics()->TextureSet within begin");
-	if(pResource)
+	if(Resource.IsValid())
 	{
-		CResource_Texture *pTexture = static_cast<CResource_Texture*>(pResource);
+		CResource_Texture *pTexture = static_cast<CResource_Texture*>(Resource.Get());
 		glEnable(GL_TEXTURE_2D);
 		glBindTexture(GL_TEXTURE_2D, pTexture->m_TexId);
 	}
@@ -770,7 +763,7 @@ bool CGraphics_OpenGL::Init()
 		0x00,0x00,0xff,0xff, 0x00,0x00,0xff,0xff, 0xff,0xff,0x00,0xff, 0xff,0xff,0x00,0xff,
 	};
 
-	m_pInvalidTexture = LoadTextureRaw(4,4,CImageInfo::FORMAT_RGBA,aNullTextureData,CImageInfo::FORMAT_RGBA,TEXLOAD_NORESAMPLE);
+	m_InvalidTexture = LoadTextureRaw(4,4,CImageInfo::FORMAT_RGBA,aNullTextureData,CImageInfo::FORMAT_RGBA,TEXLOAD_NORESAMPLE);
 
 	return true;
 }

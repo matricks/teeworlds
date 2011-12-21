@@ -4,8 +4,7 @@
 #define ENGINE_GRAPHICS_H
 
 #include "kernel.h"
-
-class CResource;
+#include <engine/loader.h> // NOT NICE!
 
 class CImageInfo
 {
@@ -80,10 +79,9 @@ public:
 
 	virtual int LoadPNG(CImageInfo *pImg, const char *pFilename, int StorageType) = 0;
 
-	virtual int UnloadTexture(CResource *pTexture) = 0;
-	virtual CResource *LoadTextureRaw(int Width, int Height, int Format, const void *pData, int StoreFormat, int Flags) = 0;
-	virtual CResource *LoadTexture(const char *pFilename, int StorageType, int StoreFormat, int Flags) = 0;
-	virtual void TextureSet(CResource *pTexture) = 0;
+	virtual CResourceHandle LoadTextureRaw(int Width, int Height, int Format, const void *pData, int StoreFormat, int Flags) = 0;
+	virtual CResourceHandle LoadTexture(const char *pFilename, int StorageType, int StoreFormat, int Flags) = 0;
+	virtual void TextureSet(CResourceHandle Texture) = 0;
 
 	struct CLineItem
 	{

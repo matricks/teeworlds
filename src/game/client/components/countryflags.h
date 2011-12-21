@@ -13,7 +13,7 @@ public:
 	{
 		int m_CountryCode;
 		char m_aCountryCodeString[8];
-		CResource *m_pTexture;
+		CResourceHandle m_Texture;
 
 		bool operator<(const CCountryFlag &Other) { return str_comp(m_aCountryCodeString, Other.m_aCountryCodeString) < 0; }
 	};

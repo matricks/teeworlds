@@ -10,11 +10,13 @@ class CSounds : public CComponent
 	{
 		QUEUE_SIZE = 32,
 	};
+	
 	struct QueueEntry
 	{
 		int m_Channel;
-		CResource *m_pResource;
+		CResourceHandle m_Resource;
 	} m_aQueue[QUEUE_SIZE];
+
 	int m_QueuePos;
 	int64 m_QueueWaitTime;
 	class CJob m_SoundJob;
@@ -38,9 +40,9 @@ public:
 	void ClearQueue();
 
 	// new sutff
-	void Enqueue(int Channel, CResource *pResource);
-	void Play(int Channel, CResource *pResource, float Vol, vec2 Pos);
-	void Stop(CResource *pResource);
+	void Enqueue(int Channel, CResourceHandle Resource);
+	void Play(int Channel, CResourceHandle Resource, float Vol, vec2 Pos);
+	void Stop(CResourceHandle Resource);
 
 	// old stuff
 	void Play(int Channel, int SetId, float Vol, vec2 Pos);

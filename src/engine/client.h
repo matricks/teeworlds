@@ -103,8 +103,8 @@ public:
 	virtual void GetServerInfo(class CServerInfo *pServerInfo) = 0;
 
 	// resources
-	virtual CResource *GetResource(const char *pResource) = 0;
-	virtual CResource *GetResource(CResourceIndex Idx) = 0;
+	virtual CResourceHandle GetResource(const char *pResource) = 0;
+	virtual CResourceHandle GetResource(CResourceIndex Idx) = 0;
 
 	// snapshot interface
 
@@ -140,7 +140,7 @@ public:
 
 	virtual bool SoundInitFailed() = 0;
 
-	virtual CResource *GetDebugFont() = 0;
+	virtual CResourceHandle GetDebugFont() = 0;
 };
 
 class IGameClient : public IInterface

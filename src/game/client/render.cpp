@@ -171,7 +171,7 @@ void CRenderTools::RenderTee(CAnimState *pAnim, CTeeRenderInfo *pInfo, int Emote
 	vec2 Position = Pos;
 
 	//Graphics()->TextureSet(data->images[IMAGE_CHAR_DEFAULT].id);
-	Graphics()->TextureSet(pInfo->m_pTexture);
+	Graphics()->TextureSet(pInfo->m_Texture);
 
 	// TODO: FIX ME
 	Graphics()->QuadsBegin();

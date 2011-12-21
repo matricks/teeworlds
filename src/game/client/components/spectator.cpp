@@ -250,7 +250,7 @@ void CSpectator::OnRender()
 			m_pClient->m_Snap.m_pGameDataObj->m_FlagCarrierBlue == m_pClient->m_Snap.m_paPlayerInfos[i]->m_ClientID))
 		{
 			Graphics()->BlendNormal();
-			Graphics()->TextureSet(g_pData->m_aImages[IMAGE_GAME].m_pResource);
+			Graphics()->TextureSet(g_pData->m_aImages[IMAGE_GAME].m_Resource);
 			Graphics()->QuadsBegin();
 
 			RenderTools()->SelectSprite(m_pClient->m_Snap.m_paPlayerInfos[i]->m_Team==TEAM_RED ? SPRITE_FLAG_BLUE : SPRITE_FLAG_RED, SPRITE_FLAG_FLIP_X);
@@ -269,7 +269,7 @@ void CSpectator::OnRender()
 	TextRender()->TextColor(1.0f, 1.0f, 1.0f, 1.0f);
 
 	// draw cursor
-	Graphics()->TextureSet(g_pData->m_aImages[IMAGE_CURSOR].m_pResource);
+	Graphics()->TextureSet(g_pData->m_aImages[IMAGE_CURSOR].m_Resource);
 	Graphics()->QuadsBegin();
 	Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 	IGraphics::CQuadItem QuadItem(m_SelectorMouse.x+Width/2.0f, m_SelectorMouse.y+Height/2.0f, 48.0f, 48.0f);

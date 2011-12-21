@@ -395,7 +395,7 @@ bool CSound::CResourceHandler::Destroy(CResource *pResource)
 
 
 
-CResource *CSound::LoadWV(const char *pFilename)
+CResourceHandle CSound::LoadWV(const char *pFilename)
 {
 	return m_pResources->GetResource(pFilename);
 }
@@ -413,9 +413,12 @@ void CSound::SetChannel(int ChannelID, float Vol, float Pan)
 	m_aChannels[ChannelID].m_Pan = (int)(Pan*255.0f); // TODO: this is only on and off right now
 }
 
-int CSound::Play(int ChannelID, CResource *pSoundResource, int Flags, float x, float y)
+int CSound::Play(int ChannelID, CResourceHandle SoundResource, int Flags, float x, float y)
 {
-	CResource_Sample *pSample = static_cast<CResource_Sample*>(pSoundResource);
+	if(!SoundResource.IsValid())
+		return -1;
+
+	CResource_Sample *pSample = static_cast<CResource_Sample*>(SoundResource.Get());
 	int VoiceID = -1;
 	int i;
 
@@ -452,19 +455,22 @@ int CSound::Play(int ChannelID, CResource *pSoundResource, int Flags, float x, f
 	return VoiceID;
 }
 
-int CSound::PlayAt(int ChannelID, CResource *pSoundResource, int Flags, float x, float y)
+int CSound::PlayAt(int ChannelID, CResourceHandle SoundResource, int Flags, float x, float y)
 {
-	return Play(ChannelID, pSoundResource, Flags|ISound::FLAG_POS, x, y);
+	return Play(ChannelID, SoundResource, Flags|ISound::FLAG_POS, x, y);
 }
 
-int CSound::Play(int ChannelID, CResource *pSoundResource, int Flags)
+int CSound::Play(int ChannelID, CResourceHandle SoundResource, int Flags)
 {
-	return Play(ChannelID, pSoundResource, Flags, 0, 0);
+	return Play(ChannelID, SoundResource, Flags, 0, 0);
 }
 
-void CSound::Stop(CResource *pSoundResource)
+void CSound::Stop(CResourceHandle SoundResource)
 {
-	CResource_Sample *pSample = static_cast<CResource_Sample*>(pSoundResource);
+	if(!SoundResource.IsValid())
+		return;
+
+	CResource_Sample *pSample = static_cast<CResource_Sample*>(SoundResource.Get());
 
 	// TODO: a nice fade out
 	lock_wait(m_SoundLock);

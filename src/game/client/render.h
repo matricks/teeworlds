@@ -3,6 +3,7 @@
 #ifndef GAME_CLIENT_RENDER_H
 #define GAME_CLIENT_RENDER_H
 
+#include <engine/loader.h>
 #include <base/vmath.h>
 #include <game/mapitems.h>
 #include "ui.h"
@@ -14,14 +15,13 @@ class CTeeRenderInfo
 public:
 	CTeeRenderInfo()
 	{
-		m_pTexture = 0x0;
 		m_ColorBody = vec4(1,1,1,1);
 		m_ColorFeet = vec4(1,1,1,1);
 		m_Size = 1.0f;
 		m_GotAirJump = 1;
 	};
 
-	CResource *m_pTexture;
+	CResourceHandle m_Texture;
 	vec4 m_ColorBody;
 	vec4 m_ColorFeet;
 	float m_Size;

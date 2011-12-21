@@ -426,7 +426,7 @@ public:
 		m_lHandlers.add(Entry);
 	}
 
-	virtual CResource *GetResource(CResourceId Id)
+	virtual CResourceHandle GetResource(CResourceId Id)
 	{
 		CResource *pResource = FindResource(Id);
 		if(pResource)

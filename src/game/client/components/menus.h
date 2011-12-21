@@ -274,7 +274,7 @@ class CMenus : public CComponent
 
 	void SetActive(bool Active);
 
-	CResource *m_pMusic;
+	CResourceHandle m_Music;
 public:
 	void RenderBackground();
 

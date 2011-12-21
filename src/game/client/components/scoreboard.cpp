@@ -245,7 +245,7 @@ void CScoreboard::RenderScoreboard(float x, float y, float w, int Team, const ch
 			m_pClient->m_Snap.m_pGameDataObj->m_FlagCarrierBlue == pInfo->m_ClientID))
 		{
 			Graphics()->BlendNormal();
-			Graphics()->TextureSet(g_pData->m_aImages[IMAGE_GAME].m_pResource);
+			Graphics()->TextureSet(g_pData->m_aImages[IMAGE_GAME].m_Resource);
 			Graphics()->QuadsBegin();
 
 			RenderTools()->SelectSprite(pInfo->m_Team==TEAM_RED ? SPRITE_FLAG_BLUE : SPRITE_FLAG_RED, SPRITE_FLAG_FLIP_X);
@@ -273,7 +273,7 @@ void CScoreboard::RenderScoreboard(float x, float y, float w, int Team, const ch
 		TextRender()->TextEx(&Cursor, m_pClient->m_aClients[pInfo->m_ClientID].m_aClan, -1);
 
 		// country flag
-		Graphics()->TextureSet(m_pClient->m_pCountryFlags->GetByCountryCode(m_pClient->m_aClients[pInfo->m_ClientID].m_Country)->m_pTexture);
+		Graphics()->TextureSet(m_pClient->m_pCountryFlags->GetByCountryCode(m_pClient->m_aClients[pInfo->m_ClientID].m_Country)->m_Texture);
 		Graphics()->QuadsBegin();
 		Graphics()->SetColor(1.0f, 1.0f, 1.0f, 0.5f);
 		IGraphics::CQuadItem QuadItem(CountryOffset, y+(Spacing+TeeSizeMod*5.0f)/2.0f, CountryLength, LineHeight-Spacing-TeeSizeMod*5.0f);

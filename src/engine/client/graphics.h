@@ -53,7 +53,7 @@ protected:
 	float m_ScreenX1;
 	float m_ScreenY1;
 
-	CResource *m_pInvalidTexture;
+	CResourceHandle m_InvalidTexture;
 
 	int m_TextureMemoryUsage;
 
@@ -119,17 +119,16 @@ public:
 	virtual void LinesEnd();
 	virtual void LinesDraw(const CLineItem *pArray, int Num);
 
-	virtual int UnloadTexture(CResource *pTexture);
-	virtual CResource *LoadTextureRaw(int Width, int Height, int Format, const void *pData, int StoreFormat, int Flags);
+	virtual CResourceHandle LoadTextureRaw(int Width, int Height, int Format, const void *pData, int StoreFormat, int Flags);
 
 	// simple uncompressed RGBA loaders
-	virtual CResource *LoadTexture(const char *pFilename, int StorageType, int StoreFormat, int Flags);
+	virtual CResourceHandle LoadTexture(const char *pFilename, int StorageType, int StoreFormat, int Flags);
 	virtual int LoadPNG(CImageInfo *pImg, const char *pFilename, int StorageType);
 
 	void ScreenshotDirect(const char *pFilename);
 
 	//virtual void TextureSet(int TextureID);
-	virtual void TextureSet(CResource *pResource);
+	virtual void TextureSet(CResourceHandle Resource);
 
 	virtual void Clear(float r, float g, float b);
 
