@@ -53,38 +53,6 @@
 
 CGameClient g_GameClient;
 
-// instanciate all systems
-static CKillMessages gs_KillMessages;
-static CCamera gs_Camera;
-static CChat gs_Chat;
-static CMotd gs_Motd;
-static CBroadcast gs_Broadcast;
-static CGameConsole gs_GameConsole;
-static CBinds gs_Binds;
-static CParticles gs_Particles;
-static CMenus gs_Menus;
-static CSkins gs_Skins;
-static CCountryFlags gs_CountryFlags;
-static CFlow gs_Flow;
-static CHud gs_Hud;
-static CDebugHud gs_DebugHud;
-static CControls gs_Controls;
-static CEffects gs_Effects;
-static CScoreboard gs_Scoreboard;
-static CSounds gs_Sounds;
-static CEmoticon gs_Emoticon;
-static CDamageInd gsDamageInd;
-static CVoting gs_Voting;
-static CSpectator gs_Spectator;
-
-static CPlayers gs_Players;
-static CNamePlates gs_NamePlates;
-static CItems gs_Items;
-static CMapImages gs_MapImages;
-
-static CMapLayers gs_MapLayersBackGround(CMapLayers::TYPE_BACKGROUND);
-static CMapLayers gs_MapLayersForeGround(CMapLayers::TYPE_FOREGROUND);
-
 CGameClient::CStack::CStack() { m_Num = 0; }
 void CGameClient::CStack::Add(class CComponent *pComponent) { m_paComponents[m_Num++] = pComponent; }
 
@@ -110,26 +78,35 @@ void CGameClient::OnConsoleInit()
 	m_pResources = Kernel()->RequestInterface<IResources>();
 
 	// setup pointers
-	m_pBinds = &::gs_Binds;
-	m_pGameConsole = &::gs_GameConsole;
-	m_pParticles = &::gs_Particles;
-	m_pMenus = &::gs_Menus;
-	m_pSkins = &::gs_Skins;
-	m_pCountryFlags = &::gs_CountryFlags;
-	m_pChat = &::gs_Chat;
-	m_pFlow = &::gs_Flow;
-	m_pCamera = &::gs_Camera;
-	m_pControls = &::gs_Controls;
-	m_pEffects = &::gs_Effects;
-	m_pSounds = &::gs_Sounds;
-	m_pMotd = &::gs_Motd;
-	m_pDamageind = &::gsDamageInd;
-	m_pMapimages = &::gs_MapImages;
-	m_pVoting = &::gs_Voting;
-	m_pScoreboard = &::gs_Scoreboard;
-	m_pItems = &::gs_Items;
-	m_pMapLayersBackGround = &::gs_MapLayersBackGround;
-	m_pMapLayersForeGround = &::gs_MapLayersForeGround;
+	m_pBinds = new CBinds();
+	m_pGameConsole = new CGameConsole();
+	m_pParticles = new CParticles();
+	m_pMenus = new CMenus();
+	m_pSkins = new CSkins();
+	m_pCountryFlags = new CCountryFlags();
+	m_pChat = new CChat();
+	m_pFlow = new CFlow();
+	m_pCamera = new CCamera();
+	m_pControls = new CControls();
+	m_pEffects = new CEffects();
+	m_pSounds = new CSounds();
+	m_pMotd = new CMotd();
+	m_pDamageind = new CDamageInd();
+	m_pMapimages = new CMapImages();
+	m_pVoting = new CVoting();
+	m_pScoreboard = new CScoreboard();
+	m_pItems = new CItems();
+	m_pMapLayersBackGround = new CMapLayers(CMapLayers::TYPE_BACKGROUND);
+	m_pMapLayersForeGround = new CMapLayers(CMapLayers::TYPE_FOREGROUND);
+
+	CNamePlates *pNamePlates = new CNamePlates();
+	CPlayers *pPlayers = new CPlayers();
+	CHud *pHud = new CHud();
+	CSpectator *pSpectator = new CSpectator();
+	CEmoticon *pEmoticon = new CEmoticon();
+	CKillMessages *pKillMessages = new CKillMessages();
+	CBroadcast *pBroadcast = new CBroadcast();
+	CDebugHud *pDebugHud = new CDebugHud();
 
 	// make a list of all the systems, make sure to add them in the corrent render order
 	m_All.Add(m_pSkins);		// #0: 51ms load time
@@ -144,23 +121,23 @@ void CGameClient::OnConsoleInit()
 	m_All.Add(m_pVoting);
 	m_All.Add(m_pParticles); // doesn't render anything, just updates all the particles
 
-	m_All.Add(&gs_MapLayersBackGround); // first to render
+	m_All.Add(m_pMapLayersBackGround); // first to render
 	m_All.Add(&m_pParticles->m_RenderTrail);
 	m_All.Add(m_pItems);
-	m_All.Add(&gs_Players);
-	m_All.Add(&gs_MapLayersForeGround);
+	m_All.Add(pPlayers);
+	m_All.Add(m_pMapLayersForeGround);
 	m_All.Add(&m_pParticles->m_RenderExplosions);
-	m_All.Add(&gs_NamePlates);
+	m_All.Add(pNamePlates);
 	m_All.Add(&m_pParticles->m_RenderGeneral);
 	m_All.Add(m_pDamageind);
-	m_All.Add(&gs_Hud);
-	m_All.Add(&gs_Spectator);
-	m_All.Add(&gs_Emoticon);
-	m_All.Add(&gs_KillMessages);
+	m_All.Add(pHud);
+	m_All.Add(pSpectator);
+	m_All.Add(pEmoticon);
+	m_All.Add(pKillMessages);
 	m_All.Add(m_pChat);
-	m_All.Add(&gs_Broadcast);
-	m_All.Add(&gs_DebugHud);
-	m_All.Add(&gs_Scoreboard);
+	m_All.Add(pBroadcast);
+	m_All.Add(pDebugHud);
+	m_All.Add(m_pScoreboard);
 	m_All.Add(m_pMotd);
 	m_All.Add(m_pMenus);
 	m_All.Add(m_pGameConsole);
@@ -172,8 +149,8 @@ void CGameClient::OnConsoleInit()
 	m_Input.Add(m_pChat); // chat has higher prio due to tha you can quit it by pressing esc
 	m_Input.Add(m_pMotd); // for pressing esc to remove it
 	m_Input.Add(m_pMenus);
-	m_Input.Add(&gs_Spectator);
-	m_Input.Add(&gs_Emoticon);
+	m_Input.Add(pSpectator);
+	m_Input.Add(pEmoticon);
 	m_Input.Add(m_pControls);
 	m_Input.Add(m_pBinds);
 
