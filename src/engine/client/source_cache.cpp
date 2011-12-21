@@ -1,7 +1,7 @@
 
 #include "source_cache.h"
 
-void CSource_Cache::GetCacheName(char *pBuffer, int BufferSize, IResource *pResource)
+void CSource_Cache::GetCacheName(char *pBuffer, int BufferSize, CResource *pResource)
 {
 	str_format(pBuffer, BufferSize, "%s/%08x_%08x", m_aBaseDirectory,pResource->NameHash(), pResource->ContentHash());
 }

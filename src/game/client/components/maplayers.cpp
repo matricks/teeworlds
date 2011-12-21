@@ -216,7 +216,7 @@ void CMapLayers::OnRender()
 						Graphics()->TextureSet(0);
 					else
 					{
-						IResource *pResource = m_pClient->m_pMapimages->Get(pTMap->m_Image);
+						CResource *pResource = m_pClient->m_pMapimages->Get(pTMap->m_Image);
 						Loaded = pResource->IsLoaded();
 						Graphics()->TextureSet(pResource);
 					}
@@ -241,7 +241,7 @@ void CMapLayers::OnRender()
 						Graphics()->TextureSet(0);
 					else
 					{
-						IResource *pResource = m_pClient->m_pMapimages->Get(pQLayer->m_Image);
+						CResource *pResource = m_pClient->m_pMapimages->Get(pQLayer->m_Image);
 						Loaded = pResource->IsLoaded();
 						Graphics()->TextureSet(pResource);
 					}

@@ -252,7 +252,7 @@ int CSound::Shutdown()
 	return 0;
 }
 
-IResource *CSound::CResourceHandler::Create(IResources::CResourceId Id)
+CResource *CSound::CResourceHandler::Create(IResources::CResourceId Id)
 {
 	return new CResource_Sample();
 }
@@ -271,7 +271,7 @@ static int ThreadReadData(void *pBuffer, int ChunkSize)
 	return ChunkSize;
 }
 
-bool CSound::CResourceHandler::Load(IResource *pResource, void *pData, unsigned DataSize)
+bool CSound::CResourceHandler::Load(CResource *pResource, void *pData, unsigned DataSize)
 {
 	CResource_Sample *pSample = static_cast<CResource_Sample*>(pResource);
 
@@ -375,14 +375,14 @@ bool CSound::CResourceHandler::Load(IResource *pResource, void *pData, unsigned 
 	return 0;
 }
 
-bool CSound::CResourceHandler::Insert(IResource *pResource)
+bool CSound::CResourceHandler::Insert(CResource *pResource)
 {
 	// sounds can be inserted directly when they are loaded
 	return true;
 }
 
 
-bool CSound::CResourceHandler::Destroy(IResource *pResource)
+bool CSound::CResourceHandler::Destroy(CResource *pResource)
 {
 	CResource_Sample *pSample = static_cast<CResource_Sample*>(pResource);
 
@@ -395,7 +395,7 @@ bool CSound::CResourceHandler::Destroy(IResource *pResource)
 
 
 
-IResource *CSound::LoadWV(const char *pFilename)
+CResource *CSound::LoadWV(const char *pFilename)
 {
 	return m_pResources->GetResource(pFilename);
 }
@@ -413,7 +413,7 @@ void CSound::SetChannel(int ChannelID, float Vol, float Pan)
 	m_aChannels[ChannelID].m_Pan = (int)(Pan*255.0f); // TODO: this is only on and off right now
 }
 
-int CSound::Play(int ChannelID, IResource *pSoundResource, int Flags, float x, float y)
+int CSound::Play(int ChannelID, CResource *pSoundResource, int Flags, float x, float y)
 {
 	CResource_Sample *pSample = static_cast<CResource_Sample*>(pSoundResource);
 	int VoiceID = -1;
@@ -452,17 +452,17 @@ int CSound::Play(int ChannelID, IResource *pSoundResource, int Flags, float x, f
 	return VoiceID;
 }
 
-int CSound::PlayAt(int ChannelID, IResource *pSoundResource, int Flags, float x, float y)
+int CSound::PlayAt(int ChannelID, CResource *pSoundResource, int Flags, float x, float y)
 {
 	return Play(ChannelID, pSoundResource, Flags|ISound::FLAG_POS, x, y);
 }
 
-int CSound::Play(int ChannelID, IResource *pSoundResource, int Flags)
+int CSound::Play(int ChannelID, CResource *pSoundResource, int Flags)
 {
 	return Play(ChannelID, pSoundResource, Flags, 0, 0);
 }
 
-void CSound::Stop(IResource *pSoundResource)
+void CSound::Stop(CResource *pSoundResource)
 {
 	CResource_Sample *pSample = static_cast<CResource_Sample*>(pSoundResource);
 

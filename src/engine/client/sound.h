@@ -13,7 +13,7 @@ class CSound : public IEngineSound
 {
 	int m_SoundEnabled;
 public:
-	class CResource_Sample : public IResource
+	class CResource_Sample : public CResource
 	{
 	public:
 		CResource_Sample()
@@ -52,10 +52,10 @@ public:
 	{
 	public:
 		CSound *m_pSound;
-		virtual IResource *Create(IResources::CResourceId Id);
-		virtual bool Load(IResource *pResource, void *pData, unsigned DataSize);
-		virtual bool Insert(IResource *pResource);
-		virtual bool Destroy(IResource *pResource);
+		virtual CResource *Create(IResources::CResourceId Id);
+		virtual bool Load(CResource *pResource, void *pData, unsigned DataSize);
+		virtual bool Insert(CResource *pResource);
+		virtual bool Destroy(CResource *pResource);
 	};
 
 	CResourceHandler m_ResourceHandler;
@@ -71,15 +71,15 @@ public:
 
 	virtual bool IsSoundEnabled() { return m_SoundEnabled != 0; }
 
-	virtual IResource *LoadWV(const char *pFilename);
+	virtual CResource *LoadWV(const char *pFilename);
 
 	virtual void SetListenerPos(float x, float y);
 	virtual void SetChannel(int ChannelID, float Vol, float Pan);
 
-	int Play(int ChannelID, IResource *pSound, int Flags, float x, float y);
-	virtual int PlayAt(int ChannelID, IResource *pSound, int Flags, float x, float y);
-	virtual int Play(int ChannelID, IResource *pSound, int Flags);
-	virtual void Stop(IResource *pSound);
+	int Play(int ChannelID, CResource *pSound, int Flags, float x, float y);
+	virtual int PlayAt(int ChannelID, CResource *pSound, int Flags, float x, float y);
+	virtual int Play(int ChannelID, CResource *pSound, int Flags);
+	virtual void Stop(CResource *pSound);
 	virtual void StopAll();
 };
 

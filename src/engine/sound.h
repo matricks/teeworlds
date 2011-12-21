@@ -5,7 +5,7 @@
 
 #include "kernel.h"
 
-class IResource;
+class CResource;
 
 class ISound : public IInterface
 {
@@ -21,14 +21,14 @@ public:
 	virtual bool IsSoundEnabled() = 0;
 
 	//virtual int LoadWV(const char *pFilename) = 0;
-	virtual IResource *LoadWV(const char *pFilename) = 0;
+	virtual CResource *LoadWV(const char *pFilename) = 0;
 
 	virtual void SetChannel(int ChannelID, float Volume, float Panning) = 0;
 	virtual void SetListenerPos(float x, float y) = 0;
 
-	virtual int PlayAt(int ChannelID, IResource *pSound, int Flags, float x, float y) = 0;
-	virtual int Play(int ChannelID, IResource *pSound, int Flags) = 0;
-	virtual void Stop(IResource *pSound) = 0;
+	virtual int PlayAt(int ChannelID, CResource *pSound, int Flags, float x, float y) = 0;
+	virtual int Play(int ChannelID, CResource *pSound, int Flags) = 0;
+	virtual void Stop(CResource *pSound) = 0;
 	virtual void StopAll() = 0;
 };
 

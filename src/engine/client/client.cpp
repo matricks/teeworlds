@@ -59,7 +59,7 @@ public:
 		MAX_RESOURCES = 1024*4,
 	};
 
-	IResource *m_aList[MAX_RESOURCES];
+	CResource *m_aList[MAX_RESOURCES];
 
 	CResourceMapping()
 	{
@@ -77,7 +77,7 @@ public:
 		mem_zero(m_aList, sizeof(m_aList));
 	}
 
-	void Set(CResourceIndex Idx, IResource *pResource)
+	void Set(CResourceIndex Idx, CResource *pResource)
 	{
 		if(Idx.Id() < 0 || Idx.Id() >= MAX_RESOURCES)
 			return;
@@ -87,7 +87,7 @@ public:
 		m_aList[Idx.Id()] = pResource;
 	}
 
-	IResource *Get(CResourceIndex Idx)
+	CResource *Get(CResourceIndex Idx)
 	{
 		if(Idx.Id() < 0 || Idx.Id() >= MAX_RESOURCES)
 			return 0x0;
@@ -135,7 +135,7 @@ void CGraph::Add(float v, float r, float g, float b)
 	m_aColors[m_Index][2] = b;
 }
 
-void CGraph::Render(IGraphics *pGraphics, IResource *pFontTexture, float x, float y, float w, float h, const char *pDescription)
+void CGraph::Render(IGraphics *pGraphics, CResource *pFontTexture, float x, float y, float w, float h, const char *pDescription)
 {
 	//m_pGraphics->BlendNormal();
 
@@ -1448,7 +1448,7 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket)
 				Id.m_pName = pName;
 				Id.m_NameHash = str_quickhash(pName);
 				Id.m_ContentHash = ContentHash;
-				IResource *pResource = m_pResources->GetResource(Id);
+				CResource *pResource = m_pResources->GetResource(Id);
 				m_ResourceMapping.Set(CResourceIndex(ResourceId), pResource);
 			}
 		}
@@ -1473,13 +1473,13 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket)
 }
 
 
-IResource *CClient::GetResource(const char *pName)
+CResource *CClient::GetResource(const char *pName)
 {
 	return 0x0;
 }
 
 // resources
-IResource *CClient::GetResource(CResourceIndex Idx)
+CResource *CClient::GetResource(CResourceIndex Idx)
 {
 	return m_ResourceMapping.Get(Idx);
 }

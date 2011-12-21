@@ -3,7 +3,7 @@
 class CSource_Cache : public CSource_Disk
 {
 protected:
-	void GetCacheName(char *pBuffer, int BufferSize, IResource *pResource);
+	void GetCacheName(char *pBuffer, int BufferSize, CResource *pResource);
 	virtual bool Load(CLoadOrder *pOrder);
 	virtual void Feedback(CLoadOrder *pOrder);
 public:

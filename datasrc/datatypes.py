@@ -170,7 +170,7 @@ class Pointer(BaseType):
 
 class Resource(BaseType):
 	def __init__(self):
-		BaseType.__init__(self, "class IResource*")
+		BaseType.__init__(self, "class CResource*")
 		#self.target = target
 	#def Set(self, target):
 	#	self.target = target

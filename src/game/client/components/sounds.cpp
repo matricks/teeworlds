@@ -115,7 +115,7 @@ void CSounds::ClearQueue()
 	m_QueueWaitTime = time_get();
 }
 
-void CSounds::Enqueue(int Channel, IResource *pResource)
+void CSounds::Enqueue(int Channel, CResource *pResource)
 {
 	// add sound to the queue
 	if(m_QueuePos < QUEUE_SIZE)
@@ -139,7 +139,7 @@ void CSounds::PlayAndRecord(int Chn, int SetId, float Vol, vec2 Pos)
 	Play(Chn, SetId, Vol, Pos);
 }
 
-void CSounds::Play(int Channel, IResource *pResource, float Vol, vec2 Pos)
+void CSounds::Play(int Channel, CResource *pResource, float Vol, vec2 Pos)
 {
 	if(!g_Config.m_SndEnable || !pResource || !Sound()->IsSoundEnabled() || (Channel == CHN_MUSIC && !g_Config.m_SndMusic))
 		return;
@@ -184,7 +184,7 @@ void CSounds::Play(int Chn, int SetId, float Vol, vec2 Pos)
 }
 
 
-void CSounds::Stop(IResource *pResource)
+void CSounds::Stop(CResource *pResource)
 {
 	if(!pResource)
 		return;

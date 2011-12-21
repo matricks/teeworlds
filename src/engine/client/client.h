@@ -27,7 +27,7 @@ public:
 	void ScaleMin();
 
 	void Add(float v, float r, float g, float b);
-	void Render(IGraphics *pGraphics, IResource *pFontTexture, float x, float y, float w, float h, const char *pDescription);
+	void Render(IGraphics *pGraphics, CResource *pFontTexture, float x, float y, float w, float h, const char *pDescription);
 };
 
 
@@ -88,7 +88,7 @@ class CClient : public IClient, public CDemoPlayer::IListner
 	unsigned m_SnapshotParts;
 	int64 m_LocalStartTime;
 
-	IResource *m_pDebugFont;
+	CResource *m_pDebugFont;
 	float m_FrameTimeLow;
 	float m_FrameTimeHigh;
 	int m_Frames;
@@ -212,7 +212,7 @@ public:
 
 	virtual bool SoundInitFailed() { return m_SoundInitFailed; }
 
-	virtual IResource *GetDebugFont() { return m_pDebugFont; }
+	virtual CResource *GetDebugFont() { return m_pDebugFont; }
 
 	void DirectInput(int *pInput, int Size);
 	void SendInput();
@@ -272,8 +272,8 @@ public:
 	virtual void OnDemoPlayerMessage(void *pData, int Size);
 
 	// resources
-	virtual IResource *GetResource(const char *pName);
-	virtual IResource *GetResource(CResourceIndex Idx);
+	virtual CResource *GetResource(const char *pName);
+	virtual CResource *GetResource(CResourceIndex Idx);
 
 	void Update();
 

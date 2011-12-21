@@ -257,13 +257,13 @@ void CGraphics_OpenGL::LinesDraw(const CLineItem *pArray, int Num)
 	AddVertices(2*Num);
 }
 
-int CGraphics_OpenGL::UnloadTexture(IResource *pTexture)
+int CGraphics_OpenGL::UnloadTexture(CResource *pTexture)
 {
 	pTexture->Destroy();
 	return 0;
 }
 
-IResource *CGraphics_OpenGL::LoadTextureRawToResource(IResource *pResource, int Width, int Height, int Format, const void *pData, int StoreFormat, int Flags)
+CResource *CGraphics_OpenGL::LoadTextureRawToResource(CResource *pResource, int Width, int Height, int Format, const void *pData, int StoreFormat, int Flags)
 {
 	CResource_Texture *pTexture = static_cast<CResource_Texture*>(pResource);
 
@@ -353,10 +353,10 @@ IResource *CGraphics_OpenGL::LoadTextureRawToResource(IResource *pResource, int 
 	return pResource;
 }
 
-IResource *CGraphics_OpenGL::LoadTextureRaw(int Width, int Height, int Format, const void *pData, int StoreFormat, int Flags)
+CResource *CGraphics_OpenGL::LoadTextureRaw(int Width, int Height, int Format, const void *pData, int StoreFormat, int Flags)
 {
 	IResources::CResourceId Id;
-	IResource *pResource = m_TextureHandler.Create(Id);
+	CResource *pResource = m_TextureHandler.Create(Id);
 	CResource_Texture *pTexture = static_cast<CResource_Texture*>(pResource);
 	pTexture->SetLoaded();
 	return LoadTextureRawToResource(pResource, Width, Height, Format, pData, StoreFormat, Flags);
@@ -373,13 +373,13 @@ unsigned int CGraphics_OpenGL::CTextureHandler::PngReadFunc(void *pOutput, unsig
 }
 
 // called from the main thread
-IResource *CGraphics_OpenGL::CTextureHandler::Create(IResources::CResourceId Id)
+CResource *CGraphics_OpenGL::CTextureHandler::Create(IResources::CResourceId Id)
 {
 	return new CResource_Texture;
 }
 
 // called from job thread
-bool CGraphics_OpenGL::CTextureHandler::Load(IResource *pResource, void *pData, unsigned DataSize)
+bool CGraphics_OpenGL::CTextureHandler::Load(CResource *pResource, void *pData, unsigned DataSize)
 {
 	CResource_Texture *pTexture = static_cast<CResource_Texture*>(pResource);
 
@@ -412,7 +412,7 @@ bool CGraphics_OpenGL::CTextureHandler::Load(IResource *pResource, void *pData, 
 }
 
 // called from the main thread
-bool CGraphics_OpenGL::CTextureHandler::Insert(IResource *pResource)
+bool CGraphics_OpenGL::CTextureHandler::Insert(CResource *pResource)
 {
 	CResource_Texture *pTexture = static_cast<CResource_Texture*>(pResource);
 	CImageInfo *pInfo = &pTexture->m_ImageInfo;
@@ -425,7 +425,7 @@ bool CGraphics_OpenGL::CTextureHandler::Insert(IResource *pResource)
 	return true;
 }
 
-bool CGraphics_OpenGL::CTextureHandler::Destroy(IResource *pResource)
+bool CGraphics_OpenGL::CTextureHandler::Destroy(CResource *pResource)
 {
 	CResource_Texture *pTexture = static_cast<CResource_Texture*>(pResource);
 	glDeleteTextures(1, &pTexture->m_TexId);
@@ -435,7 +435,7 @@ bool CGraphics_OpenGL::CTextureHandler::Destroy(IResource *pResource)
 }
 
 // simple uncompressed RGBA loaders
-IResource *CGraphics_OpenGL::LoadTexture(const char *pFilename, int StorageType, int StoreFormat, int Flags)
+CResource *CGraphics_OpenGL::LoadTexture(const char *pFilename, int StorageType, int StoreFormat, int Flags)
 {
 	(void)StorageType;
 	(void)StoreFormat;
@@ -533,7 +533,7 @@ void CGraphics_OpenGL::ScreenshotDirect(const char *pFilename)
 	mem_free(pPixelData);
 }
 
-void CGraphics_OpenGL::TextureSet(IResource *pResource)
+void CGraphics_OpenGL::TextureSet(CResource *pResource)
 {
 	dbg_assert(m_Drawing == 0, "called Graphics()->TextureSet within begin");
 	if(pResource)

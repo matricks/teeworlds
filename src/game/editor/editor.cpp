@@ -23,10 +23,10 @@
 #include "auto_map.h"
 #include "editor.h"
 
-IResource *CEditor::ms_pCheckerTexture = 0;
-IResource *CEditor::ms_pBackgroundTexture = 0;
-IResource *CEditor::ms_pCursorTexture = 0;
-IResource *CEditor::ms_pEntitiesTexture = 0;
+CResource *CEditor::ms_pCheckerTexture = 0;
+CResource *CEditor::ms_pBackgroundTexture = 0;
+CResource *CEditor::ms_pCursorTexture = 0;
+CResource *CEditor::ms_pEntitiesTexture = 0;
 const void* CEditor::ms_pUiGotContext;
 
 enum
@@ -587,7 +587,7 @@ void CEditor::RenderGrid(CLayerGroup *pGroup)
 	Graphics()->LinesEnd();
 }
 
-void CEditor::RenderBackground(CUIRect View, IResource *pTexture, float Size, float Brightness)
+void CEditor::RenderBackground(CUIRect View, CResource *pTexture, float Size, float Brightness)
 {
 	Graphics()->TextureSet(pTexture);
 	Graphics()->BlendNormal();
@@ -1403,7 +1403,7 @@ void CEditor::DoQuadPoint(CQuad *pQuad, int QuadIndex, int V)
 	Graphics()->QuadsDraw(&QuadItem, 1);
 }
 
-void CEditor::DoQuadEnvelopes(CQuad *pQuad, int Index, IResource *pTexture)
+void CEditor::DoQuadEnvelopes(CQuad *pQuad, int Index, CResource *pTexture)
 {
 	CEnvelope *pEnvelope = 0x0;
 	if(pQuad->m_PosEnv >= 0 && pQuad->m_PosEnv < m_Map.m_lEnvelopes.size())
@@ -2078,7 +2078,7 @@ void CEditor::DoMapEditor(CUIRect View, CUIRect ToolBar)
 		GetSelectedGroup()->MapScreen();
 
 		CLayerQuads *pLayer = (CLayerQuads*)GetSelectedLayer(0);
-		IResource *pTexture = 0;
+		CResource *pTexture = 0;
 		if(pLayer->m_Image >= 0 && pLayer->m_Image < m_Map.m_lImages.size())
 			pTexture = m_Map.m_lImages[pLayer->m_Image]->m_pTexture;
 
@@ -3868,7 +3868,7 @@ void CEditorMap::Clean()
 	m_Modified = false;
 }
 
-void CEditorMap::CreateDefault(IResource *pEntitiesTexture)
+void CEditorMap::CreateDefault(CResource *pEntitiesTexture)
 {
 	// add background
 	CLayerGroup *pGroup = NewGroup();

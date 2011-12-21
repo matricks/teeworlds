@@ -227,9 +227,9 @@ class CResources : public IResources
 	};
 	array<CHandlerEntry> m_lHandlers;
 
-	array<IResource*> m_lpResources;
+	array<CResource*> m_lpResources;
 
-	IResource *FindResource(CResourceId Id)
+	CResource *FindResource(CResourceId Id)
 	{
 		// TODO: bad performance, linear search, string compares
 		// TODO: check hash as well if wanted
@@ -267,7 +267,7 @@ class CResources : public IResources
 		return pType;
 	}
 
-	IResource *CreateResource(CResourceId Id)
+	CResource *CreateResource(CResourceId Id)
 	{
 		const char *pType = GetTypeFromName(Id.m_pName);
 		if(!pType)
@@ -280,7 +280,7 @@ class CResources : public IResources
 		if(!pHandler)
 			return 0x0;
 
-		IResource *pResource = pHandler->Create(Id);
+		CResource *pResource = pHandler->Create(Id);
 		pResource->m_Id = Id;
 		pResource->m_pResources = this;
 		pResource->m_pHandler = pHandler;
@@ -299,18 +299,18 @@ class CResources : public IResources
 		return pResource;
 	}
 
-	ringbuffer_mwsr<IResource*, 1024> m_lInserts; // job threads writes, main thread reads
-	ringbuffer_swsr<IResource*, 1024> m_lDestroys; // main thread only
+	ringbuffer_mwsr<CResource*, 1024> m_lInserts; // job threads writes, main thread reads
+	ringbuffer_swsr<CResource*, 1024> m_lDestroys; // main thread only
 
 	struct CLoadJobInfo
 	{
 		CResources *m_pThis;
-		IResource *m_pResource;
+		CResource *m_pResource;
 		void *m_pData;
 		unsigned m_DataSize;
 	};
 
-	void LoadResource(IResource *pResource)
+	void LoadResource(CResource *pResource)
 	{
 		CSource::CLoadOrder Order = {0,0,0};
 		Order.m_pResource = pResource;
@@ -328,7 +328,7 @@ class CResources : public IResources
 		if(pHandler->Load(pInfo->m_pResource, pInfo->m_pData, pInfo->m_DataSize) != 0)
 		{
 			dbg_msg("resources", "failed to process '%s'", pInfo->m_pResource->m_Id.m_pName);
-			pInfo->m_pResource->m_State = IResource::STATE_ERROR;
+			pInfo->m_pResource->m_State = CResource::STATE_ERROR;
 			return -2;
 		}
 
@@ -426,9 +426,9 @@ public:
 		m_lHandlers.add(Entry);
 	}
 
-	virtual IResource *GetResource(CResourceId Id)
+	virtual CResource *GetResource(CResourceId Id)
 	{
-		IResource *pResource = FindResource(Id);
+		CResource *pResource = FindResource(Id);
 		if(pResource)
 		{
 			dbg_msg("resources", "found '%s'", Id.m_pName);
@@ -446,7 +446,7 @@ public:
 		m_lDestroys.push(0x0); 
 		while(true)
 		{
-			IResource *pResource = m_lDestroys.pop();
+			CResource *pResource = m_lDestroys.pop();
 			if(pResource == 0x0)
 				break;
 			
@@ -466,13 +466,13 @@ public:
 		// handle all resource inserts
 		while(m_lInserts.size())
 		{
-			IResource *pResource = m_lInserts.pop();
+			CResource *pResource = m_lInserts.pop();
 			pResource->m_pHandler->Insert(pResource);
-			pResource->m_State = IResource::STATE_LOADED;
+			pResource->m_State = CResource::STATE_LOADED;
 		}
 	}
 
-	virtual	void Destroy(IResource *pResource)
+	virtual	void Destroy(CResource *pResource)
 	{
 		m_lpResources.remove_fast(pResource);
 		m_lDestroys.push(pResource);

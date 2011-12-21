@@ -1551,7 +1551,7 @@ void CMenus::OnRender()
 }
 
 // TODO: static variable, remove
-static IResource *gs_pTextureBlob = 0x0;
+static CResource *gs_pTextureBlob = 0x0;
 
 void CMenus::RenderBackground()
 {

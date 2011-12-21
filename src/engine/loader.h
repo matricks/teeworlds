@@ -68,7 +68,7 @@ private:
 
 extern CJobHandler g_JobHandler;
 
-class IResource;
+class CResource;
 
 
 /*
@@ -101,7 +101,7 @@ msc {
 class IResources : public IInterface
 {
 	MACRO_INTERFACE("resources", 0)
-	friend class IResource;
+	friend class CResource;
 public:
 	class IHandler;
 
@@ -121,21 +121,19 @@ public:
 		class CLoadOrder
 		{
 		public:
-			IResource *m_pResource;
+			CResource *m_pResource;
 			void *m_pData;
 			unsigned m_DataSize;
 		};
 
 		CSource(const char *pName);
+		virtual ~CSource() {}
 
 		virtual bool Load(CLoadOrder *pOrder) { return false; }
 		virtual void Feedback(CLoadOrder *pOrder) { }
 
 		const char *Name() const { return m_pName; }
 		IResources *Resources() const { return m_pResources; }
-
-		void Update();
-	
 	protected:
 		CSource *PrevSource() const { return m_pPrevSource; }
 		CSource *NextSource() const { return m_pNextSource; }	
@@ -152,6 +150,7 @@ public:
 		void ForwardOrder(CLoadOrder *pOrder);
 		void FeedbackOrder(CLoadOrder *pOrder);
 		void Run();
+		void Update();
 
 		static void ThreadFunc(void *pThis) { ((CSource *)pThis)->Run(); }
 	};
@@ -162,14 +161,14 @@ public:
 		virtual ~IHandler() {}
 
 		// called from the main thread
-		virtual IResource *Create(CResourceId Id) = 0;
+		virtual CResource *Create(CResourceId Id) = 0;
 
 		// called from job thread
-		virtual bool Load(IResource *pResource, void *pData, unsigned DataSize) = 0;
+		virtual bool Load(CResource *pResource, void *pData, unsigned DataSize) = 0;
 
 		// called from the main thread during IResources::Update()
-		virtual bool Insert(IResource *pResource) = 0;
-		virtual bool Destroy(IResource *pResource) = 0;
+		virtual bool Insert(CResource *pResource) = 0;
+		virtual bool Destroy(CResource *pResource) = 0;
 	};
 
 
@@ -180,9 +179,9 @@ public:
 
 	virtual void Update() = 0;
 
-	virtual IResource *GetResource(CResourceId Id) = 0;
+	virtual CResource *GetResource(CResourceId Id) = 0;
 
-	IResource *GetResource(const char *pName)
+	CResource *GetResource(const char *pName)
 	{
 		CResourceId Id;
 		Id.m_pName = pName;
@@ -194,7 +193,7 @@ public:
 	static IResources *CreateInstance();
 
 private:
-	virtual	void Destroy(IResource *pResource) = 0;
+	virtual	void Destroy(CResource *pResource) = 0;
 };
 
 
@@ -213,15 +212,14 @@ public:
 	void SetBaseDirectory(const char *pBase);
 };
 
-class IResource
+class CResource
 {
 	friend class IResources;
 	friend class CResources;
 
-
 protected:
 	// only IResources can destory a resource for good
-	virtual ~IResource()
+	virtual ~CResource()
 	{
 		if(m_Id.m_pName)
 			mem_free((void*)m_Id.m_pName);
@@ -241,7 +239,7 @@ protected:
 	};
 
 	// only a handler should be able to create a resource
-	IResource()
+	CResource()
 	{
 		m_State = STATE_LOADING;
 		m_pResources = 0;
