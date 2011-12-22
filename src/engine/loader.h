@@ -220,6 +220,7 @@ public:
 
 	virtual void Update() = 0;
 
+	virtual CResourceHandle CreateResource(CResourceId Id, bool StartLoad) = 0;
 	virtual CResourceHandle GetResource(CResourceId Id) = 0;
 
 	CResourceHandle GetResource(const char *pName)

@@ -265,6 +265,13 @@ void CGameClient::OnInit()
 	m_ServerMode = SERVERMODE_PURE;
 }
 
+CGameClient::~CGameClient()
+{
+	// free all the images
+	for(int i = 0; i < g_pData->m_NumImages; i++)
+		g_pData->m_aImages[i].m_Resource = 0;
+}
+
 void CGameClient::DispatchInput()
 {
 	// handle mouse movement

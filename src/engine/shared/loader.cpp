@@ -267,7 +267,7 @@ class CResources : public IResources
 		return pType;
 	}
 
-	CResource *CreateResource(CResourceId Id)
+	CResourceHandle CreateResource(CResourceId Id, bool StartLoad)
 	{
 		const char *pType = GetTypeFromName(Id.m_pName);
 		if(!pType)
@@ -295,7 +295,8 @@ class CResources : public IResources
 		m_lpResources.add(pResource);
 
 		// start the load of it
-		LoadResource(pResource);
+		if(StartLoad)
+			LoadResource(pResource);
 		return pResource;
 	}
 
@@ -436,7 +437,7 @@ public:
 		}
 
 		dbg_msg("resources", "creating '%s'", Id.m_pName);
-		return CreateResource(Id);
+		return CreateResource(Id, true);
 	}
 
 	virtual void Update()

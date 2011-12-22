@@ -35,6 +35,17 @@ static int LoadSoundsThread(void *pUser)
 
 	return 0;
 }
+
+CSounds::~CSounds()
+{
+	// release the sounds
+	for(int s = 0; s < g_pData->m_NumSounds; s++)
+	{
+		for(int i = 0; i < g_pData->m_aSounds[s].m_NumSounds; i++)
+			g_pData->m_aSounds[s].m_aSounds[i].m_Resource = 0x0;
+	}
+}
+
 void CSounds::OnInit()
 {
 	// setup sound channels

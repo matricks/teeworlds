@@ -43,6 +43,11 @@ public:
 		m_NumInterfaces = 0;
 	}
 
+	~CKernel()
+	{
+		
+	}
+
 
 	virtual bool RegisterInterfaceImpl(const char *pName, IInterface *pInterface)
 	{

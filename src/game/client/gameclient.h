@@ -10,6 +10,25 @@
 #include <game/gamecore.h>
 #include "render.h"
 
+template<typename T>
+class autoptr
+{
+	T *ptr;
+
+	// not allowed, just going to cause trouble
+	autoptr(const autoptr &other) {}
+	autoptr &operator =(const autoptr &other) { }
+public:
+	autoptr() : ptr(0x0) {}
+	~autoptr() { if(ptr) delete ptr; ptr = 0x0; }
+
+	autoptr &operator =(T *p) { ptr = p; return *this; }
+
+	const T *operator->() const { assert(ptr); return ptr; }
+	T *operator->() { assert(ptr); return ptr; }
+	operator T* () { return ptr; }
+};
+
 class CGameClient : public IGameClient
 {
 	class CStack
@@ -68,6 +87,8 @@ class CGameClient : public IGameClient
 	void EvolveCharacter(CNetObj_Character *pCharacter, int Tick);
 
 public:
+	~CGameClient();
+
 	IKernel *Kernel() { return IInterface::Kernel(); }
 	IEngine *Engine() const { return m_pEngine; }
 	class IGraphics *Graphics() const { return m_pGraphics; }
@@ -229,26 +250,26 @@ public:
 	void SendKill(int ClientID);
 
 	// pointers to all systems
-	class CGameConsole *m_pGameConsole;
-	class CBinds *m_pBinds;
-	class CParticles *m_pParticles;
-	class CMenus *m_pMenus;
-	class CSkins *m_pSkins;
-	class CCountryFlags *m_pCountryFlags;
-	class CFlow *m_pFlow;
-	class CChat *m_pChat;
-	class CDamageInd *m_pDamageind;
-	class CCamera *m_pCamera;
-	class CControls *m_pControls;
-	class CEffects *m_pEffects;
-	class CSounds *m_pSounds;
-	class CMotd *m_pMotd;
-	class CMapImages *m_pMapimages;
-	class CVoting *m_pVoting;
-	class CScoreboard *m_pScoreboard;
-	class CItems *m_pItems;
-	class CMapLayers *m_pMapLayersBackGround;
-	class CMapLayers *m_pMapLayersForeGround;
+	autoptr<class CGameConsole> m_pGameConsole;
+	autoptr<class CBinds> m_pBinds;
+	autoptr<class CParticles> m_pParticles;
+	autoptr<class CMenus> m_pMenus;
+	autoptr<class CSkins> m_pSkins;
+	autoptr<class CCountryFlags> m_pCountryFlags;
+	autoptr<class CFlow> m_pFlow;
+	autoptr<class CChat> m_pChat;
+	autoptr<class CDamageInd> m_pDamageind;
+	autoptr<class CCamera> m_pCamera;
+	autoptr<class CControls> m_pControls;
+	autoptr<class CEffects> m_pEffects;
+	autoptr<class CSounds> m_pSounds;
+	autoptr<class CMotd> m_pMotd;
+	autoptr<class CMapImages> m_pMapimages;
+	autoptr<class CVoting> m_pVoting;
+	autoptr<class CScoreboard> m_pScoreboard;
+	autoptr<class CItems> m_pItems;
+	autoptr<class CMapLayers> m_pMapLayersBackGround;
+	autoptr<class CMapLayers> m_pMapLayersForeGround;
 };
 
 

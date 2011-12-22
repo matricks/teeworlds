@@ -55,6 +55,47 @@ public:
 };
 
 
+// this list is almost like the CResourceList  on the server
+class CResourceMapping
+{
+public:
+	enum
+	{
+		MAX_RESOURCES = 1024*4,
+	};
+
+	CResourceHandle m_aList[MAX_RESOURCES];
+
+	CResourceMapping()
+	{
+	}
+
+	~CResourceMapping()
+	{
+		Clear();
+	}
+
+	void Clear()
+	{
+		for(int i = 0; i < MAX_RESOURCES; i++)
+			m_aList[i] = 0x0;
+	}
+
+	void Set(CResourceIndex Idx, CResourceHandle Resource)
+	{
+		if(Idx.Id() < 0 || Idx.Id() >= MAX_RESOURCES)
+			return;
+		m_aList[Idx.Id()] = Resource;
+	}
+
+	CResourceHandle Get(CResourceIndex Idx)
+	{
+		if(Idx.Id() < 0 || Idx.Id() >= MAX_RESOURCES)
+			return CResourceHandle();
+		return m_aList[Idx.Id()];
+	}
+};
+
 class CClient : public IClient, public CDemoPlayer::IListner
 {
 	// needed interfaces
@@ -146,6 +187,9 @@ class CClient : public IClient, public CDemoPlayer::IListner
 	CGraph m_InputtimeMarginGraph;
 	CGraph m_GametimeMarginGraph;
 	CGraph m_FpsGraph;
+
+	// resource mapping
+	CResourceMapping m_ResourceMapping;
 
 	// the game snapshots are modifiable by the game
 	class CSnapshotStorage m_SnapshotStorage;

@@ -349,10 +349,14 @@ CResource *CGraphics_OpenGL::LoadTextureRawToResource(CResource *pResource, int 
 CResourceHandle CGraphics_OpenGL::LoadTextureRaw(int Width, int Height, int Format, const void *pData, int StoreFormat, int Flags)
 {
 	IResources::CResourceId Id;
-	CResource *pResource = m_TextureHandler.Create(Id);
-	CResource_Texture *pTexture = static_cast<CResource_Texture*>(pResource);
+	Id.m_ContentHash = 0;
+	Id.m_NameHash = 0;
+	Id.m_pName = "$rawtexture.png";
+
+	CResourceHandle Resource = m_pResources->CreateResource(Id, false);
+	CResource_Texture *pTexture = static_cast<CResource_Texture*>(Resource.Get());
 	pTexture->SetLoaded();
-	return LoadTextureRawToResource(pResource, Width, Height, Format, pData, StoreFormat, Flags);
+	return LoadTextureRawToResource(pTexture, Width, Height, Format, pData, StoreFormat, Flags);
 }
 
 unsigned int CGraphics_OpenGL::CTextureHandler::PngReadFunc(void *pOutput, unsigned long size, unsigned long numel, void *pUserPtr)

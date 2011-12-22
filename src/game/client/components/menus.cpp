@@ -1548,15 +1548,12 @@ void CMenus::OnRender()
 	m_NumInputEvents = 0;
 }
 
-// TODO: static variable, remove
-static CResourceHandle gs_TextureBlob;
-
 void CMenus::RenderBackground()
 {
 	//Graphics()->Clear(1,1,1);
 	//render_sunrays(0,0);
-	if(!gs_TextureBlob.IsValid())
-		gs_TextureBlob = Graphics()->LoadTexture("blob.png", IStorage::TYPE_ALL, CImageInfo::FORMAT_AUTO, 0);
+	if(!m_TextureBlob.IsValid())
+		m_TextureBlob = Graphics()->LoadTexture("blob.png", IStorage::TYPE_ALL, CImageInfo::FORMAT_AUTO, 0);
 
 	float sw = 300*Graphics()->ScreenAspect();
 	float sh = 300;
@@ -1594,7 +1591,7 @@ void CMenus::RenderBackground()
 	Graphics()->QuadsEnd();
 
 	// render border fade
-	Graphics()->TextureSet(gs_TextureBlob);
+	Graphics()->TextureSet(m_TextureBlob);
 	Graphics()->QuadsBegin();
 		Graphics()->SetColor(0,0,0,0.5f);
 		QuadItem = IGraphics::CQuadItem(-100, -100, sw+200, sh+200);

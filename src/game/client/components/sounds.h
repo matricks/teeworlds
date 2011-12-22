@@ -32,6 +32,8 @@ public:
 		CHN_GLOBAL,
 	};
 
+	~CSounds();
+
 	virtual void OnInit();
 	virtual void OnReset();
 	virtual void OnStateChange(int NewState, int OldState);

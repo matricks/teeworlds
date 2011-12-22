@@ -23,10 +23,6 @@
 #include "auto_map.h"
 #include "editor.h"
 
-CResourceHandle CEditor::ms_CheckerTexture;
-CResourceHandle CEditor::ms_BackgroundTexture;
-CResourceHandle CEditor::ms_CursorTexture;
-CResourceHandle CEditor::ms_EntitiesTexture;
 const void* CEditor::ms_pUiGotContext;
 
 enum
@@ -3154,10 +3150,10 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 		ShowColorBar = true;
 		View.HSplitTop(20.0f, &ColorBar, &View);
 		ColorBar.Margin(2.0f, &ColorBar);
-		RenderBackground(ColorBar, ms_CheckerTexture, 16.0f, 1.0f);
+		RenderBackground(ColorBar, m_CheckerTexture, 16.0f, 1.0f);
 	}
 
-	RenderBackground(View, ms_CheckerTexture, 32.0f, 0.1f);
+	RenderBackground(View, m_CheckerTexture, 32.0f, 0.1f);
 
 	if(pEnvelope)
 	{
@@ -3597,7 +3593,7 @@ void CEditor::Render()
 	m_pTooltip = 0;
 
 	// render checker
-	RenderBackground(View, ms_CheckerTexture, 32.0f, 1.0f);
+	RenderBackground(View, m_CheckerTexture, 32.0f, 1.0f);
 
 	CUIRect MenuBar, CModeBar, ToolBar, StatusBar, EnvelopeEditor, ToolBox;
 	m_ShowPicker = Input()->KeyPressed(KEY_SPACE) != 0 && m_Dialog == DIALOG_NONE;
@@ -3650,17 +3646,17 @@ void CEditor::Render()
 	if(m_GuiActive)
 	{
 		float Brightness = 0.25f;
-		RenderBackground(MenuBar, ms_BackgroundTexture, 128.0f, Brightness*0);
+		RenderBackground(MenuBar, m_BackgroundTexture, 128.0f, Brightness*0);
 		MenuBar.Margin(2.0f, &MenuBar);
 
-		RenderBackground(ToolBox, ms_BackgroundTexture, 128.0f, Brightness);
+		RenderBackground(ToolBox, m_BackgroundTexture, 128.0f, Brightness);
 		ToolBox.Margin(2.0f, &ToolBox);
 
-		RenderBackground(ToolBar, ms_BackgroundTexture, 128.0f, Brightness);
+		RenderBackground(ToolBar, m_BackgroundTexture, 128.0f, Brightness);
 		ToolBar.Margin(2.0f, &ToolBar);
 		ToolBar.VSplitLeft(100.0f, &CModeBar, &ToolBar);
 
-		RenderBackground(StatusBar, ms_BackgroundTexture, 128.0f, Brightness);
+		RenderBackground(StatusBar, m_BackgroundTexture, 128.0f, Brightness);
 		StatusBar.Margin(2.0f, &StatusBar);
 
 		// do the toolbar
@@ -3669,7 +3665,7 @@ void CEditor::Render()
 
 		if(m_ShowEnvelopeEditor)
 		{
-			RenderBackground(EnvelopeEditor, ms_BackgroundTexture, 128.0f, Brightness);
+			RenderBackground(EnvelopeEditor, m_BackgroundTexture, 128.0f, Brightness);
 			EnvelopeEditor.Margin(2.0f, &EnvelopeEditor);
 		}
 	}
@@ -3737,7 +3733,7 @@ void CEditor::Render()
 		// render butt ugly mouse cursor
 		float mx = UI()->MouseX();
 		float my = UI()->MouseY();
-		Graphics()->TextureSet(ms_CursorTexture);
+		Graphics()->TextureSet(m_CursorTexture);
 		Graphics()->QuadsBegin();
 		if(ms_pUiGotContext == UI()->HotItem())
 			Graphics()->SetColor(1,0,0,1);
@@ -3753,7 +3749,7 @@ void CEditor::Reset(bool CreateDefault)
 
 	// create default layers
 	if(CreateDefault)
-		m_Map.CreateDefault(ms_EntitiesTexture);
+		m_Map.CreateDefault(m_EntitiesTexture);
 
 	/*
 	{
@@ -3843,7 +3839,7 @@ void CEditorMap::MakeGameLayer(CLayer *pLayer)
 {
 	m_pGameLayer = (CLayerGame *)pLayer;
 	m_pGameLayer->m_pEditor = m_pEditor;
-	m_pGameLayer->m_Texture = m_pEditor->ms_EntitiesTexture;
+	m_pGameLayer->m_Texture = m_pEditor->m_EntitiesTexture;
 }
 
 void CEditorMap::MakeGameGroup(CLayerGroup *pGroup)
@@ -3909,10 +3905,10 @@ void CEditor::Init()
 	m_UI.SetGraphics(m_pGraphics, m_pTextRender);
 	m_Map.m_pEditor = this;
 
-	ms_CheckerTexture = Graphics()->LoadTexture("editor/checker.png", IStorage::TYPE_ALL, CImageInfo::FORMAT_AUTO, 0);
-	ms_BackgroundTexture = Graphics()->LoadTexture("editor/background.png", IStorage::TYPE_ALL, CImageInfo::FORMAT_AUTO, 0);
-	ms_CursorTexture = Graphics()->LoadTexture("editor/cursor.png", IStorage::TYPE_ALL, CImageInfo::FORMAT_AUTO, 0);
-	ms_EntitiesTexture = Graphics()->LoadTexture("editor/entities.png", IStorage::TYPE_ALL, CImageInfo::FORMAT_AUTO, 0);
+	m_CheckerTexture = Graphics()->LoadTexture("editor/checker.png", IStorage::TYPE_ALL, CImageInfo::FORMAT_AUTO, 0);
+	m_BackgroundTexture = Graphics()->LoadTexture("editor/background.png", IStorage::TYPE_ALL, CImageInfo::FORMAT_AUTO, 0);
+	m_CursorTexture = Graphics()->LoadTexture("editor/cursor.png", IStorage::TYPE_ALL, CImageInfo::FORMAT_AUTO, 0);
+	m_EntitiesTexture = Graphics()->LoadTexture("editor/entities.png", IStorage::TYPE_ALL, CImageInfo::FORMAT_AUTO, 0);
 
 	m_TilesetPicker.m_pEditor = this;
 	m_TilesetPicker.MakePalette();

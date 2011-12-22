@@ -49,46 +49,6 @@
 	#include <windows.h>
 #endif
 
-
-// this list is almost like the CResourceList  on the server
-class CResourceMapping
-{
-public:
-	enum
-	{
-		MAX_RESOURCES = 1024*4,
-	};
-
-	CResourceHandle m_aList[MAX_RESOURCES];
-
-	CResourceMapping()
-	{
-		mem_zero(m_aList, sizeof(m_aList));
-	}
-
-	void Clear()
-	{
-		for(int i = 0; i < MAX_RESOURCES; i++)
-			m_aList[i] = 0x0;
-	}
-
-	void Set(CResourceIndex Idx, CResourceHandle Resource)
-	{
-		if(Idx.Id() < 0 || Idx.Id() >= MAX_RESOURCES)
-			return;
-		m_aList[Idx.Id()] = Resource;
-	}
-
-	CResourceHandle Get(CResourceIndex Idx)
-	{
-		if(Idx.Id() < 0 || Idx.Id() >= MAX_RESOURCES)
-			return CResourceHandle();
-		return m_aList[Idx.Id()];
-	}
-};
-
-CResourceMapping m_ResourceMapping;
-
 void CGraph::Init(float Min, float Max)
 {
 	m_Min = Min;
@@ -2017,8 +1977,11 @@ void CClient::Run()
 	GameClient()->OnShutdown();
 	Disconnect();
 
+	delete GameClient();
+
 	m_pGraphics->Shutdown();
 	m_pSound->Shutdown();
+
 }
 
 
@@ -2273,9 +2236,7 @@ void CClient::RegisterCommands()
 
 static CClient *CreateClient()
 {
-	CClient *pClient = static_cast<CClient *>(mem_alloc(sizeof(CClient), 1));
-	mem_zero(pClient, sizeof(CClient));
-	return new(pClient) CClient;
+	return new CClient();
 }
 
 /*
@@ -2400,6 +2361,25 @@ int main(int argc, const char **argv) // ignore_convention
 
 	// write down the config and quit
 	pConfig->Save();
+
+	delete pClient;
+
+	delete pEngineTextRender;
+	delete pEngineMap;
+	delete pEngineMasterServer;
+
+	delete pEngineGraphics;
+	delete pEngineSound;
+	delete pEngineInput;
+
+	delete pEngine;
+	delete pStorage;
+	delete pConfig;
+	delete pConsole;
+
+	delete pResources;
+
+	delete pKernel;
 
 	return 0;
 }

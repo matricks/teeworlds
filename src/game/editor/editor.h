@@ -658,11 +658,10 @@ public:
     int m_SelectedQuadEnvelope;
 	int m_SelectedImage;
 
-	// TODO: why are these statics?
-	static CResourceHandle ms_CheckerTexture;
-	static CResourceHandle ms_BackgroundTexture;
-	static CResourceHandle ms_CursorTexture;
-	static CResourceHandle ms_EntitiesTexture;
+	CResourceHandle m_CheckerTexture;
+	CResourceHandle m_BackgroundTexture;
+	CResourceHandle m_CursorTexture;
+	CResourceHandle m_EntitiesTexture;
 
 	CLayerGroup m_Brush;
 	CLayerTiles m_TilesetPicker;
