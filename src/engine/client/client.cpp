@@ -1977,8 +1977,6 @@ void CClient::Run()
 	GameClient()->OnShutdown();
 	Disconnect();
 
-	delete GameClient();
-
 	m_pGraphics->Shutdown();
 	m_pSound->Shutdown();
 
@@ -2362,6 +2360,7 @@ int main(int argc, const char **argv) // ignore_convention
 	// write down the config and quit
 	pConfig->Save();
 
+	delete pClient->GameClient();
 	delete pClient;
 
 	delete pEngineTextRender;
