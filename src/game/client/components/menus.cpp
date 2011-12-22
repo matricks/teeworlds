@@ -58,11 +58,15 @@ CMenus::CMenus()
 	m_NeedSendinfo = false;
 	m_MenuActive = true;
 	m_UseMouseButtons = true;
-
 	m_EscapePressed = false;
 	m_EnterPressed = false;
 	m_DeletePressed = false;
 	m_NumInputEvents = 0;
+
+	m_MousePos.x = 0;
+	m_MousePos.y = 0;
+
+	m_SelectedIndex = 0;
 
 	m_LastInput = time_get();
 

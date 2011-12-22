@@ -31,7 +31,6 @@ void CChat::OnInit()
 	m_Sound_ChatHighlight = Resources()->GetResource("audio/sfx_msg-highlight.wv");
 }
 
-
 void CChat::OnReset()
 {
 	for(int i = 0; i < MAX_LINES; i++)
@@ -41,6 +40,7 @@ void CChat::OnReset()
 		m_aLines[i].m_aName[0] = 0;
 	}
 
+	m_Mode = MODE_NONE;
 	m_Show = false;
 	m_InputUpdate = false;
 	m_ChatStringOffset = 0;
