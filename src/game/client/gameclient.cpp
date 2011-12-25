@@ -97,14 +97,14 @@ void CGameClient::OnConsoleInit()
 	m_pMapLayersBackGround = new CMapLayers(CMapLayers::TYPE_BACKGROUND);
 	m_pMapLayersForeGround = new CMapLayers(CMapLayers::TYPE_FOREGROUND);
 
-	CNamePlates *pNamePlates = new CNamePlates();
-	CPlayers *pPlayers = new CPlayers();
-	CHud *pHud = new CHud();
-	CSpectator *pSpectator = new CSpectator();
-	CEmoticon *pEmoticon = new CEmoticon();
-	CKillMessages *pKillMessages = new CKillMessages();
-	CBroadcast *pBroadcast = new CBroadcast();
-	CDebugHud *pDebugHud = new CDebugHud();
+	m_pNamePlates = new CNamePlates();
+	m_pPlayers = new CPlayers();
+	m_pHud = new CHud();
+	m_pSpectator = new CSpectator();
+	m_pEmoticon = new CEmoticon();
+	m_pKillMessages = new CKillMessages();
+	m_pBroadcast = new CBroadcast();
+	m_pDebugHud = new CDebugHud();
 
 	// make a list of all the systems, make sure to add them in the corrent render order
 	m_All.Add(m_pSkins);		// #0: 51ms load time
@@ -122,19 +122,19 @@ void CGameClient::OnConsoleInit()
 	m_All.Add(m_pMapLayersBackGround); // first to render
 	m_All.Add(&m_pParticles->m_RenderTrail);
 	m_All.Add(m_pItems);
-	m_All.Add(pPlayers);
+	m_All.Add(m_pPlayers);
 	m_All.Add(m_pMapLayersForeGround);
 	m_All.Add(&m_pParticles->m_RenderExplosions);
-	m_All.Add(pNamePlates);
+	m_All.Add(m_pNamePlates);
 	m_All.Add(&m_pParticles->m_RenderGeneral);
 	m_All.Add(m_pDamageind);
-	m_All.Add(pHud);
-	m_All.Add(pSpectator);
-	m_All.Add(pEmoticon);
-	m_All.Add(pKillMessages);
+	m_All.Add(m_pHud);
+	m_All.Add(m_pSpectator);
+	m_All.Add(m_pEmoticon);
+	m_All.Add(m_pKillMessages);
 	m_All.Add(m_pChat);
-	m_All.Add(pBroadcast);
-	m_All.Add(pDebugHud);
+	m_All.Add(m_pBroadcast);
+	m_All.Add(m_pDebugHud);
 	m_All.Add(m_pScoreboard);
 	m_All.Add(m_pMotd);
 	m_All.Add(m_pMenus);
@@ -147,8 +147,8 @@ void CGameClient::OnConsoleInit()
 	m_Input.Add(m_pChat); // chat has higher prio due to tha you can quit it by pressing esc
 	m_Input.Add(m_pMotd); // for pressing esc to remove it
 	m_Input.Add(m_pMenus);
-	m_Input.Add(pSpectator);
-	m_Input.Add(pEmoticon);
+	m_Input.Add(m_pSpectator);
+	m_Input.Add(m_pEmoticon);
 	m_Input.Add(m_pControls);
 	m_Input.Add(m_pBinds);
 

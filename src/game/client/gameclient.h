@@ -270,6 +270,16 @@ public:
 	autoptr<class CItems> m_pItems;
 	autoptr<class CMapLayers> m_pMapLayersBackGround;
 	autoptr<class CMapLayers> m_pMapLayersForeGround;
+
+	autoptr<class CNamePlates> m_pNamePlates;
+	autoptr<class CPlayers> m_pPlayers;
+	autoptr<class CHud> m_pHud;
+	autoptr<class CSpectator> m_pSpectator;
+	autoptr<class CEmoticon> m_pEmoticon;
+	autoptr<class CKillMessages> m_pKillMessages;
+	autoptr<class CBroadcast> m_pBroadcast;
+	autoptr<class CDebugHud> m_pDebugHud;
+
 };
 
 

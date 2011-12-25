@@ -143,6 +143,7 @@ class IResources : public IInterface
 {
 	MACRO_INTERFACE("resources", 0)
 	friend class CResource;
+	friend class CSource;
 public:
 	class IHandler;
 
@@ -174,11 +175,30 @@ public:
 		virtual void Feedback(CLoadOrder *pOrder) { }
 
 		const char *Name() const { return m_pName; }
+		int State() const { return m_State; }
 		IResources *Resources() const { return m_pResources; }
 	protected:
 		CSource *PrevSource() const { return m_pPrevSource; }
 		CSource *NextSource() const { return m_pNextSource; }	
+	
+		void SignalStateChange()
+		{
+			Resources()->m_SourceStateChange.signal();
+		}
+
 	private:
+		enum
+		{
+			STATE_STOPPED = 0,
+			STATE_RUNNING,
+			STATE_PAUSED,
+		};
+			
+		volatile int m_State; // thread updates this
+		volatile int m_RequestedState;	// the IResources updates this
+
+		void *m_pThread;
+
 		const char *m_pName;
 		CSource *m_pNextSource;
 		CSource *m_pPrevSource;
@@ -186,7 +206,16 @@ public:
 
 		ringbuffer_swsr<CLoadOrder, 1024> m_lInput; // previous source write, this source reads
 		ringbuffer_swsr<CLoadOrder, 1024> m_lFeedback; // next source write, this source reads
-		semaphore m_Semaphore;
+		
+		semaphore m_Semaphore;		// signaled on all data activity and state requests
+		semaphore m_StateSemaphore; // singaled on state request
+
+		void RequestState(int NewState)
+		{
+			m_RequestedState = NewState;
+			m_Semaphore.signal();
+			m_StateSemaphore.signal();
+		}
 
 		void ForwardOrder(CLoadOrder *pOrder);
 		void FeedbackOrder(CLoadOrder *pOrder);
@@ -217,6 +246,7 @@ public:
 
 	virtual void AssignHandler(const char *pType, IHandler *pHandler) = 0;
 	virtual void AddSource(CSource *pSource) = 0;
+	virtual void RemoveSource(CSource *pSource) = 0;
 
 	virtual void Update() = 0;
 
@@ -234,6 +264,8 @@ public:
 
 	static IResources *CreateInstance();
 
+protected:
+	semaphore m_SourceStateChange;
 private:
 	virtual	void Destroy(CResource *pResource) = 0;
 };

@@ -201,10 +201,31 @@ void IResources::CSource::FeedbackOrder(CLoadOrder *pOrder)
 
 void IResources::CSource::Run()
 {
-	while(1)
+	while(true)
 	{
-		m_Semaphore.wait();
-		Update();
+		int RequestedState = m_RequestedState;
+		if(m_State != RequestedState)
+		{
+			m_State = RequestedState;
+			SignalStateChange();
+		}
+
+		switch(m_State)
+		{
+		case STATE_STOPPED:
+			return;
+		case STATE_RUNNING:
+			{
+				m_Semaphore.wait();
+				Update();
+			} break;
+		case STATE_PAUSED:
+			{
+				while(m_RequestedState == STATE_PAUSED)
+					m_StateSemaphore.wait();
+			} break;
+
+		}
 	}
 }
 
@@ -387,25 +408,68 @@ class CResources : public IResources
 		}
 	};
 
+	void SetSourceState(int State, bool Wait)
+	{
+		// request state
+		for(CSource *pSource = &m_SourceStart; pSource; pSource = pSource->NextSource())
+			pSource->RequestState(State);
+
+		if(Wait)
+		{
+			bool AllPaused = false;
+			while(!AllPaused)
+			{
+				m_SourceStateChange.wait();
+				AllPaused = true;
+				for(CSource *pSource = &m_SourceStart; pSource; pSource = pSource->NextSource())
+				{
+					if(pSource->State() != State)
+					{
+						AllPaused = false;
+						break;
+					}
+				}
+			}
+		}
+	}
+
 	virtual void AddSource(CSource *pSource)
 	{
+		SetSourceState(CSource::STATE_PAUSED, true);
+
 		CSource *pAfter = m_SourceEnd.m_pPrevSource;
 		pAfter->m_pNextSource = pSource;
 		pSource->m_pPrevSource = pAfter;
 		pSource->m_pNextSource = &m_SourceEnd;
 		m_SourceEnd.m_pPrevSource = pSource;
 
+		SetSourceState(CSource::STATE_RUNNING, false);
+
 		StartSource(pSource);
+
+	}
+
+	virtual void RemoveSource(CSource *pSource)
+	{
+		SetSourceState(CSource::STATE_PAUSED, true);
+
+		// TODO: remove the source
+
+		SetSourceState(CSource::STATE_RUNNING, false);
 	}
 
 	void StartSource(CSource *pSource)
 	{
 		pSource->m_pResources = this;
+		pSource->m_State = CSource::STATE_RUNNING;
+		pSource->m_RequestedState = CSource::STATE_RUNNING;
+
 		char aBuf[64];
 		str_format(aBuf, sizeof(aBuf), "source %s", pSource->Name());
 		thread_create(CSource::ThreadFunc, pSource, aBuf);
 	}
 
+	bool m_Alive;
 	CSource_StartPoint m_SourceStart;
 	CSource_EndPoint m_SourceEnd;
 
@@ -417,6 +481,13 @@ public:
 
 		StartSource(&m_SourceStart);
 		StartSource(&m_SourceEnd);
+
+		m_Alive = true;
+	}
+
+	~CResources()
+	{
+		m_Alive = false;
 	}
 
 	virtual void AssignHandler(const char *pType, IHandler *pHandler)
@@ -475,6 +546,7 @@ public:
 
 	virtual	void Destroy(CResource *pResource)
 	{
+		assert(m_Alive);
 		m_lpResources.remove_fast(pResource);
 		m_lDestroys.push(pResource);
 	}
