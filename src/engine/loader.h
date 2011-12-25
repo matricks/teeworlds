@@ -169,7 +169,7 @@ public:
 		};
 
 		CSource(const char *pName);
-		virtual ~CSource() {}
+		virtual ~CSource();
 
 		virtual bool Load(CLoadOrder *pOrder) { return false; }
 		virtual void Feedback(CLoadOrder *pOrder) { }

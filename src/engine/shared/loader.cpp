@@ -155,6 +155,11 @@ IResources::CSource::CSource(const char *pName)
 	m_pPrevSource = 0x0;
 }
 
+IResources::CSource::~CSource()
+{
+	m_pResources->RemoveSource(this);
+}
+
 void IResources::CSource::Update()
 {
 	while(m_lFeedback.size())
@@ -201,6 +206,8 @@ void IResources::CSource::FeedbackOrder(CLoadOrder *pOrder)
 
 void IResources::CSource::Run()
 {
+	const char *pMyName = m_pName;
+
 	while(true)
 	{
 		int RequestedState = m_RequestedState;
@@ -451,10 +458,36 @@ class CResources : public IResources
 
 	virtual void RemoveSource(CSource *pSource)
 	{
+		dbg_msg("resources", "removing %s", pSource->Name());
+
+		// pause all operations
 		SetSourceState(CSource::STATE_PAUSED, true);
 
-		// TODO: remove the source
+		// shutdown the thread
+		pSource->RequestState(CSource::STATE_STOPPED);
+		thread_wait(pSource->m_pThread);
+		thread_destroy(pSource->m_pThread);
 
+		// unchain the source
+		if(pSource->m_pPrevSource)
+			pSource->m_pPrevSource->m_pNextSource = pSource->m_pNextSource;
+		if(pSource->m_pNextSource)
+			pSource->m_pNextSource->m_pPrevSource = pSource->m_pPrevSource;
+
+		// send feedback backwards
+		if(pSource->m_pPrevSource)
+		{
+			while(pSource->m_lFeedback.size())
+				pSource->m_pPrevSource->m_lFeedback.push(pSource->m_lFeedback.pop());
+		}
+
+		if(pSource->m_pNextSource)
+		{
+			while(pSource->m_lInput.size())
+				pSource->m_pNextSource->m_lFeedback.push(pSource->m_lInput.pop());
+		}
+
+		// resume the threads
 		SetSourceState(CSource::STATE_RUNNING, false);
 	}
 
@@ -466,7 +499,7 @@ class CResources : public IResources
 
 		char aBuf[64];
 		str_format(aBuf, sizeof(aBuf), "source %s", pSource->Name());
-		thread_create(CSource::ThreadFunc, pSource, aBuf);
+		pSource->m_pThread = thread_create(CSource::ThreadFunc, pSource, aBuf);
 	}
 
 	bool m_Alive;
