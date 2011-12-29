@@ -366,7 +366,9 @@ void CResourceHandle::Release()
 
 void CResourceHandle::Assign(CResource *pResource)
 {
-	assert((pResource == 0) || (m_pResource != pResource));
+	if(m_pResource == pResource)
+		return;
+		
 	Release();
 	if(pResource)
 	{
