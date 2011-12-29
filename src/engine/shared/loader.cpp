@@ -14,12 +14,31 @@ CJobHandler g_JobHandler;
 
 void CJobHandler::Init(int ThreadCount)
 {
+	m_Shutdown = false;
+	m_NumThreads = ThreadCount;
+	if(m_NumThreads > MAX_THREADS)
+		m_NumThreads = MAX_THREADS;
+
 	// start threads
-	for(int i = 0; i < ThreadCount; i++)
+	for(unsigned i = 0; i < m_NumThreads; i++)
 	{
 		char aBuf[32];
 		str_format(aBuf, sizeof(aBuf), "job %d", i);
-		thread_create(WorkerThread, this, aBuf);
+		m_apThreads[i] = thread_create(WorkerThread, this, aBuf);
+	}
+}
+
+void CJobHandler::Shutdown()
+{
+	m_Shutdown = true;
+	for(unsigned i = 0; i < m_NumThreads; i++)
+		m_Semaphore.signal();
+
+	for(unsigned i = 0; i < m_NumThreads; i++)
+	{
+		thread_wait(m_apThreads[i]);
+		thread_destroy(m_apThreads[i]);
+		m_apThreads[i] = 0x0;
 	}
 }
 
@@ -28,11 +47,15 @@ void CJobHandler::ConfigureQueue(int QueueId, int MaxWorkers)
 	m_aQueues[QueueId].m_MaxWorkers = MaxWorkers;
 }
 
-void CJobHandler::Kick(int QueueId, FJob pfnJob, void *pData)
+void CJobHandler::Kick(int QueueId, FJob pfnJob, volatile unsigned *pCounter, void *pData)
 {
 	COrder Order;
 	Order.m_pfnProcess = pfnJob;
 	Order.m_pData = pData;
+	Order.m_pCounter = pCounter;
+
+	if(Order.m_pCounter)
+		atomic_inc(Order.m_pCounter);
 	
 	{
 		scope_lock locker(&m_Lock); // TODO: ugly lock
@@ -47,7 +70,7 @@ void CJobHandler::WorkerThread(void *pUser)
 {
 	CJobHandler *pJobHandler = reinterpret_cast<CJobHandler *>(pUser);
 	
-	while(1)
+	while(!pJobHandler->m_Shutdown)
 	{
 		// wait for something to happen
 		pJobHandler->m_Semaphore.wait();
@@ -80,6 +103,10 @@ void CJobHandler::WorkerThread(void *pUser)
 			sync_barrier();
 			/*unsigned Count =*/ atomic_dec(&pJobHandler->m_aQueues[QueueId].m_WorkerCount);
 			atomic_inc(&pJobHandler->m_WorkDone);
+
+			if(Order.m_pCounter)
+				atomic_dec(Order.m_pCounter);
+
 
 			// we must signal again because there can be stuff in the queue but was blocked by
 			// the max worker count
@@ -153,11 +180,11 @@ IResources::CSource::CSource(const char *pName)
 	m_pName = pName;
 	m_pNextSource = 0x0;
 	m_pPrevSource = 0x0;
+	m_Shutdown = false;
 }
 
 IResources::CSource::~CSource()
 {
-	m_pResources->RemoveSource(this);
 }
 
 void IResources::CSource::Update()
@@ -206,37 +233,12 @@ void IResources::CSource::FeedbackOrder(CLoadOrder *pOrder)
 
 void IResources::CSource::Run()
 {
-	const char *pMyName = m_pName;
-
-	while(true)
+	while(!m_Shutdown)
 	{
-		int RequestedState = m_RequestedState;
-		if(m_State != RequestedState)
-		{
-			m_State = RequestedState;
-			SignalStateChange();
-		}
-
-		switch(m_State)
-		{
-		case STATE_STOPPED:
-			return;
-		case STATE_RUNNING:
-			{
-				m_Semaphore.wait();
-				Update();
-			} break;
-		case STATE_PAUSED:
-			{
-				while(m_RequestedState == STATE_PAUSED)
-					m_StateSemaphore.wait();
-			} break;
-
-		}
+		Update();
+		m_Semaphore.wait();
 	}
 }
-
-
 
 class CResources : public IResources
 {
@@ -297,6 +299,8 @@ class CResources : public IResources
 
 	CResourceHandle CreateResource(CResourceId Id, bool StartLoad)
 	{
+		assert(Id.m_NameHash != 0);
+
 		const char *pType = GetTypeFromName(Id.m_pName);
 		if(!pType)
 		{
@@ -325,11 +329,12 @@ class CResources : public IResources
 		// start the load of it
 		if(StartLoad)
 			LoadResource(pResource);
+
 		return pResource;
 	}
 
-	ringbuffer_mwsr<CResource*, 1024> m_lInserts; // job threads writes, main thread reads
-	ringbuffer_swsr<CResource*, 1024> m_lDestroys; // main thread only
+	ringbuffer_mwsr<CResource*, 1024*4> m_lInserts; // job threads writes, main thread reads
+	ringbuffer_swsr<CResource*, 1024*4> m_lDestroys; // main thread only
 
 	struct CLoadJobInfo
 	{
@@ -387,7 +392,7 @@ class CResources : public IResources
 			pInfo->m_pResource = pOrder->m_pResource;
 			pInfo->m_pData = pOrder->m_pData;
 			pInfo->m_DataSize = pOrder->m_DataSize;
-			g_JobHandler.Kick(JOBQUEUE_IO, Job_ProcessData, pInfo);
+			g_JobHandler.Kick(JOBQUEUE_IO, Job_ProcessData, &pInfo->m_pThis->m_JobCounter, pInfo);
 		}
 
 		void AddOrder(CLoadOrder *pOrder)
@@ -415,94 +420,29 @@ class CResources : public IResources
 		}
 	};
 
-	void SetSourceState(int State, bool Wait)
-	{
-		// request state
-		for(CSource *pSource = &m_SourceStart; pSource; pSource = pSource->NextSource())
-			pSource->RequestState(State);
-
-		if(Wait)
-		{
-			bool AllPaused = false;
-			while(!AllPaused)
-			{
-				m_SourceStateChange.wait();
-				AllPaused = true;
-				for(CSource *pSource = &m_SourceStart; pSource; pSource = pSource->NextSource())
-				{
-					if(pSource->State() != State)
-					{
-						AllPaused = false;
-						break;
-					}
-				}
-			}
-		}
-	}
-
 	virtual void AddSource(CSource *pSource)
 	{
-		SetSourceState(CSource::STATE_PAUSED, true);
-
 		CSource *pAfter = m_SourceEnd.m_pPrevSource;
 		pAfter->m_pNextSource = pSource;
 		pSource->m_pPrevSource = pAfter;
 		pSource->m_pNextSource = &m_SourceEnd;
 		m_SourceEnd.m_pPrevSource = pSource;
 
-		SetSourceState(CSource::STATE_RUNNING, false);
-
 		StartSource(pSource);
 
-	}
-
-	virtual void RemoveSource(CSource *pSource)
-	{
-		dbg_msg("resources", "removing %s", pSource->Name());
-
-		// pause all operations
-		SetSourceState(CSource::STATE_PAUSED, true);
-
-		// shutdown the thread
-		pSource->RequestState(CSource::STATE_STOPPED);
-		thread_wait(pSource->m_pThread);
-		thread_destroy(pSource->m_pThread);
-
-		// unchain the source
-		if(pSource->m_pPrevSource)
-			pSource->m_pPrevSource->m_pNextSource = pSource->m_pNextSource;
-		if(pSource->m_pNextSource)
-			pSource->m_pNextSource->m_pPrevSource = pSource->m_pPrevSource;
-
-		// send feedback backwards
-		if(pSource->m_pPrevSource)
-		{
-			while(pSource->m_lFeedback.size())
-				pSource->m_pPrevSource->m_lFeedback.push(pSource->m_lFeedback.pop());
-		}
-
-		if(pSource->m_pNextSource)
-		{
-			while(pSource->m_lInput.size())
-				pSource->m_pNextSource->m_lFeedback.push(pSource->m_lInput.pop());
-		}
-
-		// resume the threads
-		SetSourceState(CSource::STATE_RUNNING, false);
 	}
 
 	void StartSource(CSource *pSource)
 	{
 		pSource->m_pResources = this;
-		pSource->m_State = CSource::STATE_RUNNING;
-		pSource->m_RequestedState = CSource::STATE_RUNNING;
 
 		char aBuf[64];
 		str_format(aBuf, sizeof(aBuf), "source %s", pSource->Name());
 		pSource->m_pThread = thread_create(CSource::ThreadFunc, pSource, aBuf);
 	}
 
-	bool m_Alive;
+	volatile bool m_Running;
+	volatile unsigned m_JobCounter;
 	CSource_StartPoint m_SourceStart;
 	CSource_EndPoint m_SourceEnd;
 
@@ -515,12 +455,40 @@ public:
 		StartSource(&m_SourceStart);
 		StartSource(&m_SourceEnd);
 
-		m_Alive = true;
+		m_Running = true;
+		m_JobCounter = 0;
 	}
 
 	~CResources()
 	{
-		m_Alive = false;
+		m_Running = false;
+
+		// all resources should be gone before we close down
+		assert(m_lpResources.size() == 0);
+
+		// all handlers should be gone as well
+		assert(m_lHandlers.size() == 0);
+
+		assert(m_JobCounter == 0);
+
+		// quit all threads
+		for(CSource *pSource = &m_SourceStart; pSource; pSource = pSource->NextSource())
+		{
+			pSource->m_Shutdown = true;
+			pSource->m_Semaphore.signal();
+		}
+
+		for(CSource *pSource = &m_SourceStart; pSource; pSource = pSource->NextSource())
+		{
+			thread_wait(pSource->m_pThread);
+			thread_destroy(pSource->m_pThread);
+			pSource->m_pThread = 0x0;
+		}
+
+		// wait for all the jobs
+		while(m_JobCounter)
+			thread_yield();
+
 	}
 
 	virtual void AssignHandler(const char *pType, IHandler *pHandler)
@@ -531,16 +499,37 @@ public:
 		m_lHandlers.add(Entry);
 	}
 
+	virtual void RemoveHandler(IHandler *pHandler)
+	{
+		// wait for all deletes to be processed
+		// TODO: wait only for deletes for this handler
+		while(m_lDestroys.size())
+		{
+			Update();
+			thread_yield();
+		}
+
+		// make sure that it doesn't have any resources left
+		for(int i = 0; i < m_lpResources.size(); i++)
+			assert(m_lpResources[i]->m_pHandler != pHandler);
+
+		// remove the handler entries
+		for(int i = 0; i < m_lHandlers.size(); i++)
+		{
+			if(m_lHandlers[i].m_pHandler == pHandler)
+			{
+				m_lHandlers.remove_index(i);
+				i--;
+			}
+		}
+	}
+
 	virtual CResourceHandle GetResource(CResourceId Id)
 	{
 		CResource *pResource = FindResource(Id);
 		if(pResource)
-		{
-			dbg_msg("resources", "found '%s'", Id.m_pName);
 			return pResource;
-		}
 
-		dbg_msg("resources", "creating '%s'", Id.m_pName);
 		return CreateResource(Id, true);
 	}
 
@@ -563,7 +552,7 @@ public:
 			else
 			{
 				pResource->m_pHandler->Destroy(pResource);
-				assert(pResource->Name() != 0); // make sure that the handler didn't call delete on the resource
+				assert(pResource->m_State != CResource::STATE_DESTROYED);  // make sure that the handler didn't call delete on the resource
 				delete pResource;
 			}
 		}
@@ -579,7 +568,8 @@ public:
 
 	virtual	void Destroy(CResource *pResource)
 	{
-		assert(m_Alive);
+		assert(pResource->m_State != CResource::STATE_DESTROYED); // make that it isn't destoyed
+		assert(m_Running);
 		m_lpResources.remove_fast(pResource);
 		m_lDestroys.push(pResource);
 	}

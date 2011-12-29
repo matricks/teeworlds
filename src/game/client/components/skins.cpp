@@ -29,7 +29,7 @@ int CSkins::SkinScan(const char *pName, int IsDir, int DirType, void *pUser)
 	}
 
 	CSkin Skin;
-	Skin.m_OrgTexture = pSelf->Graphics()->LoadTextureRaw(Info.m_Width, Info.m_Height, Info.m_Format, Info.m_pData, Info.m_Format, 0);
+	Skin.m_OrgTexture = pSelf->Graphics()->LoadTextureRaw(aBuf, Info.m_Width, Info.m_Height, Info.m_Format, Info.m_pData, Info.m_Format, 0);
 
 	int BodySize = 96; // body size
 	unsigned char *d = (unsigned char *)Info.m_pData;
@@ -99,7 +99,8 @@ int CSkins::SkinScan(const char *pName, int IsDir, int DirType, void *pUser)
 			d[y*Pitch+x*4+2] = v;
 		}
 
-	Skin.m_ColorTexture = pSelf->Graphics()->LoadTextureRaw(Info.m_Width, Info.m_Height, Info.m_Format, Info.m_pData, Info.m_Format, 0);
+	str_format(aBuf, sizeof(aBuf), "skins/%s:color", pName);
+	Skin.m_ColorTexture = pSelf->Graphics()->LoadTextureRaw(aBuf, Info.m_Width, Info.m_Height, Info.m_Format, Info.m_pData, Info.m_Format, 0);
 	mem_free(Info.m_pData);
 
 	// set skin data

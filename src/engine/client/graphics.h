@@ -100,8 +100,8 @@ protected:
 	//int GetTextureSlot();
 	CResource *LoadTextureRawToResource(CResource *pResource, int Width, int Height, int Format, const void *pData, int StoreFormat, int Flags);
 public:
-
 	CGraphics_OpenGL();
+	~CGraphics_OpenGL();
 
 	virtual void ClipEnable(int x, int y, int w, int h);
 	virtual void ClipDisable();
@@ -119,7 +119,7 @@ public:
 	virtual void LinesEnd();
 	virtual void LinesDraw(const CLineItem *pArray, int Num);
 
-	virtual CResourceHandle LoadTextureRaw(int Width, int Height, int Format, const void *pData, int StoreFormat, int Flags);
+	virtual CResourceHandle LoadTextureRaw(const char *pName, int Width, int Height, int Format, const void *pData, int StoreFormat, int Flags);
 
 	// simple uncompressed RGBA loaders
 	virtual CResourceHandle LoadTexture(const char *pFilename, int StorageType, int StoreFormat, int Flags);

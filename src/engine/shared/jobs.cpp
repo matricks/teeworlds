@@ -16,7 +16,10 @@ CJobPool::~CJobPool()
 {
 	m_Shutdown = true;
 	for(int i = 0; i < m_lThreads.size(); i++)
+	{
 		thread_wait(m_lThreads[i]);
+		thread_destroy(m_lThreads[i]);
+	}
 }
 
 void CJobPool::WorkerThread(void *pUser)

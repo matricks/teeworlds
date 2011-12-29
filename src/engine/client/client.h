@@ -224,9 +224,9 @@ class CClient : public IClient, public CDemoPlayer::IListner
 
 public:
 	// TODO: move these
-	CSource_GameServer m_SourceGameServer;
-	CSource_Disk m_SourceDisk;
-	CSource_Cache m_SourceCache;
+	CSource_GameServer *m_pSourceGameServer;
+	CSource_Disk *m_pSourceDisk;
+	CSource_Cache *m_pSourceCache;
 
 	IEngine *Engine() { return m_pEngine; }
 	IEngineGraphics *Graphics() { return m_pGraphics; }

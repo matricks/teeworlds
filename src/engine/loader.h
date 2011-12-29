@@ -20,10 +20,12 @@ public:
 		{
 			m_pData = 0x0;
 			m_pfnProcess = 0x0;
+			m_pCounter = 0x0;
 		}
 
 		FJob m_pfnProcess;
 		void *m_pData;
+		volatile unsigned *m_pCounter;
 	};
 
 	class CQueue
@@ -46,19 +48,31 @@ public:
 	};
 
 	CJobHandler() { Init(4); }
+	~CJobHandler() { Shutdown(); }
 	void Init(int ThreadCount);
+	void Shutdown();
 	void ConfigureQueue(int QueueId, int MaxWorkers); // TODO: not working at the moment
 
 	void *AllocJobData(unsigned DataSize) { return mem_alloc(DataSize, sizeof(void*)); }
 	template<typename T> T *AllocJobData() { return (T *)AllocJobData(sizeof(T)); }
 	void FreeJobData(void *pPtr) { mem_free(pPtr); }
 
-	void Kick(int QueueId, FJob pfnJob, void *pData);
+	void Kick(int QueueId, FJob pfnJob, volatile unsigned *pCounter, void *pData);
 
 	unsigned volatile m_WorkDone;
 	unsigned volatile m_WorkTurns;
 
+	bool volatile m_Shutdown;
+
 private:
+	enum
+	{
+		MAX_THREADS = 256,
+	};
+
+	void *m_apThreads[MAX_THREADS];
+	unsigned m_NumThreads;
+
 	CQueue m_aQueues[NUM_QUEUES];
 	semaphore m_Semaphore;
 	lock m_Lock; // TODO: bad performance, this lock can be removed and everything done with waitfree queues
@@ -150,6 +164,14 @@ public:
 	class CResourceId
 	{
 	public:
+		CResourceId() {}
+		CResourceId(const char *pName)
+		: m_pName(pName)
+		{
+			m_ContentHash = 0;
+			m_NameHash = str_quickhash(pName);
+		}
+
 		unsigned m_ContentHash;
 		unsigned m_NameHash;
 		const char *m_pName;
@@ -175,16 +197,10 @@ public:
 		virtual void Feedback(CLoadOrder *pOrder) { }
 
 		const char *Name() const { return m_pName; }
-		int State() const { return m_State; }
 		IResources *Resources() const { return m_pResources; }
 	protected:
 		CSource *PrevSource() const { return m_pPrevSource; }
 		CSource *NextSource() const { return m_pNextSource; }	
-	
-		void SignalStateChange()
-		{
-			Resources()->m_SourceStateChange.signal();
-		}
 
 	private:
 		enum
@@ -193,9 +209,8 @@ public:
 			STATE_RUNNING,
 			STATE_PAUSED,
 		};
-			
-		volatile int m_State; // thread updates this
-		volatile int m_RequestedState;	// the IResources updates this
+
+		volatile bool m_Shutdown;
 
 		void *m_pThread;
 
@@ -208,14 +223,6 @@ public:
 		ringbuffer_swsr<CLoadOrder, 1024> m_lFeedback; // next source write, this source reads
 		
 		semaphore m_Semaphore;		// signaled on all data activity and state requests
-		semaphore m_StateSemaphore; // singaled on state request
-
-		void RequestState(int NewState)
-		{
-			m_RequestedState = NewState;
-			m_Semaphore.signal();
-			m_StateSemaphore.signal();
-		}
 
 		void ForwardOrder(CLoadOrder *pOrder);
 		void FeedbackOrder(CLoadOrder *pOrder);
@@ -245,8 +252,9 @@ public:
 	virtual ~IResources() {}
 
 	virtual void AssignHandler(const char *pType, IHandler *pHandler) = 0;
+	virtual void RemoveHandler(IHandler *pHandler) = 0;
+
 	virtual void AddSource(CSource *pSource) = 0;
-	virtual void RemoveSource(CSource *pSource) = 0;
 
 	virtual void Update() = 0;
 
@@ -306,16 +314,18 @@ protected:
 	{
 		if(m_Id.m_pName)
 			mem_free((void*)m_Id.m_pName);
-		m_Id.m_pName = 0x0;
+		//m_Id.m_pName = 0;
+		m_State = STATE_DESTROYED;
 	}
 
-	unsigned m_State;
+	int m_State;
 	IResources::CResourceId m_Id;
 	IResources::IHandler *m_pHandler;
 	IResources *m_pResources;
 
 	enum
 	{
+		STATE_DESTROYED = -2,
 		STATE_ERROR = -1,
 		STATE_LOADING = 0,
 		STATE_LOADED = 1,
@@ -356,6 +366,7 @@ void CResourceHandle::Release()
 
 void CResourceHandle::Assign(CResource *pResource)
 {
+	assert((pResource == 0) || (m_pResource != pResource));
 	Release();
 	if(pResource)
 	{

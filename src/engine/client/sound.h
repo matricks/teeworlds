@@ -12,6 +12,7 @@
 class CSound : public IEngineSound
 {
 	int m_SoundEnabled;
+	void Stop(CResource *pSound);
 public:
 	class CResource_Sample : public CResource
 	{

@@ -159,6 +159,12 @@ CGraphics_OpenGL::CGraphics_OpenGL()
 	png_init(0,0); // ignore_convention
 }
 
+CGraphics_OpenGL::~CGraphics_OpenGL()
+{
+	m_InvalidTexture = 0x0;
+	m_pResources->RemoveHandler(&m_TextureHandler);
+}
+
 void CGraphics_OpenGL::ClipEnable(int x, int y, int w, int h)
 {
 	if(x < 0)
@@ -346,12 +352,14 @@ CResource *CGraphics_OpenGL::LoadTextureRawToResource(CResource *pResource, int 
 	return pResource;
 }
 
-CResourceHandle CGraphics_OpenGL::LoadTextureRaw(int Width, int Height, int Format, const void *pData, int StoreFormat, int Flags)
+CResourceHandle CGraphics_OpenGL::LoadTextureRaw(const char *pName, int Width, int Height, int Format, const void *pData, int StoreFormat, int Flags)
 {
+	char aName[512];
+	str_format(aName, sizeof(aName), "raw:%s.png", pName);
 	IResources::CResourceId Id;
 	Id.m_ContentHash = 0;
-	Id.m_NameHash = 0;
-	Id.m_pName = "$rawtexture.png";
+	Id.m_NameHash = str_quickhash(aName);
+	Id.m_pName = aName;
 
 	CResourceHandle Resource = m_pResources->CreateResource(Id, false);
 	CResource_Texture *pTexture = static_cast<CResource_Texture*>(Resource.Get());
@@ -767,7 +775,7 @@ bool CGraphics_OpenGL::Init()
 		0x00,0x00,0xff,0xff, 0x00,0x00,0xff,0xff, 0xff,0xff,0x00,0xff, 0xff,0xff,0x00,0xff,
 	};
 
-	m_InvalidTexture = LoadTextureRaw(4,4,CImageInfo::FORMAT_RGBA,aNullTextureData,CImageInfo::FORMAT_RGBA,TEXLOAD_NORESAMPLE);
+	m_InvalidTexture = LoadTextureRaw("$invalidtexture", 4,4,CImageInfo::FORMAT_RGBA,aNullTextureData,CImageInfo::FORMAT_RGBA,TEXLOAD_NORESAMPLE);
 
 	return true;
 }

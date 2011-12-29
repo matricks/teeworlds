@@ -247,6 +247,7 @@ int CSound::Update()
 
 int CSound::Shutdown()
 {
+	m_pResources->RemoveHandler(&m_ResourceHandler);
 	SDL_CloseAudio();
 	lock_destroy(m_SoundLock);
 	return 0;
@@ -469,8 +470,12 @@ void CSound::Stop(CResourceHandle SoundResource)
 {
 	if(!SoundResource.IsValid())
 		return;
+	Stop(SoundResource.Get());
+}
 
-	CResource_Sample *pSample = static_cast<CResource_Sample*>(SoundResource.Get());
+void CSound::Stop(CResource *pSoundResource)
+{
+	CResource_Sample *pSample = static_cast<CResource_Sample*>(pSoundResource);
 
 	// TODO: a nice fade out
 	lock_wait(m_SoundLock);

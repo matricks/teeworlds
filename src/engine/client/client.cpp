@@ -233,8 +233,12 @@ void CSmoothTime::Update(CGraph *pGraph, int64 Target, int TimeLeft, int AdjustD
 }
 
 CClient::CClient()
-: m_DemoPlayer(&m_SnapshotDelta), m_DemoRecorder(&m_SnapshotDelta), m_SourceDisk("data"), m_SourceCache("cache")
+: m_DemoPlayer(&m_SnapshotDelta), m_DemoRecorder(&m_SnapshotDelta)
 {
+	m_pSourceDisk = new CSource_Disk("data");
+	m_pSourceCache = new CSource_Cache("cache");
+	m_pSourceGameServer = new CSource_GameServer();
+
 	m_pEditor = 0;
 	m_pInput = 0;
 	m_pGraphics = 0;
@@ -542,7 +546,7 @@ void CClient::Connect(const char *pAddress)
 void CClient::DisconnectWithReason(const char *pReason)
 {
 	// turn off the game server source
-	m_SourceGameServer.SetActive(false);
+	m_pSourceGameServer->SetActive(false);
 
 	char aBuf[512];
 	str_format(aBuf, sizeof(aBuf), "disconnecting. reason='%s'", pReason?pReason:"unknown");
@@ -1388,7 +1392,7 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket)
 		else if(Msg == NETMSG_RES_SET)
 		{
 			// activate the game server source
-			m_SourceGameServer.SetActive(true);
+			m_pSourceGameServer->SetActive(true);
 
 			int ResourceId = Unpacker.GetInt();
 			const char *pName = Unpacker.GetString();
@@ -1408,7 +1412,7 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket)
 		else if(Msg == NETMSG_RES_DATA)
 		{
 			//
-			m_SourceGameServer.QueueChunk(pPacket->m_pData, pPacket->m_DataSize);
+			m_pSourceGameServer->QueueChunk(pPacket->m_pData, pPacket->m_DataSize);
 		}
 		else
 		{
@@ -1443,7 +1447,7 @@ void CClient::PumpNetwork()
 	// pump network parts for data
 	while(true)
 	{
-		CSource_GameServer::CChunk *pChunk = m_SourceGameServer.PopOutputChunk();
+		CSource_GameServer::CChunk *pChunk = m_pSourceGameServer->PopOutputChunk();
 		if(!pChunk)
 			break;
 		SendMsgRaw(pChunk->m_aData, pChunk->m_DataSize, MSGFLAG_VITAL|MSGFLAG_FLUSH, true);
@@ -1976,10 +1980,6 @@ void CClient::Run()
 
 	GameClient()->OnShutdown();
 	Disconnect();
-
-	m_pGraphics->Shutdown();
-	m_pSound->Shutdown();
-
 }
 
 
@@ -2285,6 +2285,7 @@ int main(int argc, const char **argv) // ignore_convention
 	IEngineTextRender *pEngineTextRender = CreateEngineTextRender();
 	IEngineMap *pEngineMap = CreateEngineMap();
 	IEngineMasterServer *pEngineMasterServer = CreateEngineMasterServer();
+	IEditor *pEditor = CreateEditor();
 
 	{
 		bool RegisterFail = false;
@@ -2312,7 +2313,7 @@ int main(int argc, const char **argv) // ignore_convention
 		RegisterFail = RegisterFail || !pKernel->RegisterInterface(static_cast<IEngineMasterServer*>(pEngineMasterServer)); // register as both
 		RegisterFail = RegisterFail || !pKernel->RegisterInterface(static_cast<IMasterServer*>(pEngineMasterServer));
 
-		RegisterFail = RegisterFail || !pKernel->RegisterInterface(CreateEditor());
+		RegisterFail = RegisterFail || !pKernel->RegisterInterface(pEditor);
 		RegisterFail = RegisterFail || !pKernel->RegisterInterface(CreateGameClient());
 		RegisterFail = RegisterFail || !pKernel->RegisterInterface(pStorage);
 
@@ -2321,9 +2322,9 @@ int main(int argc, const char **argv) // ignore_convention
 	}
 
 
-	pResources->AddSource(&pClient->m_SourceDisk);
-	pResources->AddSource(&pClient->m_SourceCache);
-	pResources->AddSource(&pClient->m_SourceGameServer);
+	pResources->AddSource(pClient->m_pSourceDisk);
+	pResources->AddSource(pClient->m_pSourceCache);
+	pResources->AddSource(pClient->m_pSourceGameServer);
 
 	pEngine->Init();
 	pConfig->Init();
@@ -2360,15 +2361,32 @@ int main(int argc, const char **argv) // ignore_convention
 	// write down the config and quit
 	pConfig->Save();
 
+	dbg_msg("", "killing game client");
 	delete pClient->GameClient();
+	pResources->Update();
+
+	dbg_msg("", "killing editor");
+	delete pEditor;
+	pResources->Update();
+
+
+	dbg_msg("", "killing client");
 	delete pClient;
+	pResources->Update();
 
 	delete pEngineTextRender;
 	delete pEngineMap;
 	delete pEngineMasterServer;
 
+	dbg_msg("", "killing graphics");
+	pEngineGraphics->Shutdown();
 	delete pEngineGraphics;
+
+	dbg_msg("", "killing sound");
+	pEngineSound->Shutdown();
 	delete pEngineSound;
+
+	dbg_msg("", "killing input");
 	delete pEngineInput;
 
 	delete pEngine;

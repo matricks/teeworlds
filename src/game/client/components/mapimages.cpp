@@ -33,15 +33,18 @@ void CMapImages::OnMapLoad()
 		CMapItemImage *pImg = (CMapItemImage *)pMap->GetItem(Start+i, 0, 0);
 		if(pImg->m_External)
 		{
-			char Buf[256];
+			char aBuf[256];
 			char *pName = (char *)pMap->GetData(pImg->m_ImageName);
-			str_format(Buf, sizeof(Buf), "mapres/%s.png", pName);
-			m_aTextures[i] = Graphics()->LoadTexture(Buf, IStorage::TYPE_ALL, CImageInfo::FORMAT_AUTO, 0);
+			str_format(aBuf, sizeof(aBuf), "mapres/%s.png", pName);
+			m_aTextures[i] = Graphics()->LoadTexture(aBuf, IStorage::TYPE_ALL, CImageInfo::FORMAT_AUTO, 0);
 		}
 		else
 		{
+			char aBuf[256];
+			str_format(aBuf, sizeof(aBuf), "mapimage%d", i);
+
 			void *pData = pMap->GetData(pImg->m_ImageData);
-			m_aTextures[i] = Graphics()->LoadTextureRaw(pImg->m_Width, pImg->m_Height, CImageInfo::FORMAT_RGBA, pData, CImageInfo::FORMAT_RGBA, 0);
+			m_aTextures[i] = Graphics()->LoadTextureRaw(aBuf, pImg->m_Width, pImg->m_Height, CImageInfo::FORMAT_RGBA, pData, CImageInfo::FORMAT_RGBA, 0);
 			pMap->UnloadData(pImg->m_ImageData);
 		}
 	}
