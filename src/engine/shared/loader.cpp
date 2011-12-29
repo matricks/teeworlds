@@ -511,7 +511,13 @@ public:
 
 		// make sure that it doesn't have any resources left
 		for(int i = 0; i < m_lpResources.size(); i++)
-			assert(m_lpResources[i]->m_pHandler != pHandler);
+		{
+			if(m_lpResources[i]->m_pHandler == pHandler)
+			{
+				dbg_msg("resources", "WARNING: '%s' is still in use", m_lpResources[i]->Name());
+				assert(0);
+			}
+		}
 
 		// remove the handler entries
 		for(int i = 0; i < m_lHandlers.size(); i++)

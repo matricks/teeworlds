@@ -121,7 +121,12 @@ void CSounds::OnRender()
 
 void CSounds::ClearQueue()
 {
-	mem_zero(m_aQueue, sizeof(m_aQueue));
+	for(int i = 0; i < QUEUE_SIZE; i++)
+	{
+		m_aQueue[i].m_Channel = 0;
+		m_aQueue[i].m_Resource = 0;
+	}
+
 	m_QueuePos = 0;
 	m_QueueWaitTime = time_get();
 }
