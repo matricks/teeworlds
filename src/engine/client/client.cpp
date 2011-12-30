@@ -580,6 +580,9 @@ void CClient::DisconnectWithReason(const char *pReason)
 	m_aSnapshots[SNAP_CURRENT] = 0;
 	m_aSnapshots[SNAP_PREV] = 0;
 	m_RecivedSnapshots = 0;
+
+	// clear resource mapping
+	m_ResourceMapping.Clear();
 }
 
 void CClient::Disconnect()

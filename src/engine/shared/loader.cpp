@@ -414,8 +414,7 @@ class CResources : public IResources
 		{
 			// if the order has come this far, it has gone wrong.
 			dbg_msg("resources", "[%s] missing '%s'", Name(), pOrder->m_pResource->Name());
-
-			// TODO: set it to a failure to load
+			pOrder->m_pResource->m_State = CResource::STATE_ERROR;
 			return false;
 		}
 	};
