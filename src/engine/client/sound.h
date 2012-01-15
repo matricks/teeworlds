@@ -21,13 +21,9 @@ public:
 
 	static void RateConvert(int SampleID);
 
-	// TODO: Refactor: clean this mess up
-	static IOHANDLE ms_File;
-	static int ReadData(void *pBuffer, int Size);
-
 	virtual bool IsSoundEnabled() { return m_SoundEnabled != 0; }
 
-	virtual int LoadWV(const char *pFilename);
+	virtual int Load(const char *pFilename);
 
 	virtual void SetListenerPos(float x, float y);
 	virtual void SetChannel(int ChannelID, float Vol, float Pan);

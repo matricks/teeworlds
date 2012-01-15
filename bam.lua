@@ -382,3 +382,68 @@ else
 	build(release_settings)
 	DefaultTarget("game_debug")
 end
+
+
+
+function GetFileDest(input)
+	return PathJoin("data", string.sub(input, string.len("datasrc/")+1))
+end
+
+function CopyToDir(dst, strip, ...)
+	local insert = table.insert
+	local outputs = {}
+	for input in TableWalk({...}) do
+		insert(outputs, CopyFile(GetFileDest(input), input))
+	end
+	return outputs
+end
+
+function TextureDilate(dst, src)
+	local exe = "dilate"
+	AddJob(dst, "dilate " .. src, "./" .. exe .. " " .. src .. " " .. dst, src, exe)
+	return dst
+end
+
+function SoundCompressWavpack(dst, src)
+	local exe = "wavpack"
+	AddJob(dst, "wavpack " .. src, "wavpack -q -y -h -b256 "  .. src .. " -o " .. dst, src)
+	return dst
+end
+
+function SoundCompressOgg(dst, src)
+	local exe = "oggenc"
+	AddJob(dst, "oggenc " .. src, "oggenc -Q "  .. src .. " -o " .. dst, src)
+	return dst
+end
+
+function PathReplaceExt(filename, newext)
+	return PathBase(filename) .. "." .. newext
+end
+
+function build_content()
+	local images = CollectRecursive("datasrc/*.png")
+	local sounds = CollectRecursive("datasrc/*.wav")
+	local localizations = CollectRecursive("datasrc/*.txt")
+	local fonts = CollectRecursive("datasrc/*.ttf")
+
+	local outputs = {}
+
+	table.insert(outputs, CopyToDir("data", "datasrc/", localizations, fonts))
+
+	-- dilate textures
+	for filename in TableWalk(images) do
+		table.insert(outputs, TextureDilate(GetFileDest(filename), filename))
+	end
+
+	--for filename in TableWalk(sounds) do
+	--	table.insert(outputs, SoundCompressWavpack(PathReplaceExt(GetFileDest(filename), "wv"), filename))
+	--end
+
+	for filename in TableWalk(sounds) do
+		table.insert(outputs, SoundCompressOgg(PathReplaceExt(GetFileDest(filename), "ogg"), filename))
+	end
+
+	return PseudoTarget("content", outputs)
+end
+
+build_content()
