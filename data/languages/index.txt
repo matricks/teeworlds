@@ -37,6 +37,10 @@ french
 == Français
 == 250
 
+greek
+== Ελληνικά
+== 300
+
 german
 == Deutsch
 == 276

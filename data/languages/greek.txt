@@ -1,0 +1,678 @@
+##### translated strings #####
+
+%d Bytes
+== %d Byte
+
+%d of %d servers, %d players
+== %d από %d σέρβερ, %d παίχτες
+
+%d%% loaded
+== %d%% φορτώθηκε
+
+%ds left
+== %ds ακόμα
+
+%i minute left
+== %i λεπτό απομένει
+
+%i minutes left
+== %i λεπτά απομένουν
+
+%i second left
+== %i δευτερόλεπτο απομένει
+
+%i seconds left
+== %i δευτερόλεπτα απομένουν
+
+%s wins!
+== %s νίκησε !
+
+-Page %d-
+== -Σελίδα %d-
+
+Abort
+== Ακύρωση
+
+Add
+== Προσθήκη
+
+Add Friend
+== Προσθήκη Φίλου
+
+Address
+== Διεύθυνση
+
+All
+== Όλοι
+
+Alpha
+== Alpha
+
+Always show name plates
+== Εμφάνιζε τα ψευδόνυμα πάντα
+
+Are you sure that you want to delete the demo?
+== Είσαι σίγουρος ότι θέλεις να διαγραφεί το βίντεο ?
+
+Are you sure that you want to quit?
+== Είσαι σίγουρος ότι θέλεις να φύγεις ?
+
+Are you sure that you want to remove the player from your friends list?
+== Είσαι σίγουρος ότι θέλεις να διαγράψεις αυτόν τον φίλου από τη λίστα ?
+
+As this is the first time you launch the game, please enter your nick name below. It's recommended that you check the settings to adjust them to your liking before joining a server.
+== Μιας και είνα η πρώτη φορά που τρέχεις το παιχνίδι, παρακαλούμε βάλε το ψευδόνυμό σου από κάτω. Είναι προτιμώμενο να ελέγξεις τις επιλογές και να τις ρυθμίσεις ανάλογα πριν να συνδεθείς σε σέρβερ.
+
+Automatically record demos
+== Αυτόματα κατέγραψε  βίντεο
+
+Automatically take game over screenshot
+== Στιγμιότυπο στο το τέλος παιχνιδιού
+
+Blue team
+== Μπλε ομάδα
+
+Blue team wins!
+== Η μπλε ομάδα νίκησε !
+
+Body
+== Σώμα
+
+Call vote
+== Ψήφισε
+
+Change settings
+== Άλλαξε τις ρυθμίσεις 
+
+Chat
+== Μνμ
+
+Clan
+== Φυλή
+
+Client
+== Πελάτης
+
+Close
+== Κλείσιμο
+
+Compatible version
+== Συμβατή έκδοση
+
+Connect
+== Σύνδεση
+
+Connecting to
+== Σύνδεση με
+
+Connection Problems...
+== Προβλήματα συνδέσεως...
+
+Console
+== Κονσόλα
+
+Controls
+== Χειρισμός
+
+Count players only
+== Μέτρησε μόνο παίκτες
+
+Country
+== Χώρα
+
+Crc:
+== Crc:
+
+Created:
+== Δημιουργήθηκε:
+
+Current
+== Τρέχων
+
+Current version: %s
+== Τρέχουσα έκδοση : %s
+
+Custom colors
+== Προσωπικά χρώματα
+
+Delete
+== Διαγραφή
+
+Delete demo
+== Διαγραφή του βίντεο
+
+Demo details
+== Λεπτομέρειες του βίντεο
+
+Demofile: %s
+== Βίντεο : %s
+
+Demos
+== Βίντεο
+
+Disconnect
+== Αποσύνδεση
+
+Disconnected
+== Αποσυνδέθηκε
+
+Display Modes
+== Ανάλυση
+
+Downloading map
+== Κατέβασμα χάρτη
+
+Draw!
+== Ισοπαλία !
+
+Dynamic Camera
+== Δυναμική Κάμερα
+
+Emoticon
+== Φατσούλα
+
+Enter
+== Είσοδος
+
+Error
+== Λάθος
+
+Error loading demo
+== Πρόβλημα φόρτωσης του βίντεο
+
+FSAA samples
+== Δείγματα FSAA
+
+Favorite
+== Αγαπημένο
+
+Favorites
+== Αγαπημένα
+
+Feet
+== Πόδια
+
+Filter
+== Φίλτρο
+
+Fire
+== Πυροβόλα
+
+Folder
+== Φάκελος
+
+Force vote
+== Επιβολή Ψήφου
+
+Free-View
+== Ελέυθερη Ώραση
+
+Friends
+== Φίλοι
+
+Fullscreen
+== Πλήρης Οθόνη
+
+Game
+== Παιχνίδι
+
+Game info
+== Πληροφορίες
+
+Game over
+== Τέλος
+
+Game type
+== Τύπος παιχνιδιού
+
+Game types:
+== Τύποι παιχνιδιών :
+
+General
+== Γενικά
+
+Graphics
+== Γραφικά
+
+Grenade
+== Χειροβομβίδα
+
+Hammer
+== Σφυρί
+
+Has people playing
+== Έχει παίχτες μέσα
+
+High Detail
+== Υψηλή Ανάλυση
+
+Hook
+== Αγγύστρι
+
+Host address
+== Διεύθυνση διακοσμιστή
+
+Hue
+== Χροιά
+
+Info
+== Πληροφορίες
+
+Internet
+== Ίντερνετ
+
+Invalid Demo
+== Άκυρο Βίντεο
+
+Join blue
+== Μπλε
+
+Join game
+== Μπες
+
+Join red
+== Κόκκινοi
+
+Jump
+== Πήδα
+
+Kick player
+== Διώξε τον παίχτη
+
+LAN
+== LAN
+
+Language
+== Γλώσσα
+
+Length:
+== Μήκος :
+
+Lht.
+== Φωτεινότητα
+
+Loading
+== Φόρτωση
+
+MOTD
+== MOTD
+
+Map
+== Χάρτης
+
+Map:
+== Χάρτης :
+
+Max Screenshots
+== Μέγιστος αριθμός Στιγμιότυπων
+
+Max demos
+== Μέγιστος αριθμός Βίντεο
+
+Maximum ping:
+== Μέγιστο Ping :
+
+Miscellaneous
+== Διάφορα
+
+Mouse sens.
+== Ευαισθησία ποντικιού
+
+Move left
+== Αριστερή κίνηση
+
+Move player to spectators
+== Μετακίνησε τον παίχτη στους θεατές
+
+Move right
+== Δεξιά κίνηση
+
+Movement
+== Κίνηση
+
+Mute when not active
+== Βάλτο στη σίγαση, όταν δεν είναι ενεργό
+
+Name
+== Όνομα
+
+Name plates size
+== Μήκος Ψευδόνυμου
+
+Netversion:
+== Netversion :
+
+New name:
+== Νέο όνομα :
+
+News
+== Νέα
+
+Next weapon
+== Επόμενο όπλο
+
+Nickname
+== Ψευδόνυμο
+
+No
+== Όχι
+
+No password
+== Χωρίς κωδικό
+
+No servers found
+== Δε βρέθηκαν σέρβερ
+
+No servers match your filter criteria
+== Κανένας σέρβερ με αυτά τα κριτήρια
+
+Ok
+== Οκ
+
+Open
+== Άνοιγμα
+
+Parent Folder
+== Γονεϊκός Φάκελος
+
+Password
+== Κωδικός
+
+Password incorrect
+== Λάθος Κωδικός
+
+Ping
+== Ping
+
+Pistol
+== Πιστόλι
+
+Play
+== Παίξε
+
+Play background music
+== Μουσική Υποβάθρου
+
+Player
+== Παίχτης
+
+Player country:
+== Χώρα παίχτη :
+
+Player options
+== Επιλογές παίχτη
+
+Players
+== Παίχτες
+
+Please balance teams!
+== Παρακαλώ εξισορροπίστε τις ομάδες !
+
+Prev. weapon
+== Προηγούμενο όπλο
+
+Quality Textures
+== Ποιοτική Υφή
+
+Quick search:
+== Γρήγορη εύρεση :
+
+Quit
+== Έξοδος
+
+Quit anyway?
+== Έξοδος ντε και καλά ?
+
+REC %3d:%02d
+== REC %3d:%02d
+
+Reason:
+== Αιτιολόγηση :
+
+Record demo
+== Καταγραφή Βίντεο
+
+Red team
+== Κόκκινη ομάδα
+
+Red team wins!
+== Η Κόκκινη ομάδα νίκησε !
+
+Refresh
+== Ανανέωση
+
+Refreshing master servers
+== Ανανέωση κύριων σέρβερ
+
+Remote console
+== Απομακρυσμένη κονσόλα
+
+Remove
+== Αφαίρεση
+
+Remove friend
+== Αφαίρεση φίλου
+
+Rename
+== Μετονομασία
+
+Rename demo
+== Μετονομασία Βίντεο
+
+Reset filter
+== Αφαίρεση φίλτρου
+
+Reset to defaults
+== Επαναφορά προεπιλογών
+
+Rifle
+== Λέιζερ
+
+Round
+== Γύρος
+
+Sample rate
+== Δειγματοληψία
+
+Sat.
+== Ένταση Χρωμάτων
+
+Score
+== Σκορ
+
+Score board
+== Πίνακας των σκορ
+
+Score limit
+== Όριο σκορ
+
+Scoreboard
+== Πίνακας των σκορ
+
+Screenshot
+== Στιγμιότυπο Οθόνης
+
+Server address:
+== Διεύθυνση σέρβερ :
+
+Server details
+== Λεπτομέρειες σέρβερ
+
+Server filter
+== Φίλτρα σέρβερ
+
+Server info
+== Πληροφορίες σέρβερ
+
+Server not full
+== Μη πλήρεις σέρβερ
+
+Settings
+== Επιλογές
+
+Shotgun
+== Καραμπίνα
+
+Show chat
+== Εμφάνιση του chat
+
+Show friends only
+== Εμφάνιζε μόνο φίλους
+
+Show ingame HUD
+== Εμφάνιση εσωτερικού μενού
+
+Show name plates
+== Εμφάνιση ψευδόνυμων
+
+Show only supported
+== Εμφάνιση μόνο των υποστηριζόμενων
+
+Size:
+== Μέγεθος :
+
+Skins
+== Στολές
+
+Sound
+== Ήχος
+
+Sound error
+== Λάθος ήχου
+
+Sound volume
+== Ένταση ήχου
+
+Spectate
+== Θέαση
+
+Spectate next
+== Δες τον επόμενο
+
+Spectate previous
+== Δες τον προηγούμενο
+
+Spectator mode
+== Λειτουργία θέασης
+
+Spectators
+== Θεατές
+
+Standard gametype
+== Κανονικός τύπος παιχνιδιού
+
+Standard map
+== Κανονικός χάρτης
+
+Stop record
+== Σταμάτα την καταγραφή
+
+Strict gametype filter
+== Αυστηρός τύπος παιχνιδιού
+
+Sudden Death
+== Ξαφνικός Θάνατος
+
+Switch weapon on pickup
+== Άλλαξε όπλο με το που το παίρνεις
+
+Team
+== Ομάδα
+
+Team chat
+== Ομαδικό μύνημα
+
+Teeworlds %s is out! Download it at www.teeworlds.com!
+== Το Teeworlds %s είναι εδώ ! Κατέβασέ το απο το www.teeworlds.com !
+
+Texture Compression
+== Συμπίεση υφής
+
+The audio device couldn't be initialised.
+== Η συσκευή ήχου αδυνατεί να εκκινήσει.
+
+The server is running a non-standard tuning on a pure game type.
+== Ο σέρβερ τρέχει μία μη-στάνταρ ρύθμιση σε καθαρού τύπου παιχνίδι.
+
+There's an unsaved map in the editor, you might want to save it before you quit the game.
+== Ίσως να θέλεις να αποθηκεύσεις τον χάρτη στον επεξεργαστή πριν να βγεις.
+
+Time limit
+== Όριο χρόνου
+
+Time limit: %d min
+== Όριο χρόνου : %d min
+
+Try again
+== Ξαναπροσπάθησε
+
+Type
+== Τύπος
+
+Type:
+== Τύπος :
+
+UI Color
+== Χρώμα Μενού
+
+Unable to delete the demo
+== Αδυναμία διαγραφής του βίντεο
+
+Unable to rename the demo
+== Αδυναμία μετονομασίας του βίντεο
+
+Use sounds
+== Να έχει ήχους
+
+Use team colors for name plates
+== Χρώμα της ομάδας στα ψευδόνυμα
+
+V-Sync
+== Κάθ. Συγχρονισμός
+
+Version
+== Έκδοση
+
+Version:
+== Έκδοση :
+
+Vote command:
+== Εντολή Ψήφου :
+
+Vote description:
+== Περιγραφή Ψήφου :
+
+Vote no
+== Ψήφισε όχι
+
+Vote yes
+== Ψήφισε ναι
+
+Voting
+== Ψηφοφορία
+
+Warmup
+== Ζέσταμα
+
+Weapon
+== Όπλο
+
+Welcome to Teeworlds
+== Καλοσήρθατε στο Teeworlds
+
+Yes
+== Ναι
+
+You must restart the game for all settings to take effect.
+== Χρειάζεται επανεκίνηση για την εφαρμογή των αλλαγών.
+
+Your skin
+== Η στολή σου
+
+no limit
+== χωρίς όριο
+
+##### needs translation #####
+
+##### old translations #####
+
