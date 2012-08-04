@@ -146,7 +146,7 @@ void CPlayers::RenderHook(
 	// draw hook
 	if (Prev.m_HookState>0 && Player.m_HookState>0)
 	{
-		Graphics()->TextureSet(g_pData->m_aImages[IMAGE_GAME].m_Resource);
+		Graphics()->TextureSet(CResourceHandleTexture(g_pData->m_aImages[IMAGE_GAME].m_Resource));
 		Graphics()->QuadsBegin();
 		//Graphics()->QuadsBegin();
 

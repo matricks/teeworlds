@@ -8,6 +8,7 @@
 #include <game/client/components/camera.h>
 #include <game/client/components/menus.h>
 #include "sounds.h"
+#include <engine/client/glue.h>
 
 
 struct CUserData
@@ -24,7 +25,7 @@ static int LoadSoundsThread(void *pUser)
 	{
 		for(int i = 0; i < g_pData->m_aSounds[s].m_NumSounds; i++)
 		{
-			g_pData->m_aSounds[s].m_aSounds[i].m_Resource = pData->m_pGameClient->Sound()->LoadWV(g_pData->m_aSounds[s].m_aSounds[i].m_pFilename);
+			g_pData->m_aSounds[s].m_aSounds[i].m_Resource = pData->m_pGameClient->Resources()->GetResource(g_pData->m_aSounds[s].m_aSounds[i].m_pFilename);
 			//g_pData->m_aSounds[s].m_aSounds[i].m_Id = Id;
 		}
 
@@ -124,14 +125,14 @@ void CSounds::ClearQueue()
 	for(int i = 0; i < QUEUE_SIZE; i++)
 	{
 		m_aQueue[i].m_Channel = 0;
-		m_aQueue[i].m_Resource = 0;
+		m_aQueue[i].m_Resource.Release();
 	}
 
 	m_QueuePos = 0;
 	m_QueueWaitTime = time_get();
 }
 
-void CSounds::Enqueue(int Channel, CResourceHandle Resource)
+void CSounds::Enqueue(int Channel, CResourceHandleSound Resource)
 {
 	// add sound to the queue
 	if(m_QueuePos < QUEUE_SIZE)
@@ -155,7 +156,7 @@ void CSounds::PlayAndRecord(int Chn, int SetId, float Vol, vec2 Pos)
 	Play(Chn, SetId, Vol, Pos);
 }
 
-void CSounds::Play(int Channel, CResourceHandle Resource, float Vol, vec2 Pos)
+void CSounds::Play(int Channel, CResourceHandleSound Resource, float Vol, vec2 Pos)
 {
 	if(!g_Config.m_SndEnable || !Resource.IsValid() || !Sound()->IsSoundEnabled() || (Channel == CHN_MUSIC && !g_Config.m_SndMusic))
 		return;
@@ -184,7 +185,7 @@ void CSounds::Play(int Chn, int SetId, float Vol, vec2 Pos)
 
 	if(pSet->m_NumSounds == 1)
 	{
-		Sound()->PlayAt(Chn, pSet->m_aSounds[0].m_Resource, Flags, Pos.x, Pos.y);
+		Sound()->PlayAt(Chn, CResourceHandleSound(pSet->m_aSounds[0].m_Resource), Flags, Pos.x, Pos.y);
 		return;
 	}
 
@@ -195,12 +196,12 @@ void CSounds::Play(int Chn, int SetId, float Vol, vec2 Pos)
 		Id = rand() % pSet->m_NumSounds;
 	}
 	while(Id == pSet->m_Last);
-	Sound()->PlayAt(Chn, pSet->m_aSounds[Id].m_Resource, Flags, Pos.x, Pos.y);
+	Sound()->PlayAt(Chn, CResourceHandleSound(pSet->m_aSounds[Id].m_Resource), Flags, Pos.x, Pos.y);
 	pSet->m_Last = Id;
 }
 
 
-void CSounds::Stop(CResourceHandle Resource)
+void CSounds::Stop(CResourceHandleSound Resource)
 {
 	if(!Resource.IsValid())
 		return;

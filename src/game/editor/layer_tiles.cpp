@@ -116,7 +116,7 @@ void CLayerTiles::Clamp(RECTi *pRect)
 
 void CLayerTiles::BrushSelecting(CUIRect Rect)
 {
-	Graphics()->TextureSet(0);
+	Graphics()->TextureClear();
 	m_pEditor->Graphics()->QuadsBegin();
 	m_pEditor->Graphics()->SetColor(1.0f, 1.0f, 1.0f, 0.4f);
 	Snap(&Rect);
@@ -458,7 +458,7 @@ int CLayerTiles::RenderProperties(CUIRect *pToolBox)
 	{
 		if (NewVal == -1)
 		{
-			m_Texture = 0;
+			m_Texture = IGraphics::CTextureHandle();
 			m_Image = -1;
 		}
 		else

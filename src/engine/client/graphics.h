@@ -5,13 +5,11 @@
 
 #include <base/tl/ringbuffer.h>
 
-#include <engine/loader.h>
-
 class CGraphics_OpenGL : public IEngineGraphics
 {
 protected:
-	class IResources *m_pResources;
-	class IStorage *m_pStorage;
+	//class IResources *m_pResources;
+	class IStorage *m_pStorage; // TODO: remove this dependency
 	class IConsole *m_pConsole;
 
 	//
@@ -53,10 +51,21 @@ protected:
 	float m_ScreenX1;
 	float m_ScreenY1;
 
-	CResourceHandle m_InvalidTexture;
+	IGraphics::CTextureHandle m_InvalidTexture;
 
+	struct CTexture
+	{
+		GLuint m_Tex;
+		int m_MemSize;
+		int m_Flags;
+		int m_Next;
+	};
+
+	CTexture m_aTextures[MAX_TEXTURES];
+	int m_FirstFreeTexture;
 	int m_TextureMemoryUsage;
 
+	/*
 	class CResource_Texture : public CResource
 	{
 		friend class CGraphics_OpenGL;
@@ -89,16 +98,18 @@ protected:
 	};
 
 	CTextureHandler m_TextureHandler;
+	*/
 
 	void Flush();
 	void AddVertices(int Count);
 	void Rotate4(const CPoint &rCenter, CVertex *pPoints);
 
-	static unsigned char Sample(int w, int h, const unsigned char *pData, int u, int v, int Offset, int ScaleW, int ScaleH, int Bpp);
-	static unsigned char *Rescale(int Width, int Height, int NewWidth, int NewHeight, int Format, const unsigned char *pData);
+	static unsigned char Sample(int w, int h, const unsigned char *pData, int u, int v, int Offset);
+	//static unsigned char Sample(int w, int h, const unsigned char *pData, int u, int v, int Offset, int ScaleW, int ScaleH, int Bpp);
+	//static unsigned char *Rescale(int Width, int Height, int NewWidth, int NewHeight, int Format, const unsigned char *pData);
 
 	//int GetTextureSlot();
-	CResource *LoadTextureRawToResource(CResource *pResource, int Width, int Height, int Format, const void *pData, int StoreFormat, int Flags);
+	//CResource *LoadTextureRawToResource(CResource *pResource, int Width, int Height, int Format, const void *pData, int StoreFormat, int Flags);
 public:
 	CGraphics_OpenGL();
 	~CGraphics_OpenGL();
@@ -119,16 +130,17 @@ public:
 	virtual void LinesEnd();
 	virtual void LinesDraw(const CLineItem *pArray, int Num);
 
-	virtual CResourceHandle LoadTextureRaw(const char *pName, int Width, int Height, int Format, const void *pData, int StoreFormat, int Flags);
+	virtual int UnloadTexture(CTextureHandle Index);
+	virtual CTextureHandle LoadTextureRaw(int Width, int Height, int Format, const void *pData, int StoreFormat, int Flags);
 
 	// simple uncompressed RGBA loaders
-	virtual CResourceHandle LoadTexture(const char *pFilename, int StorageType, int StoreFormat, int Flags);
+	virtual CTextureHandle LoadTexture(const char *pFilename, int StorageType, int StoreFormat, int Flags);
 	virtual int LoadPNG(CImageInfo *pImg, const char *pFilename, int StorageType);
 
 	void ScreenshotDirect(const char *pFilename);
 
 	//virtual void TextureSet(int TextureID);
-	virtual void TextureSet(CResourceHandle Resource);
+	virtual void TextureSet(CTextureHandle iTexture);
 
 	virtual void Clear(float r, float g, float b);
 

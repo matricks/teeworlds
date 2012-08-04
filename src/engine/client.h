@@ -5,7 +5,8 @@
 #include "kernel.h"
 
 #include "message.h"
-#include "loader.h" // kinda ugly
+#include "loader.h" // TODO: kinda ugly
+#include "graphics.h" // TODO: even uglier
 
 class IClient : public IInterface
 {
@@ -156,7 +157,7 @@ public:
 
 	virtual bool SoundInitFailed() = 0;
 
-	virtual CResourceHandle GetDebugFont() = 0;
+	virtual IGraphics::CTextureHandle GetDebugFont() = 0; // TODO: remove this function
 };
 
 class IGameClient : public IInterface

@@ -14,7 +14,7 @@ class CSounds : public CComponent
 	struct QueueEntry
 	{
 		int m_Channel;
-		CResourceHandle m_Resource;
+		CResourceHandleSound m_Resource;
 	} m_aQueue[QUEUE_SIZE];
 
 	int m_QueuePos;
@@ -42,9 +42,9 @@ public:
 	void ClearQueue();
 
 	// new sutff
-	void Enqueue(int Channel, CResourceHandle Resource);
-	void Play(int Channel, CResourceHandle Resource, float Vol, vec2 Pos);
-	void Stop(CResourceHandle Resource);
+	void Enqueue(int Channel, CResourceHandleSound Resource);
+	void Play(int Channel, CResourceHandleSound Resource, float Vol, vec2 Pos);
+	void Stop(CResourceHandleSound Resource);
 
 	// old stuff
 	void Play(int Channel, int SetId, float Vol, vec2 Pos);

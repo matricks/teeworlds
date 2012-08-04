@@ -213,11 +213,11 @@ void CMapLayers::OnRender()
 					bool Loaded = true;
 					CMapItemLayerTilemap *pTMap = (CMapItemLayerTilemap *)pLayer;
 					if(pTMap->m_Image == -1)
-						Graphics()->TextureSet(0);
+						Graphics()->TextureSet(IGraphics::CTextureHandle());
 					else
 					{
-						CResourceHandle Resource = m_pClient->m_pMapimages->Get(pTMap->m_Image);
-						Loaded = Resource->IsLoaded();
+						IGraphics::CTextureHandle Resource = m_pClient->m_pMapimages->Get(pTMap->m_Image);
+						//Loaded = Resource->IsLoaded();
 						Graphics()->TextureSet(Resource);
 					}
 
@@ -238,12 +238,12 @@ void CMapLayers::OnRender()
 					bool Loaded = true;
 					CMapItemLayerQuads *pQLayer = (CMapItemLayerQuads *)pLayer;
 					if(pQLayer->m_Image == -1)
-						Graphics()->TextureSet(0);
+						Graphics()->TextureSet(IGraphics::CTextureHandle());
 					else
 					{
 						CResourceHandle Resource = m_pClient->m_pMapimages->Get(pQLayer->m_Image);
 						Loaded = Resource->IsLoaded();
-						Graphics()->TextureSet(Resource);
+						Graphics()->TextureSet(CResourceHandleTexture(Resource));
 					}
 
 					if(Loaded)

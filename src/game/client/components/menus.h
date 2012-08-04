@@ -274,8 +274,8 @@ class CMenus : public CComponent
 
 	void SetActive(bool Active);
 
-	CResourceHandle m_TextureBlob;
-	CResourceHandle m_Music;
+	CResourceHandleTexture m_TextureBlob;
+	CResourceHandleSound m_Music;
 public:
 	void RenderBackground();
 

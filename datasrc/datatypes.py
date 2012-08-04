@@ -171,9 +171,18 @@ class Pointer(BaseType):
 class Resource(BaseType):
 	def __init__(self):
 		BaseType.__init__(self, "CResourceHandle")
-		#self.target = target
-	#def Set(self, target):
-	#	self.target = target
+	def EmitDefinition(self, name):
+		return ["0x0"]
+
+class ResourceTexture(BaseType):
+	def __init__(self):
+		BaseType.__init__(self, "CResourceHandleTexture")
+	def EmitDefinition(self, name):
+		return ["CResourceHandleTexture()"]		
+
+class ResourceSound(BaseType):
+	def __init__(self):
+		BaseType.__init__(self, "CResourceHandleSound")
 	def EmitDefinition(self, name):
 		return ["0x0"]
 

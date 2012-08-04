@@ -23,7 +23,7 @@ CLayerQuads::~CLayerQuads()
 
 void CLayerQuads::Render()
 {
-	Graphics()->TextureSet(0);
+	Graphics()->TextureClear();
 	if(m_Image >= 0 && m_Image < m_pEditor->m_Map.m_lImages.size())
 		Graphics()->TextureSet(m_pEditor->m_Map.m_lImages[m_Image]->m_Texture);
 
@@ -88,7 +88,7 @@ void CLayerQuads::BrushSelecting(CUIRect Rect)
 		IGraphics::CLineItem(Rect.x+Rect.w, Rect.y, Rect.x+Rect.w, Rect.y+Rect.h),
 		IGraphics::CLineItem(Rect.x+Rect.w, Rect.y+Rect.h, Rect.x, Rect.y+Rect.h),
 		IGraphics::CLineItem(Rect.x, Rect.y+Rect.h, Rect.x, Rect.y)};
-	Graphics()->TextureSet(0);
+	Graphics()->TextureClear();
 	Graphics()->LinesBegin();
 	Graphics()->LinesDraw(Array, 4);
 	Graphics()->LinesEnd();

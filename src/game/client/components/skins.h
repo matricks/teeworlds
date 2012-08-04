@@ -12,8 +12,8 @@ public:
 	// do this better and nicer
 	struct CSkin
 	{
-		CResourceHandle m_OrgTexture;
-		CResourceHandle m_ColorTexture;
+		IGraphics::CTextureHandle m_OrgTexture;
+		IGraphics::CTextureHandle m_ColorTexture;
 		char m_aName[24];
 		vec3 m_BloodColor;
 

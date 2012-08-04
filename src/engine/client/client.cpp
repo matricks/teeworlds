@@ -43,6 +43,8 @@
 #include "serverbrowser.h"
 #include "client.h"
 
+#include "glue.h"
+
 #if defined(CONF_FAMILY_WINDOWS)
 	#define _WIN32_WINNT 0x0501
 	#define WIN32_LEAN_AND_MEAN
@@ -87,12 +89,12 @@ void CGraph::Add(float v, float r, float g, float b)
 	m_aColors[m_Index][2] = b;
 }
 
-void CGraph::Render(IGraphics *pGraphics, CResourceHandle FontTexture, float x, float y, float w, float h, const char *pDescription)
+void CGraph::Render(IGraphics *pGraphics, IGraphics::CTextureHandle FontTexture, float x, float y, float w, float h, const char *pDescription)
 {
 	//m_pGraphics->BlendNormal();
 
 
-	pGraphics->TextureSet(0);
+	pGraphics->TextureSet(IGraphics::CTextureHandle());
 
 	pGraphics->QuadsBegin();
 	pGraphics->SetColor(0, 0, 0, 0.75f);
@@ -2324,11 +2326,16 @@ int main(int argc, const char **argv) // ignore_convention
 			return -1;
 	}
 
-
+	// setup resource system
 	pResources->AddSource(pClient->m_pSourceDisk);
 	pResources->AddSource(pClient->m_pSourceCache);
 	pResources->AddSource(pClient->m_pSourceGameServer);
 
+	pClient->m_ResourceHandlerSound.m_pSound = pKernel->RequestInterface<ISound>();
+	pResources->AssignHandler("wv", &pClient->m_ResourceHandlerSound);
+
+
+	// do inits
 	pEngine->Init();
 	pConfig->Init();
 	pEngineMasterServer->Init();

@@ -744,7 +744,7 @@ int CEditor::PopupSelectImage(CEditor *pEditor, CUIRect View)
 		pEditor->Graphics()->TextureSet(pEditor->m_Map.m_lImages[ShowImage]->m_Texture);
 	}
 	else
-		pEditor->Graphics()->TextureSet(0);
+		pEditor->Graphics()->TextureClear();
 	pEditor->Graphics()->QuadsBegin();
 	IGraphics::CQuadItem QuadItem(ImageView.x, ImageView.y, ImageView.w, ImageView.h);
 	pEditor->Graphics()->QuadsDrawTL(&QuadItem, 1);

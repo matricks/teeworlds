@@ -251,7 +251,7 @@ public:
 
 	void AnalyseTileFlags();
 
-	CResourceHandle m_Texture;
+	IGraphics::CTextureHandle m_Texture;
 	int m_External;
 	char m_aName[128];
 	unsigned char m_aTileFlags[256];
@@ -335,7 +335,7 @@ public:
 	}
 
 	void Clean();
-	void CreateDefault(CResourceHandle EntitiesTexture);
+	void CreateDefault(IGraphics::CTextureHandle EntitiesTexture);
 
 	// io
 	int Save(class IStorage *pStorage, const char *pFilename);
@@ -406,7 +406,7 @@ public:
 
 	void GetSize(float *w, float *h) { *w = m_Width*32.0f; *h = m_Height*32.0f; }
 
-	CResourceHandle m_Texture;
+	IGraphics::CTextureHandle m_Texture;
 	int m_Game;
 	int m_Image;
 	int m_Width;
@@ -663,10 +663,10 @@ public:
     int m_SelectedQuadEnvelope;
 	int m_SelectedImage;
 
-	CResourceHandle m_CheckerTexture;
-	CResourceHandle m_BackgroundTexture;
-	CResourceHandle m_CursorTexture;
-	CResourceHandle m_EntitiesTexture;
+	IGraphics::CTextureHandle m_CheckerTexture;
+	IGraphics::CTextureHandle m_BackgroundTexture;
+	IGraphics::CTextureHandle m_CursorTexture;
+	IGraphics::CTextureHandle m_EntitiesTexture;
 
 	CLayerGroup m_Brush;
 	CLayerTiles m_TilesetPicker;
@@ -693,7 +693,7 @@ public:
 
 	int DoEditBox(void *pID, const CUIRect *pRect, char *pStr, unsigned StrSize, float FontSize, float *Offset, bool Hidden=false, int Corners=CUI::CORNER_ALL);
 
-	void RenderBackground(CUIRect View, CResourceHandle Texture, float Size, float Brightness);
+	void RenderBackground(CUIRect View, IGraphics::CTextureHandle Texture, float Size, float Brightness);
 
 	void RenderGrid(CLayerGroup *pGroup);
 
@@ -729,7 +729,7 @@ public:
 
 	vec4 ButtonColorMul(const void *pID);
 
-	void DoQuadEnvelopes(CQuad *pQuad, int Index, CResourceHandle Texture = 0);
+	void DoQuadEnvelopes(CQuad *pQuad, int Index, IGraphics::CTextureHandle Texture = IGraphics::CTextureHandle());
 	void DoQuadEnvPoint(CQuad *pQuad, int QIndex, int pIndex);
 	void DoQuadPoint(CQuad *pQuad, int QuadIndex, int v);
 

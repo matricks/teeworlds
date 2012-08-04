@@ -3,8 +3,8 @@
 #ifndef ENGINE_GRAPHICS_H
 #define ENGINE_GRAPHICS_H
 
+#include <base/tl/strong_typedef.h>
 #include "kernel.h"
-#include <engine/loader.h> // NOT NICE!
 
 class CImageInfo
 {
@@ -59,6 +59,8 @@ public:
 		TEXLOAD_NORESAMPLE=1,
 	};
 
+	typedef strong_typedef<int, struct CSampleHandleUnique> CTextureHandle;
+
 	int ScreenWidth() const { return m_ScreenWidth; }
 	int ScreenHeight() const { return m_ScreenHeight; }
 	float ScreenAspect() const { return (float)ScreenWidth()/(float)ScreenHeight(); }
@@ -79,9 +81,11 @@ public:
 
 	virtual int LoadPNG(CImageInfo *pImg, const char *pFilename, int StorageType) = 0;
 
-	virtual CResourceHandle LoadTextureRaw(const char *pName, int Width, int Height, int Format, const void *pData, int StoreFormat, int Flags) = 0;
-	virtual CResourceHandle LoadTexture(const char *pFilename, int StorageType, int StoreFormat, int Flags) = 0;
-	virtual void TextureSet(CResourceHandle Texture) = 0;
+	virtual int UnloadTexture(CTextureHandle Index) = 0;
+	virtual CTextureHandle LoadTextureRaw(int Width, int Height, int Format, const void *pData, int StoreFormat, int Flags) = 0;
+	virtual CTextureHandle LoadTexture(const char *pFilename, int StorageType, int StoreFormat, int Flags) = 0;
+	virtual void TextureSet(CTextureHandle Texture) = 0;
+	void TextureClear() { TextureSet(CTextureHandle()); }
 
 	struct CLineItem
 	{

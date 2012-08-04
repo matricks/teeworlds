@@ -7,8 +7,7 @@
 #include <base/vmath.h>
 #include <game/mapitems.h>
 #include "ui.h"
-
-class CResource;
+#include <engine/client/glue.h> // TODO: remove
 
 class CTeeRenderInfo
 {
@@ -21,7 +20,7 @@ public:
 		m_GotAirJump = 1;
 	};
 
-	CResourceHandle m_Texture;
+	IGraphics::CTextureHandle m_Texture;
 	vec4 m_ColorBody;
 	vec4 m_ColorFeet;
 	float m_Size;

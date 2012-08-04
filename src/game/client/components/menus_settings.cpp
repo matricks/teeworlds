@@ -391,7 +391,7 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 			if(g_Config.m_Debug)
 			{
 				vec3 BloodColor = g_Config.m_PlayerUseCustomColor ? m_pClient->m_pSkins->GetColorV3(g_Config.m_PlayerColorBody) : s->m_BloodColor;
-				Graphics()->TextureSet(0);
+				Graphics()->TextureClear();
 				Graphics()->QuadsBegin();
 				Graphics()->SetColor(BloodColor.r, BloodColor.g, BloodColor.b, 1.0f);
 				IGraphics::CQuadItem QuadItem(Item.m_Rect.x, Item.m_Rect.y, 12.0f, 12.0f);

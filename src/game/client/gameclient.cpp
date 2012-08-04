@@ -250,7 +250,7 @@ void CGameClient::OnInit()
 			m_pResources->GetResource(Id);
 		}*/
 
-		g_pData->m_aImages[i].m_Resource = Graphics()->LoadTexture(g_pData->m_aImages[i].m_pFilename, IStorage::TYPE_ALL, CImageInfo::FORMAT_AUTO, 0);
+		g_pData->m_aImages[i].m_Resource = Resources()->GetResource(g_pData->m_aImages[i].m_pFilename); //, IStorage::TYPE_ALL, CImageInfo::FORMAT_AUTO, 0);
 		m_pMenus->RenderLoading();
 	}
 
@@ -269,7 +269,7 @@ CGameClient::~CGameClient()
 {
 	// free all the images
 	for(int i = 0; i < g_pData->m_NumImages; i++)
-		g_pData->m_aImages[i].m_Resource = 0;
+		g_pData->m_aImages[i].m_Resource.Release();
 }
 
 void CGameClient::DispatchInput()

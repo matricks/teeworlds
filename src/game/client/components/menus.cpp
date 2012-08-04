@@ -657,7 +657,7 @@ void CMenus::RenderLoading()
 
 	Graphics()->BlendNormal();
 
-	Graphics()->TextureSet(0x0);
+	Graphics()->TextureClear();
 	Graphics()->QuadsBegin();
 	Graphics()->SetColor(0,0,0,0.50f);
 	RenderTools()->DrawRoundRect(x, y, w, h, 40.0f);
@@ -673,7 +673,7 @@ void CMenus::RenderLoading()
 	r.h = h;
 	UI()->DoLabel(&r, pCaption, 48.0f, 0, -1);
 
-	Graphics()->TextureSet(0x0);
+	Graphics()->TextureClear();
 	Graphics()->QuadsBegin();
 	Graphics()->SetColor(1,1,1,0.75f);
 	RenderTools()->DrawRoundRect(x+40, y+h-75, (w-80)*Percent, 25, 5.0f);
@@ -1557,14 +1557,14 @@ void CMenus::RenderBackground()
 	//Graphics()->Clear(1,1,1);
 	//render_sunrays(0,0);
 	if(!m_TextureBlob.IsValid())
-		m_TextureBlob = Graphics()->LoadTexture("blob.png", IStorage::TYPE_ALL, CImageInfo::FORMAT_AUTO, 0);
+		m_TextureBlob = Resources()->GetResource("blob.png");
 
 	float sw = 300*Graphics()->ScreenAspect();
 	float sh = 300;
 	Graphics()->MapScreen(0, 0, sw, sh);
 
 	// render background color
-	Graphics()->TextureSet(0);
+	Graphics()->TextureClear();
 	Graphics()->QuadsBegin();
 		//vec4 bottom(gui_color.r*0.3f, gui_color.g*0.3f, gui_color.b*0.3f, 1.0f);
 		//vec4 bottom(0, 0, 0, 1.0f);
@@ -1581,7 +1581,7 @@ void CMenus::RenderBackground()
 	Graphics()->QuadsEnd();
 
 	// render the tiles
-	Graphics()->TextureSet(0);
+	Graphics()->TextureClear();
 	Graphics()->QuadsBegin();
 		float Size = 15.0f;
 		float OffsetTime = fmod(Client()->LocalTime()*0.15f, 2.0f);

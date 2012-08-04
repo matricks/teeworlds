@@ -5,7 +5,7 @@
 
 #include "source_gameserver.h"
 #include "source_cache.h"
-
+#include "glue.h"
 
 class CGraph
 {
@@ -27,7 +27,7 @@ public:
 	void ScaleMin();
 
 	void Add(float v, float r, float g, float b);
-	void Render(IGraphics *pGraphics, CResourceHandle FontTexture, float x, float y, float w, float h, const char *pDescription);
+	void Render(IGraphics *pGraphics, IGraphics::CTextureHandle FontTexture, float x, float y, float w, float h, const char *pDescription);
 };
 
 
@@ -129,7 +129,7 @@ class CClient : public IClient, public CDemoPlayer::IListner
 	unsigned m_SnapshotParts;
 	int64 m_LocalStartTime;
 
-	CResourceHandle m_DebugFont;
+	IGraphics::CTextureHandle m_DebugFont;
 	float m_FrameTimeLow;
 	float m_FrameTimeHigh;
 	int m_Frames;
@@ -227,7 +227,9 @@ public:
 	CSource_GameServer *m_pSourceGameServer;
 	CSource_Disk *m_pSourceDisk;
 	CSource_Cache *m_pSourceCache;
+	CResourceHandler_Sound m_ResourceHandlerSound;
 
+	//
 	IEngine *Engine() { return m_pEngine; }
 	IEngineGraphics *Graphics() { return m_pGraphics; }
 	IEngineInput *Input() { return m_pInput; }
@@ -256,7 +258,7 @@ public:
 
 	virtual bool SoundInitFailed() { return m_SoundInitFailed; }
 
-	virtual CResourceHandle GetDebugFont() { return m_DebugFont; }
+	virtual IGraphics::CTextureHandle GetDebugFont() { return m_DebugFont; }
 
 	void DirectInput(int *pInput, int Size);
 	void SendInput();

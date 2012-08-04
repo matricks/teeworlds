@@ -55,9 +55,9 @@ class CChat : public CComponent
 	static void ConChat(IConsole::IResult *pResult, void *pUserData);
 	static void ConShowChat(IConsole::IResult *pResult, void *pUserData);
 
-	CResourceHandle m_Sound_ChatPlayer;
-	CResourceHandle m_Sound_ChatServer;
-	CResourceHandle m_Sound_ChatHighlight;
+	CResourceHandleSound m_Sound_ChatPlayer;
+	CResourceHandleSound m_Sound_ChatServer;
+	CResourceHandleSound m_Sound_ChatHighlight;
 
 public:
 	CChat();

@@ -6,12 +6,12 @@
 
 class CMapImages : public CComponent
 {
-	CResourceHandle m_aTextures[64];
+	CResourceHandleTexture m_aTextures[64];
 	int m_Count;
 public:
 	CMapImages();
 
-	CResourceHandle Get(int Index) const { return m_aTextures[Index]; }
+	CResourceHandleTexture Get(int Index) const { return m_aTextures[Index]; }
 	int Num() const { return m_Count; }
 
 	virtual void OnMapLoad();

@@ -8,6 +8,8 @@ void CSource_Cache::GetCacheName(char *pBuffer, int BufferSize, CResource *pReso
 
 bool CSource_Cache::Load(CLoadOrder *pOrder)
 {
+	// we can't load from the cache if we don't know the hash of the content.
+	// we might load the wrong version other wise
 	if(pOrder->m_pResource->ContentHash() == 0)
 		return false;
 

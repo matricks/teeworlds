@@ -297,7 +297,7 @@ class CResources : public IResources
 		return pType;
 	}
 
-	CResourceHandle CreateResource(CResourceId Id, bool StartLoad)
+	virtual CResourceHandle CreateResource(CResourceId Id, bool StartLoad)
 	{
 		assert(Id.m_NameHash != 0);
 
@@ -332,6 +332,23 @@ class CResources : public IResources
 
 		return pResource;
 	}
+
+	virtual CResourceHandle CreateResource(CResourceId Id, void *pData, int DataSize)
+	{
+		CResourceHandle Resource = CreateResource(Id, false);
+		if(Resource.IsValid())
+			return Resource;
+
+		CLoadJobInfo *pInfo = g_JobHandler.AllocJobData<CLoadJobInfo>();
+		pInfo->m_pThis = this;
+		pInfo->m_pResource = Resource.Get();
+		pInfo->m_pData = pData;
+		pInfo->m_DataSize = DataSize;
+		g_JobHandler.Kick(JOBQUEUE_IO, Job_ProcessData, &m_JobCounter, pInfo);		
+
+		return Resource;
+	}
+
 
 	ringbuffer_mwsr<CResource*, 1024*4> m_lInserts; // job threads writes, main thread reads
 	ringbuffer_swsr<CResource*, 1024*4> m_lDestroys; // main thread only

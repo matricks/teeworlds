@@ -89,7 +89,6 @@ class CResourceHandle
 {
 	class CResource *m_pResource;
 
-	inline void Release();
 	inline void Assign(CResource *pResource);
 public:
 	CResourceHandle()
@@ -115,7 +114,8 @@ public:
 		Release();
 	}
 
-	CResource *Get() { return m_pResource; }
+	CResource *Get() const { return m_pResource; }
+	inline void Release();
 
 	bool IsValid() const { return m_pResource != 0x0; }
 
@@ -149,9 +149,28 @@ msc {
 	job -> main [ label="CResource::m_lInserts" ];
 }
 
+
+	The resource system has a chain of CSources that it tries to load the resources from.
+	When a resource is loaded, it feedbacks through the whole chain again.
+	Resource creation, insert and destruction happens from the main thread, all loading
+	happens from a job thread.
+
+	Resources are referenced counted.
+
+	IResources				Main interface
+	IResources::CSource 	Source interface
+	CResource 				Base resource class
+	CResourceHandle 		Handle to a resource
+
+
 	Behaviours:
 		* Handlers are called from the loader thread
 		* Each source runs on it's own thread
+*/
+
+/*
+	IResources
+		Main interface to the resource system. Handles resources and sources to load them from
 */
 class IResources : public IInterface
 {
@@ -177,6 +196,12 @@ public:
 		const char *m_pName;
 	};
 
+	/*
+		ISource
+			Interface class to a source
+
+		TODO: Should be ISource
+	*/
 	class CSource
 	{
 		// a bit ugly
@@ -241,6 +266,7 @@ public:
 		virtual CResource *Create(CResourceId Id) = 0;
 
 		// called from job thread
+		// pData is destroyed after the call
 		virtual bool Load(CResource *pResource, void *pData, unsigned DataSize) = 0;
 
 		// called from the main thread during IResources::Update()
@@ -258,6 +284,7 @@ public:
 
 	virtual void Update() = 0;
 
+	virtual CResourceHandle CreateResource(CResourceId Id, void *pData, int DataSize) = 0;
 	virtual CResourceHandle CreateResource(CResourceId Id, bool StartLoad) = 0;
 	virtual CResourceHandle GetResource(CResourceId Id) = 0;
 
@@ -280,19 +307,6 @@ private:
 
 
 unsigned hash_crc32(unsigned crc, const void *data, size_t datasize);
-
-class CSource_Disk : public IResources::CSource
-{
-protected:
-	static int LoadWholeFile(const char *pFilename, void **ppData, unsigned *pDataSize);
-	char m_aBaseDirectory[512];
-
-	virtual bool Load(CLoadOrder *pOrder);
-	CSource_Disk(const char *pName, const char *pBase);
-public:
-	CSource_Disk(const char *pBase = 0);
-	void SetBaseDirectory(const char *pBase);
-};
 
 class CResource
 {
@@ -350,8 +364,6 @@ public:
 	bool IsLoaded() const { return m_State == STATE_LOADED; }
 };
 
-
-
 void CResourceHandle::Release()
 {
 	if(m_pResource)
@@ -378,6 +390,8 @@ void CResourceHandle::Assign(CResource *pResource)
 }
 
 
+
+
 class CResourceIndex
 {
 	int m_Id;
@@ -392,4 +406,21 @@ public:
 	
 	bool IsValid() const { return m_Id >= 0; }
 	int Id() const { return m_Id; }
+};
+
+/*
+	Basic disk source
+		Reads resource from a specified directory
+*/
+class CSource_Disk : public IResources::CSource
+{
+protected:
+	static int LoadWholeFile(const char *pFilename, void **ppData, unsigned *pDataSize);
+	char m_aBaseDirectory[512];
+
+	virtual bool Load(CLoadOrder *pOrder);
+	CSource_Disk(const char *pName, const char *pBase);
+public:
+	CSource_Disk(const char *pBase = 0);
+	void SetBaseDirectory(const char *pBase);
 };

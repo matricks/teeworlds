@@ -557,7 +557,7 @@ void CEditor::RenderGrid(CLayerGroup *pGroup)
 	int XGridOffset = XOffset % m_GridFactor;
 	int YGridOffset = YOffset % m_GridFactor;
 
-	Graphics()->TextureSet(0);
+	Graphics()->TextureClear();
 	Graphics()->LinesBegin();
 
 	for(int i = 0; i < (int)w; i++)
@@ -582,7 +582,7 @@ void CEditor::RenderGrid(CLayerGroup *pGroup)
 	Graphics()->LinesEnd();
 }
 
-void CEditor::RenderBackground(CUIRect View, CResourceHandle Texture, float Size, float Brightness)
+void CEditor::RenderBackground(CUIRect View, IGraphics::CTextureHandle Texture, float Size, float Brightness)
 {
 	Graphics()->TextureSet(Texture);
 	Graphics()->BlendNormal();
@@ -1398,7 +1398,7 @@ void CEditor::DoQuadPoint(CQuad *pQuad, int QuadIndex, int V)
 	Graphics()->QuadsDraw(&QuadItem, 1);
 }
 
-void CEditor::DoQuadEnvelopes(CQuad *pQuad, int Index, CResourceHandle Texture)
+void CEditor::DoQuadEnvelopes(CQuad *pQuad, int Index, IGraphics::CTextureHandle Texture)
 {
 	CEnvelope *pEnvelope = 0x0;
 	if(pQuad->m_PosEnv >= 0 && pQuad->m_PosEnv < m_Map.m_lEnvelopes.size())
@@ -1410,7 +1410,7 @@ void CEditor::DoQuadEnvelopes(CQuad *pQuad, int Index, CResourceHandle Texture)
 	CPoint *pPoints = pQuad->m_aPoints;
 
 	//Draw Lines
-	Graphics()->TextureSet(0x0);
+	Graphics()->TextureClear();
 	Graphics()->LinesBegin();
 		Graphics()->SetColor(80.0f/255, 150.0f/255, 230.f/255, 0.5f);
 		for(int i = 0; i < pEnvelope->m_lPoints.size()-1; i++)
@@ -1483,7 +1483,7 @@ void CEditor::DoQuadEnvelopes(CQuad *pQuad, int Index, CResourceHandle Texture)
 
 		Graphics()->QuadsEnd();
 		
-		Graphics()->TextureSet(0);
+		Graphics()->TextureClear();
 		Graphics()->QuadsBegin();
 		DoQuadEnvPoint(pQuad, Index, i);
 		Graphics()->QuadsEnd();
@@ -1720,7 +1720,7 @@ void CEditor::DoMapEditor(CUIRect View, CUIRect ToolBar)
 					IGraphics::CLineItem(w, 0, w, h),
 					IGraphics::CLineItem(w, h, 0, h),
 					IGraphics::CLineItem(0, h, 0, 0)};
-				Graphics()->TextureSet(0);
+				Graphics()->TextureClear();
 				Graphics()->LinesBegin();
 				Graphics()->LinesDraw(Array, 4);
 				Graphics()->LinesEnd();
@@ -1884,7 +1884,7 @@ void CEditor::DoMapEditor(CUIRect View, CUIRect ToolBar)
 							IGraphics::CLineItem(w, 0, w, h),
 							IGraphics::CLineItem(w, h, 0, h),
 							IGraphics::CLineItem(0, h, 0, 0)};
-						Graphics()->TextureSet(0);
+						Graphics()->TextureClear();
 						Graphics()->LinesBegin();
 						Graphics()->LinesDraw(Array, 4);
 						Graphics()->LinesEnd();
@@ -1911,7 +1911,7 @@ void CEditor::DoMapEditor(CUIRect View, CUIRect ToolBar)
 						if(!m_ShowEnvelopePreview)
 							m_ShowEnvelopePreview = 2;
 
-						Graphics()->TextureSet(0);
+						Graphics()->TextureClear();
 						Graphics()->QuadsBegin();
 						for(int i = 0; i < pLayer->m_lQuads.size(); i++)
 						{
@@ -1965,7 +1965,7 @@ void CEditor::DoMapEditor(CUIRect View, CUIRect ToolBar)
 		CLayerGroup *g = m_Map.m_pGameGroup;
 		g->MapScreen();
 
-		Graphics()->TextureSet(0);
+		Graphics()->TextureClear();
 		Graphics()->LinesBegin();
 
 			CUIRect r;
@@ -1991,7 +1991,7 @@ void CEditor::DoMapEditor(CUIRect View, CUIRect ToolBar)
 		CLayerGroup *g = m_Map.m_pGameGroup;
 		g->MapScreen();
 
-		Graphics()->TextureSet(0);
+		Graphics()->TextureClear();
 		Graphics()->LinesBegin();
 
 		float aLastPoints[4];
@@ -2073,7 +2073,7 @@ void CEditor::DoMapEditor(CUIRect View, CUIRect ToolBar)
 		GetSelectedGroup()->MapScreen();
 
 		CLayerQuads *pLayer = (CLayerQuads*)GetSelectedLayer(0);
-		CResourceHandle Texture;
+		IGraphics::CTextureHandle Texture;
 		if(pLayer->m_Image >= 0 && pLayer->m_Image < m_Map.m_lImages.size())
 			Texture = m_Map.m_lImages[pLayer->m_Image]->m_Texture;
 
@@ -2411,12 +2411,12 @@ void CEditor::ReplaceImage(const char *pFileName, int StorageType, void *pUser)
 
 	CEditorImage *pImg = pEditor->m_Map.m_lImages[pEditor->m_SelectedImage];
 	int External = pImg->m_External;
-	pImg->m_Texture = 0x0;
+	pImg->m_Texture = IGraphics::CTextureHandle();
 	*pImg = ImgInfo;
 	pImg->m_External = External;
 	pEditor->ExtractName(pFileName, pImg->m_aName, sizeof(pImg->m_aName));
 	pImg->m_AutoMapper.Load(pImg->m_aName);
-	pImg->m_Texture = pEditor->Graphics()->LoadTextureRaw(pFileName, ImgInfo.m_Width, ImgInfo.m_Height, ImgInfo.m_Format, ImgInfo.m_pData, CImageInfo::FORMAT_AUTO, 0);
+	pImg->m_Texture = pEditor->Graphics()->LoadTextureRaw(ImgInfo.m_Width, ImgInfo.m_Height, ImgInfo.m_Format, ImgInfo.m_pData, CImageInfo::FORMAT_AUTO, 0);
 	pEditor->SortImages();
 	for(int i = 0; i < pEditor->m_Map.m_lImages.size(); ++i)
 	{
@@ -2444,7 +2444,7 @@ void CEditor::AddImage(const char *pFileName, int StorageType, void *pUser)
 
 	CEditorImage *pImg = new CEditorImage(pEditor);
 	*pImg = ImgInfo;
-	pImg->m_Texture = pEditor->Graphics()->LoadTextureRaw(aBuf, ImgInfo.m_Width, ImgInfo.m_Height, ImgInfo.m_Format, ImgInfo.m_pData, CImageInfo::FORMAT_AUTO, 0);
+	pImg->m_Texture = pEditor->Graphics()->LoadTextureRaw(ImgInfo.m_Width, ImgInfo.m_Height, ImgInfo.m_Format, ImgInfo.m_pData, CImageInfo::FORMAT_AUTO, 0);
 	pImg->m_External = 1;	// external by default
 	str_copy(pImg->m_aName, aBuf, sizeof(pImg->m_aName));
 	pImg->m_AutoMapper.Load(pImg->m_aName);
@@ -2680,7 +2680,7 @@ void CEditor::RenderImages(CUIRect ToolBox, CUIRect ToolBar, CUIRect View)
 		ToolBox.HSplitTop(5.0f, &Slot, &ToolBox);
 		ImageCur += 5.0f;
 		IGraphics::CLineItem LineItem(Slot.x, Slot.y+Slot.h/2, Slot.x+Slot.w, Slot.y+Slot.h/2);
-		Graphics()->TextureSet(0);
+		Graphics()->TextureClear();
 		Graphics()->LinesBegin();
 		Graphics()->LinesDraw(&LineItem, 1);
 		Graphics()->LinesEnd();
@@ -3252,7 +3252,7 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 		// render lines
 		{
 			UI()->ClipEnable(&View);
-			Graphics()->TextureSet(0);
+			Graphics()->TextureClear();
 			Graphics()->LinesBegin();
 			for(int c = 0; c < pEnvelope->m_Channels; c++)
 			{
@@ -3312,7 +3312,7 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 		// render colorbar
 		if(ShowColorBar)
 		{
-			Graphics()->TextureSet(0);
+			Graphics()->TextureClear();
 			Graphics()->QuadsBegin();
 			for(int i = 0; i < pEnvelope->m_lPoints.size()-1; i++)
 			{
@@ -3351,7 +3351,7 @@ void CEditor::RenderEnvelopeEditor(CUIRect View)
 		{
 			int CurrentValue = 0, CurrentTime = 0;
 
-			Graphics()->TextureSet(0);
+			Graphics()->TextureClear();
 			Graphics()->QuadsBegin();
 			for(int c = 0; c < pEnvelope->m_Channels; c++)
 			{
@@ -3863,7 +3863,7 @@ void CEditorMap::Clean()
 	m_Modified = false;
 }
 
-void CEditorMap::CreateDefault(CResourceHandle EntitiesTexture)
+void CEditorMap::CreateDefault(IGraphics::CTextureHandle EntitiesTexture)
 {
 	// add background
 	CLayerGroup *pGroup = NewGroup();

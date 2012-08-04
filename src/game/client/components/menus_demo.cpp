@@ -30,7 +30,7 @@ int CMenus::DoButton_DemoPlayer(const void *pID, const char *pText, int Checked,
 int CMenus::DoButton_Sprite(const void *pID, int ImageID, int SpriteID, int Checked, const CUIRect *pRect, int Corners)
 {
 	RenderTools()->DrawUIRect(pRect, Checked ? vec4(1.0f, 1.0f, 1.0f, 0.10f) : vec4(1.0f, 1.0f, 1.0f, 0.5f)*ButtonColorMul(pID), Corners, 5.0f);
-	Graphics()->TextureSet(g_pData->m_aImages[ImageID].m_Resource);
+	Graphics()->TextureSet(CResourceHandleTexture(g_pData->m_aImages[ImageID].m_Resource));
 	Graphics()->QuadsBegin();
 	if(!Checked)
 		Graphics()->SetColor(1.0f, 1.0f, 1.0f, 0.5f);
