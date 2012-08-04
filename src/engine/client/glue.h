@@ -59,10 +59,13 @@ class CResource_Texture : public CResource
 public:
 	CResource_Texture()
 	{
+		m_Handle = IGraphics::CTextureHandle(-1);
+		m_MemSize = 0;
+		m_Flags = 0;
 		mem_zero(&m_ImageInfo, sizeof(m_ImageInfo));
 	}
 
-	IGraphics::CTextureHandle m_TexId;
+	IGraphics::CTextureHandle m_Handle;
 	int m_MemSize;
 	int m_Flags;
 
@@ -94,7 +97,7 @@ public:
 	{
 		if(!Get())
 			return IGraphics::CTextureHandle(-1);
-		return ((CResource_Texture *)Get())->m_TexId;
+		return ((CResource_Texture *)Get())->m_Handle;
 	}
 };
 

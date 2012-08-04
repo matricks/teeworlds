@@ -228,6 +228,7 @@ public:
 	CSource_Disk *m_pSourceDisk;
 	CSource_Cache *m_pSourceCache;
 	CResourceHandler_Sound m_ResourceHandlerSound;
+	CResourceHandler_Texture m_ResourceHandlerTexture;
 
 	//
 	IEngine *Engine() { return m_pEngine; }

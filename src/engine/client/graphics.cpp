@@ -381,6 +381,7 @@ IGraphics::CTextureHandle CGraphics_OpenGL::LoadTextureRaw(int Width, int Height
 
 	m_TextureMemoryUsage += m_aTextures[Tex].m_MemSize;
 	mem_free(pTmpData);
+	dbg_msg("", "tex = %d", Tex);
 	return IGraphics::CTextureHandle(Tex);
 }
 
@@ -744,7 +745,7 @@ void CGraphics_OpenGL::TextureSet(IGraphics::CTextureHandle Texture)
 	else
 	{
 		glEnable(GL_TEXTURE_2D);
-		glBindTexture(GL_TEXTURE_2D, Texture);
+		glBindTexture(GL_TEXTURE_2D, m_aTextures[Texture].m_Tex);
 	}
 }
 
@@ -942,6 +943,12 @@ bool CGraphics_OpenGL::Init()
 {
 	m_pStorage = Kernel()->RequestInterface<IStorage>();
 	m_pConsole = Kernel()->RequestInterface<IConsole>();
+
+	// init textures
+	m_FirstFreeTexture = 0;
+	for(int i = 0; i < MAX_TEXTURES; i++)
+		m_aTextures[i].m_Next = i+1;
+	m_aTextures[MAX_TEXTURES-1].m_Next = -1;
 
 	//m_TextureHandler.m_pGL = this;
 	//m_pResources->AssignHandler("png", &m_TextureHandler);

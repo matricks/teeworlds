@@ -310,7 +310,10 @@ class CResources : public IResources
 
 		IHandler *pHandler = FindHandler(pType);
 		if(!pHandler)
+		{
+			dbg_msg("resources", "couldn't find handler for resource type '%s' for resource '%s'", pType, Id.m_pName);
 			return 0x0;
+		}
 
 		CResource *pResource = pHandler->Create(Id);
 		pResource->m_Id = Id;
@@ -583,6 +586,7 @@ public:
 		while(m_lInserts.size())
 		{
 			CResource *pResource = m_lInserts.pop();
+			dbg_msg("resources", "inserting '%s'", pResource->Name());
 			pResource->m_pHandler->Insert(pResource);
 			pResource->m_State = CResource::STATE_LOADED;
 		}

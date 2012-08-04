@@ -1526,6 +1526,9 @@ void CMenus::OnRender()
 		Render();
 
 	// render cursor
+	//if(g_pData->m_aImages[IMAGE_CURSOR].m_Resource.Get())
+		//dbg_msg("", "%x", g_pData->m_aImages[IMAGE_CURSOR].m_Resource.Get());
+	
 	Graphics()->TextureSet(g_pData->m_aImages[IMAGE_CURSOR].m_Resource);
 	Graphics()->QuadsBegin();
 	Graphics()->SetColor(1,1,1,1);

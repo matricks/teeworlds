@@ -85,7 +85,7 @@ public:
 	virtual CTextureHandle LoadTextureRaw(int Width, int Height, int Format, const void *pData, int StoreFormat, int Flags) = 0;
 	virtual CTextureHandle LoadTexture(const char *pFilename, int StorageType, int StoreFormat, int Flags) = 0;
 	virtual void TextureSet(CTextureHandle Texture) = 0;
-	void TextureClear() { TextureSet(CTextureHandle()); }
+	void TextureClear() { TextureSet(CTextureHandle(-1)); }
 
 	struct CLineItem
 	{

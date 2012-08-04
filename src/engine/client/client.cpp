@@ -2334,6 +2334,9 @@ int main(int argc, const char **argv) // ignore_convention
 	pClient->m_ResourceHandlerSound.m_pSound = pKernel->RequestInterface<ISound>();
 	pResources->AssignHandler("wv", &pClient->m_ResourceHandlerSound);
 
+	pClient->m_ResourceHandlerTexture.m_pGraphics = pEngineGraphics;
+	pResources->AssignHandler("png", &pClient->m_ResourceHandlerTexture);
+
 
 	// do inits
 	pEngine->Init();
