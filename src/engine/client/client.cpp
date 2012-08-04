@@ -2337,7 +2337,6 @@ int main(int argc, const char **argv) // ignore_convention
 	pClient->m_ResourceHandlerTexture.m_pGraphics = pEngineGraphics;
 	pResources->AssignHandler("png", &pClient->m_ResourceHandlerTexture);
 
-
 	// do inits
 	pEngine->Init();
 	pConfig->Init();
@@ -2384,6 +2383,8 @@ int main(int argc, const char **argv) // ignore_convention
 
 
 	dbg_msg("", "killing client");
+	pResources->RemoveHandler(&pClient->m_ResourceHandlerSound);
+	pResources->RemoveHandler(&pClient->m_ResourceHandlerTexture);
 	delete pClient;
 	pResources->Update();
 

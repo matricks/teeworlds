@@ -206,11 +206,7 @@ bool CResourceHandler_Texture::Insert(CResource *pResource)
 {
 	CResource_Texture *pTexture = static_cast<CResource_Texture*>(pResource);
 	CImageInfo *pInfo = &pTexture->m_ImageInfo;
-
-	dbg_msg("gfx", "%d %d %d %p %d", pInfo->m_Width, pInfo->m_Height, pInfo->m_Format, pInfo->m_pData, pInfo->m_Format);
 	pTexture->m_Handle = m_pGraphics->LoadTextureRaw(pInfo->m_Width, pInfo->m_Height, pInfo->m_Format, pInfo->m_pData, pInfo->m_Format, 0);
-	dbg_msg("gfx", "%d", (int)(IGraphics::CTextureHandle)pTexture->m_Handle);
-	
 	// free the texture data
 	mem_free(pInfo->m_pData);
 	pInfo->m_pData = 0;

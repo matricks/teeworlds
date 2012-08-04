@@ -483,10 +483,22 @@ public:
 		m_Running = false;
 
 		// all resources should be gone before we close down
-		assert(m_lpResources.size() == 0);
+		if(m_lpResources.size() != 0)
+		{
+			dbg_msg("resources", "errors: resources left when exiting");
+			for(int i = 0; i < m_lpResources.size(); i++)
+				dbg_msg("resources", "    %s", m_lpResources[i]->Name());
+			assert(m_lpResources.size() == 0);
+		}
 
 		// all handlers should be gone as well
-		assert(m_lHandlers.size() == 0);
+		if(m_lHandlers.size() != 0)
+		{
+			dbg_msg("resources", "errors: handlers left when exiting");
+			for(int i = 0; i < m_lHandlers.size(); i++)
+				dbg_msg("resources", "    %s", m_lHandlers[i].m_pType);
+			assert(m_lHandlers.size() == 0);
+		}
 
 		assert(m_JobCounter == 0);
 
@@ -596,6 +608,7 @@ public:
 	{
 		assert(pResource->m_State != CResource::STATE_DESTROYED); // make that it isn't destoyed
 		assert(m_Running);
+		dbg_msg("resources", "destroying '%s'", pResource->Name());
 		m_lpResources.remove_fast(pResource);
 		m_lDestroys.push(pResource);
 	}

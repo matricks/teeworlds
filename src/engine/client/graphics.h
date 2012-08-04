@@ -8,7 +8,6 @@
 class CGraphics_OpenGL : public IEngineGraphics
 {
 protected:
-	//class IResources *m_pResources;
 	class IStorage *m_pStorage; // TODO: remove this dependency
 	class IConsole *m_pConsole;
 
@@ -65,51 +64,12 @@ protected:
 	int m_FirstFreeTexture;
 	int m_TextureMemoryUsage;
 
-	/*
-	class CResource_Texture : public CResource
-	{
-		friend class CGraphics_OpenGL;
-		void SetLoaded() { m_State = CResource::STATE_LOADED; }
-	public:
-		CResource_Texture()
-		{
-			m_TexId = 0;
-			mem_zero(&m_ImageInfo, sizeof(m_ImageInfo));
-		}
-
-		GLuint m_TexId;
-		int m_MemSize;
-		int m_Flags;
-
-		// used for loading the texture
-		// TODO: should perhaps just be stored at load time
-		CImageInfo m_ImageInfo;
-	};
-
-	class CTextureHandler : public IResources::IHandler
-	{
-	public:
-		CGraphics_OpenGL *m_pGL;
-		static unsigned int PngReadFunc(void *pOutput, unsigned long size, unsigned long numel, void *pUserPtr);
-		virtual CResource *Create(IResources::CResourceId Id);
-		virtual bool Load(CResource *pResource, void *pData, unsigned DataSize);
-		virtual bool Insert(CResource *pResource);
-		virtual bool Destroy(CResource *pResource);
-	};
-
-	CTextureHandler m_TextureHandler;
-	*/
-
 	void Flush();
 	void AddVertices(int Count);
 	void Rotate4(const CPoint &rCenter, CVertex *pPoints);
 
 	static unsigned char Sample(int w, int h, const unsigned char *pData, int u, int v, int Offset);
-	//static unsigned char Sample(int w, int h, const unsigned char *pData, int u, int v, int Offset, int ScaleW, int ScaleH, int Bpp);
-	//static unsigned char *Rescale(int Width, int Height, int NewWidth, int NewHeight, int Format, const unsigned char *pData);
 
-	//int GetTextureSlot();
-	//CResource *LoadTextureRawToResource(CResource *pResource, int Width, int Height, int Format, const void *pData, int StoreFormat, int Flags);
 public:
 	CGraphics_OpenGL();
 	~CGraphics_OpenGL();

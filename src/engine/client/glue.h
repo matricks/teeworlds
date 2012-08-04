@@ -100,15 +100,3 @@ public:
 		return ((CResource_Texture *)Get())->m_Handle;
 	}
 };
-
-/*
-// TODO: ugly way of solving this but it has todo for now.
-inline IGraphics::CTextureHandle operator+(const CResourceHandle &rHandle)
-{
-	if(!rHandle.Get())
-		return IGraphics::CTextureHandle(-1);
-	return ((CResource_Texture *)rHandle.Get())->m_TexId;
-}*/
-
-
-
