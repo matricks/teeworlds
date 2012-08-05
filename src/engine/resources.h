@@ -305,9 +305,6 @@ private:
 	virtual	void Destroy(CResource *pResource) = 0;
 };
 
-
-unsigned hash_crc32(unsigned crc, const void *data, size_t datasize);
-
 class CResource
 {
 	friend class IResources;
@@ -363,6 +360,8 @@ public:
 	bool IsLoading() const { return m_State == STATE_LOADING; }
 	bool IsLoaded() const { return m_State == STATE_LOADED; }
 };
+
+unsigned hash_crc32(unsigned crc, const void *data, size_t datasize);
 
 void CResourceHandle::Release()
 {

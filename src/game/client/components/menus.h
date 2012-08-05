@@ -6,6 +6,9 @@
 #include <base/vmath.h>
 #include <base/tl/sorted_array.h>
 
+#include <engine/resources_sound.h>
+#include <engine/resources_texture.h>
+
 #include <engine/demo.h>
 #include <engine/friends.h>
 

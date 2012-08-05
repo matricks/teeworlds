@@ -1,4 +1,4 @@
-#include <engine/loader.h>
+#include <engine/resources.h>
 
 class CSource_GameServer : public IResources::CSource
 {

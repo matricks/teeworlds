@@ -8,8 +8,6 @@
 #include <game/client/components/camera.h>
 #include <game/client/components/menus.h>
 #include "sounds.h"
-#include <engine/client/glue.h>
-
 
 struct CUserData
 {

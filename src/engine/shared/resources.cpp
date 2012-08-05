@@ -1,7 +1,7 @@
 #include <base/system.h>
 #include <base/tl/array.h>
 
-#include <engine/loader.h>
+#include <engine/resources.h>
 #include <engine/storage.h>
 
 #include <zlib.h> // crc32

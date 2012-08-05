@@ -12,7 +12,7 @@ Powerups = ["HEALTH", "ARMOR", "WEAPON", "NINJA"]
 RawHeader = '''
 
 #include <engine/message.h>
-#include <engine/loader.h> // not that nice
+#include <engine/resources.h> // not that nice
 
 enum
 {

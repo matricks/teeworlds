@@ -22,7 +22,6 @@
 #include <engine/sound.h>
 #include <engine/storage.h>
 #include <engine/textrender.h>
-#include <engine/loader.h>
 
 #include <engine/shared/config.h>
 #include <engine/shared/compression.h>
@@ -42,8 +41,6 @@
 #include "friends.h"
 #include "serverbrowser.h"
 #include "client.h"
-
-#include "glue.h"
 
 #if defined(CONF_FAMILY_WINDOWS)
 	#define _WIN32_WINNT 0x0501

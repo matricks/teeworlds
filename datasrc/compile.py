@@ -65,8 +65,9 @@ if gen_server_content_header:
 
 if gen_client_content_header or gen_server_content_header:
 	# print some includes
-	print('#include <engine/loader.h>')
-	print('#include <engine/client/glue.h> // TODO: REMOVE THIS') # TODO: Remove this
+	print('#include <engine/resources.h>')
+	print('#include <engine/resources_texture.h> // TODO: REMOVE THIS') # TODO: Remove this
+	print('#include <engine/resources_sound.h> // TODO: REMOVE THIS') # TODO: Remove this
 
 	# emit the type declarations
 	contentlines = open("datasrc/content.py", "rb").readlines()

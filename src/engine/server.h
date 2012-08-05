@@ -2,10 +2,10 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #ifndef ENGINE_SERVER_H
 #define ENGINE_SERVER_H
+
 #include "kernel.h"
 #include "message.h"
-
-#include "loader.h" // TODO: kinda ugly
+#include "resources.h" // TODO: kinda ugly
 
 class IServer : public IInterface
 {

@@ -5,7 +5,7 @@
 #include "kernel.h"
 
 #include "message.h"
-#include "loader.h" // TODO: kinda ugly
+#include "resources.h" // TODO: kinda ugly
 #include "graphics.h" // TODO: even uglier
 
 class IClient : public IInterface

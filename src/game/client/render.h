@@ -3,11 +3,10 @@
 #ifndef GAME_CLIENT_RENDER_H
 #define GAME_CLIENT_RENDER_H
 
-#include <engine/loader.h>
+#include <engine/graphics.h>
 #include <base/vmath.h>
 #include <game/mapitems.h>
 #include "ui.h"
-#include <engine/client/glue.h> // TODO: remove
 
 class CTeeRenderInfo
 {

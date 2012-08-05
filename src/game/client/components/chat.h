@@ -2,6 +2,8 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #ifndef GAME_CLIENT_COMPONENTS_CHAT_H
 #define GAME_CLIENT_COMPONENTS_CHAT_H
+
+#include <engine/resources_sound.h>
 #include <engine/shared/ringbuffer.h>
 #include <game/client/component.h>
 #include <game/client/lineinput.h>

@@ -6,7 +6,6 @@
 #include <engine/serverbrowser.h>
 #include <engine/shared/config.h>
 #include <engine/storage.h>
-#include <engine/loader.h>
 
 #include <game/layers.h>
 #include <game/client/gameclient.h>

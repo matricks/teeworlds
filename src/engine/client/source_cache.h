@@ -1,4 +1,4 @@
-#include <engine/loader.h>
+#include <engine/resources.h>
 
 class CSource_Cache : public CSource_Disk
 {

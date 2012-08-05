@@ -10,7 +10,7 @@
 #include <engine/storage.h>
 #include <engine/sound.h>
 #include <engine/serverbrowser.h>
-#include <engine/loader.h>
+#include <engine/resources.h>
 #include <engine/shared/demo.h>
 #include <engine/shared/config.h>
 

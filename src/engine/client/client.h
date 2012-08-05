@@ -3,9 +3,10 @@
 #ifndef ENGINE_CLIENT_CLIENT_H
 #define ENGINE_CLIENT_CLIENT_H
 
+#include <engine/resources_texture.h>
+#include <engine/resources_sound.h>
 #include "source_gameserver.h"
 #include "source_cache.h"
-#include "glue.h"
 
 class CGraph
 {
