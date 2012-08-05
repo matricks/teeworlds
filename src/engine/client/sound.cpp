@@ -352,15 +352,15 @@ ISound::CSampleHandle CSound::LoadWVFromMem(const void *pData, unsigned DataSize
 
 	// don't waste memory on sound when we are stress testing
 	if(g_Config.m_DbgStress)
-		return CSampleHandle(-1);
+		return CSampleHandle();
 
 	// no need to load sound when we are running with no sound
 	if(!m_SoundEnabled)
-		return CSampleHandle(1);
+		return CSampleHandle();
 
 	SampleID = AllocID();
 	if(SampleID < 0)
-		return CSampleHandle(-1);
+		return CSampleHandle();
 	pSample = &m_aSamples[SampleID];
 
 	//
@@ -386,7 +386,7 @@ ISound::CSampleHandle CSound::LoadWVFromMem(const void *pData, unsigned DataSize
 		if(pSample->m_Channels > 2)
 		{
 			dbg_msg("sound/wv", "wvdata is not mono or stereo.");
-			return CSampleHandle(-1);
+			return CSampleHandle();
 		}
 
 		/*
@@ -399,7 +399,7 @@ ISound::CSampleHandle CSound::LoadWVFromMem(const void *pData, unsigned DataSize
 		if(BitsPerSample != 16)
 		{
 			dbg_msg("sound/wv", "bps is %d, not 16,", BitsPerSample);
-			return CSampleHandle(-1);
+			return CSampleHandle();
 		}
 
 		pData = (int *)mem_alloc(4*m_aSamples*m_aChannels, 1);
@@ -425,19 +425,19 @@ ISound::CSampleHandle CSound::LoadWVFromMem(const void *pData, unsigned DataSize
 	}
 
 	RateConvert(SampleID);
-	return CSampleHandle(SampleID);
+	return CreateSampleHandle(SampleID);
 }
 
 ISound::CSampleHandle CSound::LoadWVFromFile(const char *pFilename)
 {
 	if(!m_pStorage)
-		return CSampleHandle(-1);
+		return CSampleHandle();
 
 	IOHANDLE hFile = m_pStorage->OpenFile(pFilename, IOFLAG_READ, IStorage::TYPE_ALL);
 	if(!hFile)
 	{
 		dbg_msg("sound/wv", "failed to open file. filename='%s'", pFilename);
-		return CSampleHandle(1);
+		return CSampleHandle();
 	}
 
 	// read the complete file
@@ -453,7 +453,7 @@ ISound::CSampleHandle CSound::LoadWVFromFile(const char *pFilename)
 	if(SampleId < 0)
 		dbg_msg("sound/wv", "failed to load sample. filename='%s'", pFilename);
 
-	return SampleId;
+	return CreateSampleHandle(SampleId);
 
 
 	/*
@@ -568,6 +568,9 @@ void CSound::SetChannel(int ChannelID, float Vol, float Pan)
 
 int CSound::Play(int ChannelID, CSampleHandle SampleID, int Flags, float x, float y)
 {
+	if(SampleID < 0)
+		return -1;
+
 	int VoiceID = -1;
 	int i;
 

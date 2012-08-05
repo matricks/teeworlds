@@ -3,7 +3,6 @@
 #ifndef ENGINE_GRAPHICS_H
 #define ENGINE_GRAPHICS_H
 
-#include <base/tl/strong_typedef.h>
 #include "kernel.h"
 
 class CImageInfo
@@ -59,7 +58,20 @@ public:
 		TEXLOAD_NORESAMPLE=1,
 	};
 
-	typedef strong_typedef<int, struct CSampleHandleUnique> CTextureHandle;
+
+	class CTextureHandle
+	{
+		friend class IGraphics;
+		int m_Id;
+	public:
+		CTextureHandle()
+		: m_Id(-1)
+		{}
+
+		operator int() const { return m_Id; }
+	};
+
+	//typedef strong_typedef<int, struct CSampleHandleUnique> CTextureHandle;
 
 	int ScreenWidth() const { return m_ScreenWidth; }
 	int ScreenHeight() const { return m_ScreenHeight; }
@@ -85,7 +97,7 @@ public:
 	virtual CTextureHandle LoadTextureRaw(int Width, int Height, int Format, const void *pData, int StoreFormat, int Flags) = 0;
 	virtual CTextureHandle LoadTexture(const char *pFilename, int StorageType, int StoreFormat, int Flags) = 0;
 	virtual void TextureSet(CTextureHandle Texture) = 0;
-	void TextureClear() { TextureSet(CTextureHandle(-1)); }
+	void TextureClear() { TextureSet(CTextureHandle()); }
 
 	struct CLineItem
 	{
@@ -136,6 +148,14 @@ public:
 	virtual int GetVideoModes(CVideoMode *pModes, int MaxModes) = 0;
 
 	virtual void Swap() = 0;
+
+protected:
+	inline CTextureHandle CreateTextureHandle(int Index)
+	{
+		CTextureHandle Tex;
+		Tex.m_Id = Index;
+		return Tex;
+	}
 };
 
 class IEngineGraphics : public IGraphics

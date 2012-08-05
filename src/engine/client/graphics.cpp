@@ -381,7 +381,7 @@ IGraphics::CTextureHandle CGraphics_OpenGL::LoadTextureRaw(int Width, int Height
 
 	m_TextureMemoryUsage += m_aTextures[Tex].m_MemSize;
 	mem_free(pTmpData);
-	return IGraphics::CTextureHandle(Tex);
+	return CreateTextureHandle(Tex);
 }
 
 // simple uncompressed RGBA loaders
@@ -400,7 +400,7 @@ IGraphics::CTextureHandle CGraphics_OpenGL::LoadTexture(const char *pFilename, i
 
 		ID = LoadTextureRaw(Img.m_Width, Img.m_Height, Img.m_Format, Img.m_pData, StoreFormat, Flags);
 		mem_free(Img.m_pData);
-		return IGraphics::CTextureHandle(ID);
+		return CreateTextureHandle(ID);
 	}
 
 	return m_InvalidTexture;

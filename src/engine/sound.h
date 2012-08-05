@@ -3,7 +3,6 @@
 #ifndef ENGINE_SOUND_H
 #define ENGINE_SOUND_H
 
-#include <base/tl/strong_typedef.h>
 #include "kernel.h"
 
 class ISound : public IInterface
@@ -19,7 +18,17 @@ public:
 		FLAG_ALL=3
 	};
 
-	typedef strong_typedef<int, struct CSampleHandleUnique> CSampleHandle;
+	class CSampleHandle
+	{
+		friend class ISound;
+		int m_Id;
+	public:
+		CSampleHandle()
+		: m_Id(-1)
+		{}
+
+		operator int() const { return m_Id; }
+	};
 
 	int MixingRate() const { return m_MixingRate; }
 
@@ -35,6 +44,14 @@ public:
 	virtual int Play(int ChannelID, CSampleHandle Sound, int Flags) = 0;
 	virtual void Stop(CSampleHandle Sound) = 0;
 	virtual void StopAll() = 0;
+
+protected:
+	inline CSampleHandle CreateSampleHandle(int Index)
+	{
+		CSampleHandle Tex;
+		Tex.m_Id = Index;
+		return Tex;
+	}
 };
 
 

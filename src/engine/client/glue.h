@@ -13,7 +13,6 @@ class CResource_Sample : public CResource
 	ISound::CSampleHandle m_Handle;
 public:
 	CResource_Sample()
-	: m_Handle(-1)
 	{
 		m_pData = 0;
 		m_DataSize = 0;
@@ -48,7 +47,7 @@ public:
 	operator ISound::CSampleHandle() const
 	{
 		if(!Get())
-			return ISound::CSampleHandle(-1);
+			return ISound::CSampleHandle();
 		return ((CResource_Sample *)Get())->GetId();
 	}
 };
@@ -59,7 +58,6 @@ class CResource_Texture : public CResource
 public:
 	CResource_Texture()
 	{
-		m_Handle = IGraphics::CTextureHandle(-1);
 		m_MemSize = 0;
 		m_Flags = 0;
 		mem_zero(&m_ImageInfo, sizeof(m_ImageInfo));
@@ -96,7 +94,7 @@ public:
 	operator IGraphics::CTextureHandle() const
 	{
 		if(!Get())
-			return IGraphics::CTextureHandle(-1);
+			return IGraphics::CTextureHandle();
 		return ((CResource_Texture *)Get())->m_Handle;
 	}
 };
