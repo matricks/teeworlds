@@ -91,7 +91,7 @@ void CGraph::Render(IGraphics *pGraphics, IGraphics::CTextureHandle FontTexture,
 	//m_pGraphics->BlendNormal();
 
 
-	pGraphics->TextureSet(IGraphics::CTextureHandle());
+	pGraphics->TextureClear();
 
 	pGraphics->QuadsBegin();
 	pGraphics->SetColor(0, 0, 0, 0.75f);

@@ -9,18 +9,13 @@ class CResource_Texture : public CResource
 public:
 	CResource_Texture()
 	{
-		m_MemSize = 0;
-		m_Flags = 0;
 		mem_zero(&m_ImageInfo, sizeof(m_ImageInfo));
 	}
 
 	IGraphics::CTextureHandle m_Handle;
-	int m_MemSize;
-	int m_Flags;
 
 	// used for loading the texture
-	// TODO: should perhaps just be stored at load time
-	CImageInfo m_ImageInfo;
+	CImageInfo m_ImageInfo; // TODO: should perhaps just be stored at load time
 };
 
 class CResourceHandler_Texture : public IResources::IHandler
