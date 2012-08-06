@@ -18,7 +18,6 @@
 #include <engine/keys.h>
 #include <engine/map.h>
 #include <engine/masterserver.h>
-#include <engine/serverbrowser.h>
 #include <engine/sound.h>
 #include <engine/storage.h>
 #include <engine/textrender.h>
@@ -30,9 +29,7 @@
 #include <engine/shared/filecollection.h>
 #include <engine/shared/mapchecker.h>
 #include <engine/shared/network.h>
-#include <engine/shared/packer.h>
 #include <engine/shared/protocol.h>
-#include <engine/shared/ringbuffer.h>
 #include <engine/shared/snapshot.h>
 
 #include <mastersrv/mastersrv.h>
