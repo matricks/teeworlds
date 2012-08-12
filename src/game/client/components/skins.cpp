@@ -32,58 +32,8 @@ int CSkins::SkinPartScan(const char *pName, int IsDir, int DirType, void *pUser)
 
 	char aBuf[512];
 	str_format(aBuf, sizeof(aBuf), "skins/%s/%s", gs_apFolders[pSelf->m_ScanningPart], pName);
-	CImageInfo Info;
-	if(!pSelf->Graphics()->LoadPNG(&Info, aBuf, DirType))
-	{
-		str_format(aBuf, sizeof(aBuf), "failed to load skin from %s", pName);
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "game", aBuf);
-		return 0;
-	}
-
 	CSkinPart Part;
-	Part.m_OrgTexture = pSelf->Graphics()->LoadTextureRaw(Info.m_Width, Info.m_Height, Info.m_Format, Info.m_pData, Info.m_Format, 0);
-
-
-	unsigned char *d = (unsigned char *)Info.m_pData;
-	int Pitch = Info.m_Width*4;
-
-	// dig out blood color
-	if(pSelf->m_ScanningPart == SKINPART_BODY)
-	{
-		int PartX = Info.m_Width/2;
-		int PartY = 0;
-		int PartWidth = Info.m_Width/2;
-		int PartHeight = Info.m_Height/2;
-
-		int aColors[3] = {0};
-		for(int y = PartY; y < PartY+PartHeight; y++)
-			for(int x = PartX; x < PartX+PartWidth; x++)
-			{
-				if(d[y*Pitch+x*4+3] > 128)
-				{
-					aColors[0] += d[y*Pitch+x*4+0];
-					aColors[1] += d[y*Pitch+x*4+1];
-					aColors[2] += d[y*Pitch+x*4+2];
-				}
-			}
-
-		Part.m_BloodColor = normalize(vec3(aColors[0], aColors[1], aColors[2]));
-	}
-
-	// create colorless version
-	int Step = Info.m_Format == CImageInfo::FORMAT_RGBA ? 4 : 3;
-
-	// make the texture gray scale
-	for(int i = 0; i < Info.m_Width*Info.m_Height; i++)
-	{
-		int v = (d[i*Step]+d[i*Step+1]+d[i*Step+2])/3;
-		d[i*Step] = v;
-		d[i*Step+1] = v;
-		d[i*Step+2] = v;
-	}
-
-	Part.m_ColorTexture = pSelf->Graphics()->LoadTextureRaw(Info.m_Width, Info.m_Height, Info.m_Format, Info.m_pData, Info.m_Format, 0);
-	mem_free(Info.m_pData);
+	Part.m_Texture = pSelf->Resources()->GetResource(aBuf);
 
 	// set skin part data
 	str_copy(Part.m_aName, pName, min((int)sizeof(Part.m_aName),l-3));
@@ -205,6 +155,59 @@ int CSkins::SkinScan(const char *pName, int IsDir, int DirType, void *pUser)
 	return 0;
 }
 
+// a bit ugly, but have todo for now
+static const char *gs_aSkinParts[NUM_SKINPARTS][20] = {
+	// body
+	{
+		"bear",
+		"kitty",
+		"standard",
+		"x_ninja",
+		NULL,
+	},
+	// tattoo
+	{
+		"bear",
+		"cammo1",
+		"cammo2",
+		"cammostripes",
+		"donny",
+		"duodonny",
+		"saddo",
+		"stripe",
+		"stripes",
+		"toptri",
+		"twintri",
+		"uppy",
+		"warpaint",
+		"whisker",
+		NULL,
+	},
+	// decoration
+	{
+		"hair",
+		"twinbopp",
+		"unibop",
+		NULL,
+	},
+	// hands
+	{
+		"standard",
+		NULL,
+	},
+	// feet
+	{
+		"standard",
+		NULL,
+	},
+	// eyes
+	{
+		"standard",
+		"standardreal",
+		NULL,
+	},
+};
+
 
 void CSkins::OnInit()
 {
@@ -221,19 +224,16 @@ void CSkins::OnInit()
 			m_aaSkinParts[p].add(NoneSkinPart);
 		}
 
-		// load skin parts
-		char aBuf[64];
-		str_format(aBuf, sizeof(aBuf), "skins/%s", gs_apFolders[p]);
-		m_ScanningPart = p;
-		Storage()->ListDirectory(IStorage::TYPE_ALL, aBuf, SkinPartScan, this);
-
-		// add dummy skin part
-		if(!m_aaSkinParts[p].size())
+		for(int i = 0; gs_aSkinParts[p][i]; i++)
 		{
-			CSkinPart DummySkinPart;
-			str_copy(DummySkinPart.m_aName, "dummy", sizeof(DummySkinPart.m_aName));
-			DummySkinPart.m_BloodColor = vec3(1.0f, 1.0f, 1.0f);
-			m_aaSkinParts[p].add(DummySkinPart);
+			CSkinPart Part;
+			const char *pName = gs_aSkinParts[p][i];
+			str_copy(Part.m_aName, pName, sizeof(Part.m_aName));
+
+			char aBuf[512];
+			str_format(aBuf, sizeof(aBuf), "skins/%s/%s.png", gs_apFolders[p], pName);
+			Part.m_Texture = Resources()->GetResource(aBuf);
+			m_aaSkinParts[p].add(Part);
 		}
 	}
 
@@ -253,13 +253,8 @@ void CSkins::OnInit()
 		m_DummySkin.m_aUseCustomColors[p] = 0;
 	}
 
-	// load skins
-	m_aSkins.clear();
-	Storage()->ListDirectory(IStorage::TYPE_ALL, "skins", SkinScan, this);
-
 	// add dummy skin
-	if(!m_aSkins.size())
-		m_aSkins.add(m_DummySkin);
+	m_aSkins.add(m_DummySkin);
 }
 
 int CSkins::Num()

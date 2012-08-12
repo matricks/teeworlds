@@ -948,79 +948,36 @@ void CMenus::RenderNews(CUIRect MainView)
 	RenderTools()->DrawUIRect(&MainView, vec4(1.0f, 1.0f, 1.0f, 0.25f), CUI::CORNER_ALL, 10.0f);
 }
 
+void CMenus::LoadMenuImage(const char *pName)
+{
+	CMenuImage MenuImage;
+	str_copy(MenuImage.m_aName, pName, sizeof(MenuImage.m_aName));
+	char aBuf[512];
+	str_format(aBuf, sizeof(aBuf), "menuimages/%s.png", pName);
+	MenuImage.m_OrgTexture = Resources()->GetResource(aBuf);
+	str_format(aBuf, sizeof(aBuf), "menuimages/%s.gray.png", pName);
+	MenuImage.m_GreyTexture = Resources()->GetResource(aBuf);
+	m_lMenuImages.add(MenuImage);
+}
+
+/*
 int CMenus::MenuImageScan(const char *pName, int IsDir, int DirType, void *pUser)
 {
 	CMenus *pSelf = (CMenus *)pUser;
 	int l = str_length(pName);
-	if(l < 4 || IsDir || str_comp(pName+l-4, ".png") != 0)
+	if(l < 4 || IsDir || str_comp(pName+l-4, ".png") != 0 || str_find(pName, ".gray.png") != 0)
 		return 0;
-
-	char aBuf[512];
-	str_format(aBuf, sizeof(aBuf), "menuimages/%s", pName);
-	CImageInfo Info;
-	if(!pSelf->Graphics()->LoadPNG(&Info, aBuf, DirType))
-	{
-		str_format(aBuf, sizeof(aBuf), "failed to load menu image from %s", pName);
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "game", aBuf);
-		return 0;
-	}
 
 	CMenuImage MenuImage;
-	MenuImage.m_OrgTexture = pSelf->Graphics()->LoadTextureRaw(Info.m_Width, Info.m_Height, Info.m_Format, Info.m_pData, Info.m_Format, 0);
+	char aBuf[512];
+	str_format(aBuf, sizeof(aBuf), "menuimages/%s", pName);
+	
+	MenuImage.m_OrgTexture = pSelf->Resources()->GetResource(aBuf);
 
-	unsigned char *d = (unsigned char *)Info.m_pData;
-	//int Pitch = Info.m_Width*4;
-
-	// create colorless version
-	int Step = Info.m_Format == CImageInfo::FORMAT_RGBA ? 4 : 3;
-
-	// make the texture gray scale
-	for(int i = 0; i < Info.m_Width*Info.m_Height; i++)
-	{
-		int v = (d[i*Step]+d[i*Step+1]+d[i*Step+2])/3;
-		d[i*Step] = v;
-		d[i*Step+1] = v;
-		d[i*Step+2] = v;
-	}
-
-	/* same grey like sinks
-	int Freq[256] = {0};
-	int OrgWeight = 0;
-	int NewWeight = 192;
-
-	// find most common frequence
-	for(int y = 0; y < Info.m_Height; y++)
-		for(int x = 0; x < Info.m_Width; x++)
-		{
-			if(d[y*Pitch+x*4+3] > 128)
-				Freq[d[y*Pitch+x*4]]++;
-		}
-
-	for(int i = 1; i < 256; i++)
-	{
-		if(Freq[OrgWeight] < Freq[i])
-			OrgWeight = i;
-	}
-
-	// reorder
-	int InvOrgWeight = 255-OrgWeight;
-	int InvNewWeight = 255-NewWeight;
-	for(int y = 0; y < Info.m_Height; y++)
-		for(int x = 0; x < Info.m_Width; x++)
-		{
-			int v = d[y*Pitch+x*4];
-			if(v <= OrgWeight)
-				v = (int)(((v/(float)OrgWeight) * NewWeight));
-			else
-				v = (int)(((v-OrgWeight)/(float)InvOrgWeight)*InvNewWeight + NewWeight);
-			d[y*Pitch+x*4] = v;
-			d[y*Pitch+x*4+1] = v;
-			d[y*Pitch+x*4+2] = v;
-		}
-	*/
-
-	MenuImage.m_GreyTexture = pSelf->Graphics()->LoadTextureRaw(Info.m_Width, Info.m_Height, Info.m_Format, Info.m_pData, Info.m_Format, 0);
-	mem_free(Info.m_pData);
+	// load the gray version of it
+	aBuf[str_length(aBuf)-4] = 0; // cut out the .png part
+	str_append(aBuf, ".gray.png", sizeof(aBuf)); // add .gray.png
+	MenuImage.m_GreyTexture = pSelf->Resources()->GetResource(aBuf);
 
 	// set menu image data
 	str_copy(MenuImage.m_aName, pName, min((int)sizeof(MenuImage.m_aName),l-3));
@@ -1029,7 +986,7 @@ int CMenus::MenuImageScan(const char *pName, int IsDir, int DirType, void *pUser
 	pSelf->m_lMenuImages.add(MenuImage);
 
 	return 0;
-}
+}*/
 
 const CMenus::CMenuImage *CMenus::FindMenuImage(const char *pName)
 {
@@ -1044,8 +1001,12 @@ const CMenus::CMenuImage *CMenus::FindMenuImage(const char *pName)
 void CMenus::OnInit()
 {
 	// load menu images
-	m_lMenuImages.clear();
-	Storage()->ListDirectory(IStorage::TYPE_ALL, "menuimages", MenuImageScan, this);
+	//m_lMenuImages.clear();
+	LoadMenuImage("demos");
+	LoadMenuImage("editor");
+	LoadMenuImage("local_server");
+	LoadMenuImage("play_game");
+	LoadMenuImage("settings");
 
 	m_Music = Resources()->GetResource("audio/music_menu.wv");
 

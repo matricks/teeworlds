@@ -204,6 +204,8 @@ void CGameClient::OnInit()
 		Client()->SnapSetStaticsize(i, m_NetObjHandler.GetObjSize(i));
 
 	// load default font
+	m_DefaultFont = Resources()->GetResource("fonts/dejavusans.ttf");
+	/*
 	static CFont *pDefaultFont = 0;
 	char aFilename[512];
 	IOHANDLE File = Storage()->OpenFile("fonts/DejaVuSans.ttf", IOFLAG_READ, IStorage::TYPE_ALL, aFilename, sizeof(aFilename));
@@ -215,6 +217,7 @@ void CGameClient::OnInit()
 	}
 	if(!pDefaultFont)
 		Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "gameclient", "failed to load font. filename='fonts/DejaVuSans.ttf'");
+		*/
 
 	// init all components
 	for(int i = m_All.m_Num-1; i >= 0; --i)
@@ -397,6 +400,9 @@ void CGameClient::EvolveCharacter(CNetObj_Character *pCharacter, int Tick)
 
 void CGameClient::OnRender()
 {
+	TextRender()->SetDefaultFont(m_DefaultFont);
+
+
 	/*Graphics()->Clear(1,0,0);
 
 	menus->render_background();
@@ -1193,12 +1199,12 @@ void CGameClient::CClientData::UpdateRenderInfo(CGameClient *pGameClient, bool U
 			const CSkins::CSkinPart *pSkinPart = pGameClient->m_pSkins->GetSkinPart(p, m_SkinPartIDs[p]);
 			if(m_aUseCustomColors[p])
 			{
-				m_SkinInfo.m_aTextures[p] = pSkinPart->m_ColorTexture;
+				m_SkinInfo.m_aTextures[p] = pSkinPart->m_Texture;
 				m_SkinInfo.m_aColors[p] = pGameClient->m_pSkins->GetColorV4(m_aSkinPartColors[p], p==SKINPART_TATTOO);
 			}
 			else
 			{
-				m_SkinInfo.m_aTextures[p] = pSkinPart->m_OrgTexture;
+				m_SkinInfo.m_aTextures[p] = pSkinPart->m_Texture;
 				m_SkinInfo.m_aColors[p] = vec4(1.0f, 1.0f, 1.0f, 1.0f);
 			}
 		}
@@ -1211,7 +1217,7 @@ void CGameClient::CClientData::UpdateRenderInfo(CGameClient *pGameClient, bool U
 	{
 		for(int p = 0; p < NUM_SKINPARTS; p++)
 		{
-			m_RenderInfo.m_aTextures[p] = pGameClient->m_pSkins->GetSkinPart(p, m_SkinPartIDs[p])->m_ColorTexture;
+			m_RenderInfo.m_aTextures[p] = pGameClient->m_pSkins->GetSkinPart(p, m_SkinPartIDs[p])->m_Texture;
 			int ColorVal = pGameClient->m_pSkins->GetTeamColor(m_aUseCustomColors[p], m_aSkinPartColors[p], m_Team, p);
 			m_RenderInfo.m_aColors[p] = pGameClient->m_pSkins->GetColorV4(ColorVal, p==SKINPART_TATTOO);
 		}
@@ -1233,7 +1239,7 @@ void CGameClient::CClientData::Reset(CGameClient *pGameClient)
 	for(int p = 0; p < NUM_SKINPARTS; p++)
 	{
 		m_SkinPartIDs[p] = 0;
-		m_SkinInfo.m_aTextures[p] = pGameClient->m_pSkins->GetSkinPart(p, 0)->m_ColorTexture;
+		m_SkinInfo.m_aTextures[p] = pGameClient->m_pSkins->GetSkinPart(p, 0)->m_Texture;
 		m_SkinInfo.m_aColors[p] = vec4(1.0f, 1.0f, 1.0f , 1.0f);
 	}
 	UpdateRenderInfo(pGameClient, false);

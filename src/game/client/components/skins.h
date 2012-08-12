@@ -4,6 +4,7 @@
 #define GAME_CLIENT_COMPONENTS_SKINS_H
 #include <base/vmath.h>
 #include <base/tl/sorted_array.h>
+#include <engine/resources_texture.h>
 #include <game/client/component.h>
 
 enum
@@ -28,8 +29,7 @@ public:
 	struct CSkinPart
 	{
 		char m_aName[24];
-		IGraphics::CTextureHandle m_OrgTexture;
-		IGraphics::CTextureHandle m_ColorTexture;
+		CResourceHandleTexture m_Texture;
 		vec3 m_BloodColor;
 
 		bool operator<(const CSkinPart &Other) { return str_comp_nocase(m_aName, Other.m_aName) < 0; }

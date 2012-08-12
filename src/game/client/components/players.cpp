@@ -547,10 +547,10 @@ void CPlayers::OnRender()
 				for(int p = 0; p < NUM_SKINPARTS; p++)
 				{
 					if(IsTeamplay)
-						m_aRenderInfo[i].m_aTextures[p] = pNinja->m_apParts[p]->m_ColorTexture;
+						m_aRenderInfo[i].m_aTextures[p] = pNinja->m_apParts[p]->m_Texture;
 					else
 					{
-						m_aRenderInfo[i].m_aTextures[p] = pNinja->m_apParts[p]->m_OrgTexture;
+						m_aRenderInfo[i].m_aTextures[p] = pNinja->m_apParts[p]->m_Texture;
 						m_aRenderInfo[i].m_aColors[p] = vec4(1.0f, 1.0f, 1.0f, 1.0f);
 					}
 				}

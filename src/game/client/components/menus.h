@@ -162,13 +162,13 @@ class CMenus : public CComponent
 	struct CMenuImage
 	{
 		char m_aName[64];
-		IGraphics::CTextureHandle m_OrgTexture;
-		IGraphics::CTextureHandle m_GreyTexture;
+		CResourceHandleTexture m_OrgTexture;
+		CResourceHandleTexture m_GreyTexture;
 	};
 	array<CMenuImage> m_lMenuImages;
 
-	static int MenuImageScan(const char *pName, int IsDir, int DirType, void *pUser);
-
+	//static int MenuImageScan(const char *pName, int IsDir, int DirType, void *pUser);
+	void LoadMenuImage(const char *pName);
 	const CMenuImage *FindMenuImage(const char* pName);
 
 	int64 m_LastInput;

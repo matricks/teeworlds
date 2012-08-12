@@ -2,8 +2,10 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #ifndef GAME_CLIENT_COMPONENTS_COUNTRYFLAGS_H
 #define GAME_CLIENT_COMPONENTS_COUNTRYFLAGS_H
+
 #include <base/vmath.h>
 #include <base/tl/sorted_array.h>
+#include <engine/resources_texture.h>
 #include <game/client/component.h>
 
 class CCountryFlags : public CComponent
@@ -13,7 +15,7 @@ public:
 	{
 		int m_CountryCode;
 		char m_aCountryCodeString[8];
-		IGraphics::CTextureHandle m_Texture;
+		CResourceHandleTexture m_Texture;
 
 		bool operator<(const CCountryFlag &Other) { return str_comp(m_aCountryCodeString, Other.m_aCountryCodeString) < 0; }
 	};

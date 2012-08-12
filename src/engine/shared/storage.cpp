@@ -196,6 +196,8 @@ public:
 			return;
 		}
 
+		return;
+
 		// 2) use compiled-in data-dir if present
 		if(IsDataDir(DATA_DIR))
 		{

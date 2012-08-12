@@ -6,6 +6,7 @@
 #include <base/vmath.h>
 #include <engine/client.h>
 #include <engine/console.h>
+#include <engine/resources_font.h>
 #include <game/layers.h>
 #include <game/gamecore.h>
 #include "render.h"
@@ -83,6 +84,8 @@ class CGameClient : public IGameClient
 
 
 	void EvolveCharacter(CNetObj_Character *pCharacter, int Tick);
+
+	CResourceHandleFont m_DefaultFont;
 
 public:
 	~CGameClient();

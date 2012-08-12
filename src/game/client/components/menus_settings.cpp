@@ -334,12 +334,12 @@ void CMenus::RenderSkinSelection(CUIRect MainView)
 			{
 				if(s->m_aUseCustomColors[p])
 				{
-					Info.m_aTextures[p] = s->m_apParts[p]->m_ColorTexture;
+					Info.m_aTextures[p] = s->m_apParts[p]->m_Texture;
 					Info.m_aColors[p] = m_pClient->m_pSkins->GetColorV4(s->m_aPartColors[p], p==SKINPART_TATTOO);
 				}
 				else
 				{
-					Info.m_aTextures[p] = s->m_apParts[p]->m_OrgTexture;
+					Info.m_aTextures[p] = s->m_apParts[p]->m_Texture;
 					Info.m_aColors[p] = vec4(1.0f, 1.0f, 1.0f, 1.0f);
 				}
 			}
@@ -423,17 +423,17 @@ void CMenus::RenderSkinPartSelection(CUIRect MainView)
 				if(*gs_apUCCVariables[j])
 				{
 					if(p == j)
-						Info.m_aTextures[j] = s->m_ColorTexture;
+						Info.m_aTextures[j] = s->m_Texture;
 					else
-						Info.m_aTextures[j] = pSkinPart->m_ColorTexture;
+						Info.m_aTextures[j] = pSkinPart->m_Texture;
 					Info.m_aColors[j] = m_pClient->m_pSkins->GetColorV4(*gs_apColorVariables[j], j==SKINPART_TATTOO);
 				}
 				else
 				{
 					if(p == j)
-						Info.m_aTextures[j] = s->m_OrgTexture;
+						Info.m_aTextures[j] = s->m_Texture;
 					else
-						Info.m_aTextures[j] = pSkinPart->m_OrgTexture;
+						Info.m_aTextures[j] = pSkinPart->m_Texture;
 					Info.m_aColors[j] = vec4(1.0f, 1.0f, 1.0f, 1.0f);
 				}
 			}
@@ -866,12 +866,12 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 			const CSkins::CSkinPart *pSkinPart = m_pClient->m_pSkins->GetSkinPart(p, SkinPart);
 			if(*gs_apUCCVariables[p])
 			{
-				OwnSkinInfo.m_aTextures[p] = pSkinPart->m_ColorTexture;
+				OwnSkinInfo.m_aTextures[p] = pSkinPart->m_Texture;
 				OwnSkinInfo.m_aColors[p] = m_pClient->m_pSkins->GetColorV4(*gs_apColorVariables[p], p==SKINPART_TATTOO);
 			}
 			else
 			{
-				OwnSkinInfo.m_aTextures[p] = pSkinPart->m_OrgTexture;
+				OwnSkinInfo.m_aTextures[p] = pSkinPart->m_Texture;
 				OwnSkinInfo.m_aColors[p] = vec4(1.0f, 1.0f, 1.0f, 1.0f);
 			}
 		}
@@ -964,7 +964,7 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 			{
 				int SkinPart = m_pClient->m_pSkins->FindSkinPart(p, gs_apSkinVariables[p]);
 				const CSkins::CSkinPart *pSkinPart = m_pClient->m_pSkins->GetSkinPart(p, SkinPart);
-				Tex = pSkinPart->m_OrgTexture;
+				Tex = pSkinPart->m_Texture;
 				Sprite = s_aSprites[p];
 			}
 

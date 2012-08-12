@@ -5,8 +5,10 @@
 
 #include <engine/resources_texture.h>
 #include <engine/resources_sound.h>
+#include <engine/resources_font.h>
 #include "source_gameserver.h"
 #include "source_cache.h"
+#include "source_http.h"
 
 class CGraph
 {
@@ -240,8 +242,10 @@ public:
 	CSource_GameServer *m_pSourceGameServer;
 	CSource_Disk *m_pSourceDisk;
 	CSource_Cache *m_pSourceCache;
+	CSource_Http *m_pSourceHttp;
 	CResourceHandler_Sound m_ResourceHandlerSound;
 	CResourceHandler_Texture m_ResourceHandlerTexture;
+	CResourceHandler_Font m_ResourceHandlerFont;
 
 	//
 	IEngine *Engine() { return m_pEngine; }

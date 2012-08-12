@@ -238,9 +238,10 @@ void CSmoothTime::Update(CGraph *pGraph, int64 Target, int TimeLeft, int AdjustD
 CClient::CClient()
 : m_DemoPlayer(&m_SnapshotDelta), m_DemoRecorder(&m_SnapshotDelta)
 {
-	m_pSourceDisk = new CSource_Disk("data");
+	m_pSourceDisk = new CSource_Disk("../data");
 	m_pSourceCache = new CSource_Cache("cache");
 	m_pSourceGameServer = new CSource_GameServer();
+	m_pSourceHttp = new CSource_Http();
 
 	m_pEditor = 0;
 	m_pInput = 0;
@@ -2408,13 +2409,17 @@ int main(int argc, const char **argv) // ignore_convention
 	}
 
 	// setup resource system
-	pResources->AddSource(pClient->m_pSourceDisk);
+	//pResources->AddSource(pClient->m_pSourceDisk);
 	pResources->AddSource(pClient->m_pSourceCache);
+	pResources->AddSource(pClient->m_pSourceHttp);
 	pResources->AddSource(pClient->m_pSourceGameServer);
 
 	pClient->m_ResourceHandlerSound.m_pSound = pKernel->RequestInterface<ISound>();
+	pClient->m_ResourceHandlerFont.m_pTextRender = pEngineTextRender;
+
 	pResources->AssignHandler("wv", &pClient->m_ResourceHandlerSound);
 	pResources->AssignHandler("png", &pClient->m_ResourceHandlerTexture);
+	pResources->AssignHandler("ttf", &pClient->m_ResourceHandlerFont);
 
 	// do inits
 	pEngine->Init();

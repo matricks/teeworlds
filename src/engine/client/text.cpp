@@ -62,8 +62,9 @@ struct CFontSizeData
 class CFont
 {
 public:
-	char m_aFilename[512];
 	FT_Face m_FtFace;
+	FT_Byte *m_pData;
+	unsigned m_DataSize;
 	CFontSizeData m_aSizes[NUM_FONT_SIZES];
 };
 
@@ -459,16 +460,22 @@ public:
 		FT_Init_FreeType(&m_FTLibrary);
 	}
 
-
-	virtual CFont *LoadFont(const char *pFilename)
+	//virtual CFont *LoadFont(const char *pFilename)
+	virtual CFont *LoadFont(const void *pData, unsigned DataSize)// = 0;
 	{
 		CFont *pFont = (CFont *)mem_alloc(sizeof(CFont), 1);
-
 		mem_zero(pFont, sizeof(*pFont));
-		str_copy(pFont->m_aFilename, pFilename, sizeof(pFont->m_aFilename));
 
-		if(FT_New_Face(m_FTLibrary, pFont->m_aFilename, 0, &pFont->m_FtFace))
+		// we need to keep a copy of the data
+		pFont->m_DataSize = DataSize;
+		pFont->m_pData = new FT_Byte[DataSize];
+		mem_copy(pFont->m_pData, pData, DataSize);
+
+		//if(FT_New_Face(m_FTLibrary, pFont->m_aFilename, 0, &pFont->m_FtFace))
+		if(FT_New_Memory_Face(m_FTLibrary, pFont->m_pData, pFont->m_DataSize, 0, &pFont->m_FtFace))
 		{
+			dbg_msg("textrender", "failed to load font, %p, %d", pData, DataSize);
+			delete [] pFont->m_pData;
 			mem_free(pFont);
 			return NULL;
 		}
@@ -476,18 +483,17 @@ public:
 		for(unsigned i = 0; i < NUM_FONT_SIZES; i++)
 			pFont->m_aSizes[i].m_FontSize = -1;
 
-		dbg_msg("textrender", "loaded pFont from '%s'", pFilename);
 		return pFont;
 	};
 
 	virtual void DestroyFont(CFont *pFont)
 	{
+		delete [] pFont->m_pData;
 		mem_free(pFont);
 	}
 
 	virtual void SetDefaultFont(CFont *pFont)
 	{
-		dbg_msg("textrender", "default pFont set %p", pFont);
 		m_pDefaultFont = pFont;
 	}
 

@@ -58,33 +58,21 @@ void CCountryFlags::LoadCountryflagsIndexfile()
 			continue;
 		}
 
-		// load the graphic file
-		char aBuf[128];
-		CImageInfo Info;
-		if(g_Config.m_ClLoadCountryFlags)
-		{
-			str_format(aBuf, sizeof(aBuf), "countryflags/%s.png", aOrigin);
-			if(!Graphics()->LoadPNG(&Info, aBuf, IStorage::TYPE_ALL))
-			{
-				char aMsg[128];
-				str_format(aMsg, sizeof(aMsg), "failed to load '%s'", aBuf);
-				Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "countryflags", aMsg);
-				continue;
-			}
-		}
-
 		// add entry
 		CCountryFlag CountryFlag;
 		CountryFlag.m_CountryCode = CountryCode;
 		str_copy(CountryFlag.m_aCountryCodeString, aOrigin, sizeof(CountryFlag.m_aCountryCodeString));
 		if(g_Config.m_ClLoadCountryFlags)
 		{
-			CountryFlag.m_Texture = Graphics()->LoadTextureRaw(Info.m_Width, Info.m_Height, Info.m_Format, Info.m_pData, Info.m_Format, 0);
-			mem_free(Info.m_pData);
+			// load the graphic file
+			char aBuf[128];
+			str_format(aBuf, sizeof(aBuf), "countryflags/%s.png", aOrigin);
+			CountryFlag.m_Texture = Resources()->GetResource(aBuf);
 		}
 		
 		if(g_Config.m_Debug)
 		{
+			char aBuf[128];
 			str_format(aBuf, sizeof(aBuf), "loaded country flag '%s'", aOrigin);
 			Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "countryflags", aBuf);
 		}

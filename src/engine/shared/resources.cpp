@@ -199,6 +199,11 @@ void IResources::CSource::Update()
 	while(m_lInput.size())
 	{
 		CLoadOrder Order = m_lInput.pop();
+		tl_assert(Order.m_pData == 0x0);
+		tl_assert(Order.m_DataSize == 0);
+
+		Order.m_pData = 0x0;
+		Order.m_DataSize = 0;
 
 		if(Load(&Order))
 		{
@@ -598,7 +603,7 @@ public:
 		while(m_lInserts.size())
 		{
 			CResource *pResource = m_lInserts.pop();
-			dbg_msg("resources", "inserting '%s'", pResource->Name());
+			//dbg_msg("resources", "inserting '%s'", pResource->Name());
 			pResource->m_pHandler->Insert(pResource);
 			pResource->m_State = CResource::STATE_LOADED;
 		}
@@ -608,7 +613,7 @@ public:
 	{
 		tl_assert(pResource->m_State != CResource::STATE_DESTROYED); // make that it isn't destoyed
 		tl_assert(m_Running);
-		dbg_msg("resources", "destroying '%s'", pResource->Name());
+		//dbg_msg("resources", "destroying '%s'", pResource->Name());
 		m_lpResources.remove_fast(pResource);
 		m_lDestroys.push(pResource);
 	}

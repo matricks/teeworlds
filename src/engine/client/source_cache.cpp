@@ -10,8 +10,8 @@ bool CSource_Cache::Load(CLoadOrder *pOrder)
 {
 	// we can't load from the cache if we don't know the hash of the content.
 	// we might load the wrong version other wise
-	if(pOrder->m_pResource->ContentHash() == 0)
-		return false;
+	//if(pOrder->m_pResource->ContentHash() == 0)
+	//	return false;
 
 	char aFilename[512];
 	GetCacheName(aFilename, sizeof(aFilename), pOrder->m_pResource);
