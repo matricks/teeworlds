@@ -343,10 +343,70 @@ int CSound::ReadData(void *pBuffer, int BlockSize)
 	//return io_read(ms_File, pBuffer, Size);
 }
 
+ISound::CSampleHandle CSound::LoadRawFromMem(const void *pData, unsigned DataSize, int Channels, int SampleRate)
+{
+	// don't waste memory on sound when we are stress testing
+	if(g_Config.m_DbgStress)
+		return CSampleHandle();
+
+	// no need to load sound when we are running with no sound
+	if(!m_SoundEnabled)
+		return CSampleHandle();
+
+	int SampleID = AllocID();
+	if(SampleID < 0)
+		return CSampleHandle();
+
+	CSample *pSample = &m_aSamples[SampleID];
+	pSample->m_Channels = Channels;
+	pSample->m_Rate = SampleRate;
+
+	int NumFrames = DataSize/Channels/2;
+
+	pSample->m_pData = (short *)mem_alloc(DataSize, 1);
+	mem_copy(pSample->m_pData, pData, DataSize);
+	pSample->m_NumFrames = NumFrames;
+	pSample->m_LoopStart = -1;
+	pSample->m_LoopEnd = -1;
+	pSample->m_PausedAt = 0;
+
+	RateConvert(SampleID);
+	return CreateSampleHandle(SampleID);	
+}
+
+ISound::CSampleHandle CSound::LoadRawFromMemTakeOver(const void *pData, unsigned DataSize, int Channels, int SampleRate)
+{
+	// don't waste memory on sound when we are stress testing
+	if(g_Config.m_DbgStress)
+		return CSampleHandle();
+
+	// no need to load sound when we are running with no sound
+	if(!m_SoundEnabled)
+		return CSampleHandle();
+
+	int SampleID = AllocID();
+	if(SampleID < 0)
+		return CSampleHandle();
+
+	CSample *pSample = &m_aSamples[SampleID];
+	pSample->m_Channels = Channels;
+	pSample->m_Rate = SampleRate;
+
+	int NumFrames = DataSize/Channels/2;
+
+	pSample->m_pData = (short *)pData;
+	pSample->m_NumFrames = NumFrames;
+	pSample->m_LoopStart = -1;
+	pSample->m_LoopEnd = -1;
+	pSample->m_PausedAt = 0;
+
+	RateConvert(SampleID);
+	return CreateSampleHandle(SampleID);
+}
+
+
 ISound::CSampleHandle CSound::LoadWVFromMem(const void *pData, unsigned DataSize)
 {
-	CSample *pSample;
-	int SampleID = -1;
 	char aError[100];
 	WavpackContext *pContext;
 
@@ -358,11 +418,6 @@ ISound::CSampleHandle CSound::LoadWVFromMem(const void *pData, unsigned DataSize
 	if(!m_SoundEnabled)
 		return CSampleHandle();
 
-	SampleID = AllocID();
-	if(SampleID < 0)
-		return CSampleHandle();
-	pSample = &m_aSamples[SampleID];
-
 	//
 	ms_pWvBuffer = pData;
 	ms_WvBufferSize = DataSize;;
@@ -371,30 +426,16 @@ ISound::CSampleHandle CSound::LoadWVFromMem(const void *pData, unsigned DataSize
 	pContext = WavpackOpenFileInput(ReadData, aError);
 	if (pContext)
 	{
-		int m_aSamples = WavpackGetNumSamples(pContext);
+		int NumSamples = WavpackGetNumSamples(pContext);
 		int BitsPerSample = WavpackGetBitsPerSample(pContext);
 		unsigned int SampleRate = WavpackGetSampleRate(pContext);
-		int m_aChannels = WavpackGetNumChannels(pContext);
-		int *pData;
-		int *pSrc;
-		short *pDst;
-		int i;
+		int NumChannels = WavpackGetNumChannels(pContext);
 
-		pSample->m_Channels = m_aChannels;
-		pSample->m_Rate = SampleRate;
-
-		if(pSample->m_Channels > 2)
+		if(NumChannels > 2)
 		{
 			dbg_msg("sound/wv", "wvdata is not mono or stereo.");
 			return CSampleHandle();
 		}
-
-		/*
-		if(snd->rate != 44100)
-		{
-			dbg_msg("sound/wv", "file is %d Hz, not 44100 Hz. filename='%s'", snd->rate, filename);
-			return -1;
-		}*/
 
 		if(BitsPerSample != 16)
 		{
@@ -402,30 +443,32 @@ ISound::CSampleHandle CSound::LoadWVFromMem(const void *pData, unsigned DataSize
 			return CSampleHandle();
 		}
 
-		pData = (int *)mem_alloc(4*m_aSamples*m_aChannels, 1);
-		WavpackUnpackSamples(pContext, pData, m_aSamples); // TODO: check return value
-		pSrc = pData;
+		int *pData = (int *)mem_alloc(4*NumSamples*NumChannels, 1);
+		WavpackUnpackSamples(pContext, pData, NumSamples); // TODO: check return value
 
-		pSample->m_pData = (short *)mem_alloc(2*m_aSamples*m_aChannels, 1);
-		pDst = pSample->m_pData;
+		int S16Size = 2*NumSamples*NumChannels;
+		short *pS16Data = (short *)mem_alloc(S16Size, 1);
 
-		for (i = 0; i < m_aSamples*m_aChannels; i++)
-			*pDst++ = (short)*pSrc++;
+		// convert down to S16
+		{
+			int *pSrc = pData;
+			short *pDst = pS16Data;
+			for (int i = 0; i < NumSamples*NumChannels; i++)
+				*pDst++ = (short)*pSrc++;
+		}
 
+		ISound::CSampleHandle SampleHandle = LoadRawFromMem(pS16Data, S16Size, NumChannels, SampleRate);
 		mem_free(pData);
+		mem_free(pS16Data);
 
-		pSample->m_NumFrames = m_aSamples;
-		pSample->m_LoopStart = -1;
-		pSample->m_LoopEnd = -1;
-		pSample->m_PausedAt = 0;
+		return SampleHandle;
 	}
 	else
 	{
 		dbg_msg("sound/wv", "failed to open: %s", aError);
 	}
 
-	RateConvert(SampleID);
-	return CreateSampleHandle(SampleID);
+	return CSampleHandle();
 }
 
 ISound::CSampleHandle CSound::LoadWVFromFile(const char *pFilename)

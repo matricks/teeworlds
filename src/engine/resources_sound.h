@@ -6,8 +6,12 @@
 class CResource_Sample : public CResource
 {
 	friend class CResourceHandler_Sound;
+	
+	// used for loading
 	char *m_pData;
 	int m_DataSize;
+	int m_NumChannels;
+	int m_SampleRate;
 
 	ISound::CSampleHandle m_Handle;
 public:
@@ -26,6 +30,10 @@ public:
 
 class CResourceHandler_Sound : public IResources::IHandler
 {
+	static __thread const void *ms_pWvBuffer;
+	static __thread int ms_WvBufferSize;
+	static __thread int ms_WvBufferPos;
+	static __thread int ReadData(void *pBuffer, int Size);
 public:
 	ISound *m_pSound;
 	virtual CResource *Create(IResources::CResourceId Id);

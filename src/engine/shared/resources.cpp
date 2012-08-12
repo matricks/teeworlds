@@ -207,7 +207,7 @@ void IResources::CSource::Update()
 
 		if(Load(&Order))
 		{
-			dbg_msg("resources", "[%s] loaded %s", Name(), Order.m_pResource->Name());
+			//dbg_msg("resources", "[%s] loaded %s", Name(), Order.m_pResource->Name());
 			FeedbackOrder(&Order);
 		}
 		else
@@ -384,7 +384,7 @@ class CResources : public IResources
 		IHandler *pHandler = pInfo->m_pResource->m_pHandler;
 
 		//dbg_msg("resources", "processing '%s'", pInfo->m_pResource->m_Id.m_pName);
-		if(pHandler->Load(pInfo->m_pResource, pInfo->m_pData, pInfo->m_DataSize) != 0)
+		if(!pHandler->Load(pInfo->m_pResource, pInfo->m_pData, pInfo->m_DataSize))
 		{
 			dbg_msg("resources", "failed to process '%s'", pInfo->m_pResource->m_Id.m_pName);
 			pInfo->m_pResource->m_State = CResource::STATE_ERROR;
@@ -600,13 +600,30 @@ public:
 		}
 
 		// handle all resource inserts
+		int64 StartTime = time_get();
+		int64 TimeSlice = time_freq()/100/2; // 5ms
 		while(m_lInserts.size())
 		{
 			CResource *pResource = m_lInserts.pop();
 			//dbg_msg("resources", "inserting '%s'", pResource->Name());
-			pResource->m_pHandler->Insert(pResource);
+			{
+				int64 StartTime = time_get();
+				pResource->m_pHandler->Insert(pResource);
+				int64 EndTime = time_get();
+				if(EndTime - StartTime > time_freq()/1000)
+					dbg_msg("resources", "insert took %.2fms (%s)", (EndTime - StartTime) / (double)time_freq() * 1000, pResource->Name());
+			}
 			pResource->m_State = CResource::STATE_LOADED;
+
+			// make sure that we don't spend too much time inserting resources
+			int64 EndTime = time_get();
+			if(EndTime-StartTime > TimeSlice)
+			{
+				dbg_msg("resources", "inserts %.2fms waiting for next frame todo more", (EndTime - StartTime) / (double)time_freq() * 1000);
+				break;
+			}
 		}
+			
 	}
 
 	virtual	void Destroy(CResource *pResource)

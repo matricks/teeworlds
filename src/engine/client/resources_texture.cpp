@@ -29,13 +29,13 @@ bool CResourceHandler_Texture::Load(CResource *pResource, void *pData, unsigned 
 	if(Error != PNG_NO_ERROR)
 	{
 		dbg_msg("graphics", "failed to open file. name='%s'", pResource->Name());
-		return -1;// 0;
+		return false;// 0;
 	}
 
 	if(Png.depth != 8 || (Png.color_type != PNG_TRUECOLOR && Png.color_type != PNG_TRUECOLOR_ALPHA)) // ignore_convention
 	{
 		dbg_msg("graphics", "invalid format. filename='%s'", pResource->Name());
-		return -2;// 0;
+		return false;// 0;
 	}
 
 	unsigned char *pBuffer = (unsigned char *)mem_alloc(Png.width * Png.height * Png.bpp, 1); // ignore_convention
@@ -48,7 +48,7 @@ bool CResourceHandler_Texture::Load(CResource *pResource, void *pData, unsigned 
 	else if(Png.color_type == PNG_TRUECOLOR_ALPHA) // ignore_convention
 		pTexture->m_ImageInfo.m_Format = CImageInfo::FORMAT_RGBA;
 	pTexture->m_ImageInfo.m_pData = pBuffer;
-	return 0;
+	return true;
 }
 
 // called from the main thread

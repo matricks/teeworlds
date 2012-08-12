@@ -13,7 +13,7 @@ bool CResourceHandler_Font::Load(CResource *pResource, void *pData, unsigned Dat
 	pFont->m_pData = new char [DataSize];
 	mem_copy(pFont->m_pData, pData, DataSize);
 	pFont->m_DataSize = DataSize;
-	return false;
+	return true;
 }
 
 bool CResourceHandler_Font::Insert(CResource *pResource)

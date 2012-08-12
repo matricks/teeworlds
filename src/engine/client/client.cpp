@@ -48,6 +48,8 @@
 	#include <windows.h>
 #endif
 
+static int64 gs_BootTime = 0;
+
 #include "SDL.h"
 #ifdef main
 #undef main
@@ -1966,6 +1968,8 @@ void CClient::Run()
 			{
 				m_RenderFrames++;
 
+				int64 RenderStartTime = time_get();
+
 				// update frametime
 				int64 Now = time_get();
 				m_RenderFrameTime = (Now - m_LastRenderTime) / (float)time_freq();
@@ -2001,6 +2005,13 @@ void CClient::Run()
 						DebugRender();
 					}
 					m_pGraphics->Swap();
+				}
+
+				if(m_RenderFrames == 1)
+				{
+					int64 RenderEndTime = time_get();
+					dbg_msg("client", "%.2fms from boot first render", (RenderStartTime - gs_BootTime) / (double)time_freq() * 1000);
+					dbg_msg("client", "%.2fms from boot to sync", (RenderEndTime - gs_BootTime) / (double)time_freq() * 1000);
 				}
 			}
 		}
@@ -2348,6 +2359,9 @@ extern "C" int SDL_main(int argc, char **argv_) // ignore_convention
 int main(int argc, const char **argv) // ignore_convention
 {
 #endif
+
+	gs_BootTime = time_get();
+
 #if defined(CONF_FAMILY_WINDOWS)
 	for(int i = 1; i < argc; i++) // ignore_convention
 	{

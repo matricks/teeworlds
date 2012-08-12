@@ -31,6 +31,8 @@ public:
 
 	virtual CSampleHandle LoadWVFromFile(const char *pFilename);
 	virtual CSampleHandle LoadWVFromMem(const void *pData, unsigned DataSize);
+	virtual CSampleHandle LoadRawFromMem(const void *pData, unsigned DataSize, int Channels, int SampleRate);
+	virtual CSampleHandle LoadRawFromMemTakeOver(const void *pData, unsigned DataSize, int Channels, int SampleRate);
 
 	virtual void SetListenerPos(float x, float y);
 	virtual void SetChannel(int ChannelID, float Vol, float Pan);

@@ -9,131 +9,107 @@ CResource *CResourceHandler_Sound::Create(IResources::CResourceId Id)
 	return new CResource_Sample();
 }
 
-// Ugly TLS solution
-/*
-__thread char *gt_pWVData;
-__thread int gt_WVDataSize;
-static int ThreadReadData(void *pBuffer, int ChunkSize)
+//
+__thread const void *CResourceHandler_Sound::ms_pWvBuffer = NULL;
+__thread int CResourceHandler_Sound::ms_WvBufferSize = 0;
+__thread int CResourceHandler_Sound::ms_WvBufferPos = 0;
+
+int CResourceHandler_Sound::ReadData(void *pBuffer, int BlockSize)
 {
-	if(ChunkSize > gt_WVDataSize)
-		ChunkSize = gt_WVDataSize;
-	mem_copy(pBuffer, gt_pWVData, ChunkSize);
-	gt_pWVData += ChunkSize;
-	gt_WVDataSize -= ChunkSize;
-	return ChunkSize;
-}*/
+	// clamp the block size
+	BlockSize = ms_WvBufferSize - ms_WvBufferPos < BlockSize ? ms_WvBufferSize - ms_WvBufferPos : BlockSize;
+	mem_copy(pBuffer, (const char *)ms_pWvBuffer + ms_WvBufferPos, BlockSize);
+	ms_WvBufferPos += BlockSize;
+	return BlockSize;
+}
 
 bool CResourceHandler_Sound::Load(CResource *pResource, void *pData, unsigned DataSize)
 {
 	CResource_Sample *pSample = static_cast<CResource_Sample*>(pResource);
-	
-	// just copy the data for now
-	pSample->m_pData = new char [DataSize];
-	mem_copy(pSample->m_pData, pData, DataSize);
-	pSample->m_DataSize = DataSize;
-	return false;
+	WavpackContext *pContext;
 
-	/*
-	char aError[100];
-	gt_pWVData = (char*)pData;
-	gt_WVDataSize = DataSize;
-	WavpackContext *pContext = WavpackOpenFileInput(ThreadReadData, aError);
-	if (pContext)
+	//
+	ms_pWvBuffer = pData;
+	ms_WvBufferSize = DataSize;;
+	ms_WvBufferPos = 0;
+
+	char aError[128];
+	pContext = WavpackOpenFileInput(ReadData, aError);
+	if(!pContext)
+		return false;
+
+	int NumSamples = WavpackGetNumSamples(pContext);
+	int BitsPerSample = WavpackGetBitsPerSample(pContext);
+	unsigned SampleRate = WavpackGetSampleRate(pContext);
+	int NumChannels = WavpackGetNumChannels(pContext);
+
+	if(NumChannels > 2 || BitsPerSample != 16)
+		return false;
+
+	int *pS32Data = (int *)mem_alloc(4*NumSamples*NumChannels, 1);
+	WavpackUnpackSamples(pContext, pS32Data, NumSamples); // TODO: check return value
+
+	int S16Size = 2*NumSamples*NumChannels;
+	short *pS16Data = (short *)mem_alloc(S16Size, sizeof(void*));
+
+	// convert down to S16
 	{
-		int NumSamples = WavpackGetNumSamples(pContext);
-		int BitsPerSample = WavpackGetBitsPerSample(pContext);
-		unsigned int SampleRate = WavpackGetSampleRate(pContext);
-		int NumChannels = WavpackGetNumChannels(pContext);
-
-		if(NumChannels > 2)
-		{
-			dbg_msg("sound/wv", "file is not mono or stereo. filename='%s'", pResource->Name());
-			return -1;
-		}
-
-
-		if(BitsPerSample != 16)
-		{
-			dbg_msg("sound/wv", "bps is %d, not 16, filname='%s'", BitsPerSample, pResource->Name());
-			return -1;
-		}
-
-		short *pFinalData = (short *)mem_alloc(2*NumSamples*NumChannels, 1);
-
-		{
-			int *pTmpData = (int *)mem_alloc(4*NumSamples*NumChannels, 1);
-			WavpackUnpackSamples(pContext, pTmpData, NumSamples); // TODO: check return value
-
-			// convert int32 to int16
-			{
-				int *pSrc = pTmpData;
-				short *pDst = pFinalData;
-				for(int i = 0; i < NumSamples*NumChannels; i++)
-					*pDst++ = (short)*pSrc++;
-			}
-
-			mem_free(pTmpData);
-		}
-
-		// do rate convert
-		{
-			int NewNumFrames = 0;
-			short *pNewData = 0;
-
-			// allocate new data
-			NewNumFrames = (int)((NumSamples / (float)SampleRate)*m_MixingRate);
-			pNewData = (short *)mem_alloc(NewNumFrames*NumChannels*sizeof(short), sizeof(void*));
-
-			for(int i = 0; i < NewNumFrames; i++)
-			{
-				// resample TODO: this should be done better, like linear atleast
-				float a = i/(float)NewNumFrames;
-				int f = (int)(a*NumSamples);
-				if(f >= NumSamples)
-					f = NumSamples-1;
-
-				// set new data
-				if(NumChannels == 1)
-					pNewData[i] = pFinalData[f];
-				else if(NumChannels == 2)
-				{
-					pNewData[i*2] = pFinalData[f*2];
-					pNewData[i*2+1] = pFinalData[f*2+1];
-				}
-			}
-
-			// free old data and apply new
-			mem_free(pFinalData);
-			pFinalData = pNewData;
-			NumSamples = NewNumFrames;
-		}
-
-
-		// insert it directly, we don't need to wait for anything
-		pSample->m_Channels = NumChannels;
-		pSample->m_Rate = SampleRate;
-		pSample->m_LoopStart = -1;
-		pSample->m_LoopEnd = -1;
-		pSample->m_PausedAt = 0;
-		pSample->m_pData = pFinalData;
-		sync_barrier(); // make sure that all parameters are written before we say how large it is
-		pSample->m_NumFrames = NumSamples;
-	}
-	else
-	{
-		dbg_msg("sound/wv", "failed to open %s: %s", pResource->Name(), aError);
+		int *pSrc = pS32Data;
+		short *pDst = pS16Data;
+		for (int i = 0; i < NumSamples*NumChannels; i++)
+			*pDst++ = (short)*pSrc++;
 	}
 
-	//RateConvert(SampleID);
-	return 0;
-	*/
+	mem_free(pS32Data);
+
+	// do rate convert
+	const unsigned DstSampleRate = 48000;
+	if(SampleRate != DstSampleRate)
+	{
+		// allocate new data
+		int SrcNumFrames = NumSamples/NumChannels;
+		int DstNumFrames = (int)((SrcNumFrames/(float)SampleRate)*DstSampleRate);
+		short *pNewData = (short *)mem_alloc(DstNumFrames*NumChannels*sizeof(short), sizeof(void*));
+
+		for(int i = 0; i < DstNumFrames; i++)
+		{
+			// resample TODO: this should be done better, like linear atleast
+			float a = i/(float)DstNumFrames;
+			int f = (int)(a*SrcNumFrames);
+			if(f >= SrcNumFrames)
+				f = SrcNumFrames-1;
+
+			// set new data
+			if(NumChannels == 1)
+				pNewData[i] = pS16Data[f];
+			else if(NumChannels == 2)
+			{
+				pNewData[i*2] = pS16Data[f*2];
+				pNewData[i*2+1] = pS16Data[f*2+1];
+			}
+		}
+
+		// free old data and apply new
+		mem_free(pS16Data);
+		NumSamples = DstNumFrames*NumChannels;
+		pS16Data = pNewData;
+		S16Size = NumSamples * sizeof(short);
+		SampleRate = DstSampleRate;
+	}
+
+	pSample->m_pData = (char*)pS16Data;
+	pSample->m_DataSize = S16Size;
+	pSample->m_NumChannels = NumChannels;
+	pSample->m_SampleRate = SampleRate;
+	return true;
 }
 
 bool CResourceHandler_Sound::Insert(CResource *pResource)
 {
 	CResource_Sample *pSample = static_cast<CResource_Sample*>(pResource);
-	pSample->m_Handle = m_pSound->LoadWVFromMem(pSample->m_pData, pSample->m_DataSize);
-	delete [] pSample->m_pData;
+	pSample->m_Handle = m_pSound->LoadRawFromMemTakeOver(pSample->m_pData, pSample->m_DataSize, pSample->m_NumChannels, pSample->m_SampleRate);
+	pSample->m_pData = 0x0;
+	pSample->m_DataSize = 0;
 	return pSample->m_Handle.Id() >= 0;
 }
 

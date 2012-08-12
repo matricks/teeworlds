@@ -265,7 +265,7 @@ public:
 		// called from the main thread
 		virtual CResource *Create(CResourceId Id) = 0;
 
-		// called from job thread
+		// called from job thread so several can be called at the same
 		// pData is destroyed after the call
 		virtual bool Load(CResource *pResource, void *pData, unsigned DataSize) = 0;
 
