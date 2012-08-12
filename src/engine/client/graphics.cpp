@@ -284,16 +284,16 @@ void CGraphics_OpenGL::LinesDraw(const CLineItem *pArray, int Num)
 
 int CGraphics_OpenGL::UnloadTexture(IGraphics::CTextureHandle Index)
 {
-	if(Index == m_InvalidTexture)
+	if(Index.Id() == m_InvalidTexture.Id())
 		return 0;
 
-	if(Index < 0)
+	if(!Index.IsValid())
 		return 0;
 
-	glDeleteTextures(1, &m_aTextures[Index].m_Tex);
-	m_aTextures[Index].m_Next = m_FirstFreeTexture;
-	m_TextureMemoryUsage -= m_aTextures[Index].m_MemSize;
-	m_FirstFreeTexture = Index;
+	glDeleteTextures(1, &m_aTextures[Index.Id()].m_Tex);
+	m_aTextures[Index.Id()].m_Next = m_FirstFreeTexture;
+	m_TextureMemoryUsage -= m_aTextures[Index.Id()].m_MemSize;
+	m_FirstFreeTexture = Index.Id();
 	return 0;
 }
 
@@ -305,11 +305,10 @@ int CGraphics_OpenGL::LoadTextureRawSub(IGraphics::CTextureHandle TextureID, int
 	else if(Format == CImageInfo::FORMAT_ALPHA)
 		Oglformat = GL_ALPHA;
 
-	glBindTexture(GL_TEXTURE_2D, m_aTextures[TextureID].m_Tex);
+	glBindTexture(GL_TEXTURE_2D, m_aTextures[TextureID.Id()].m_Tex);
 	glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, Width, Height, Oglformat, GL_UNSIGNED_BYTE, pData);
 	return 0;
 }
-
 
 IGraphics::CTextureHandle CGraphics_OpenGL::LoadTextureRaw(int Width, int Height, int Format, const void *pData, int StoreFormat, int Flags)
 {
@@ -419,7 +418,7 @@ IGraphics::CTextureHandle CGraphics_OpenGL::LoadTextureRaw(int Width, int Height
 IGraphics::CTextureHandle CGraphics_OpenGL::LoadTexture(const char *pFilename, int StorageType, int StoreFormat, int Flags)
 {
 	int l = str_length(pFilename);
-	int ID;
+	IGraphics::CTextureHandle ID;
 	CImageInfo Img;
 
 	if(l < 3)
@@ -427,11 +426,11 @@ IGraphics::CTextureHandle CGraphics_OpenGL::LoadTexture(const char *pFilename, i
 	if(LoadPNG(&Img, pFilename, StorageType))
 	{
 		if (StoreFormat == CImageInfo::FORMAT_AUTO)
-		StoreFormat = Img.m_Format;
+			StoreFormat = Img.m_Format;
 
 		ID = LoadTextureRaw(Img.m_Width, Img.m_Height, Img.m_Format, Img.m_pData, StoreFormat, Flags);
 		mem_free(Img.m_pData);
-		return CreateTextureHandle(ID);
+		return ID;
 	}
 
 	return m_InvalidTexture;
@@ -460,7 +459,7 @@ int CGraphics_OpenGL::LoadPNG(CImageInfo *pImg, const char *pFilename, int Stora
 	{
 		dbg_msg("game/png", "failed to open file. filename='%s'", aCompleteFilename);
 		if(Error != PNG_FILE_ERROR)
-		png_close_file(&Png); // ignore_convention
+			png_close_file(&Png); // ignore_convention
 		return 0;
 	}
 
@@ -532,14 +531,14 @@ void CGraphics_OpenGL::ScreenshotDirect(const char *pFilename)
 void CGraphics_OpenGL::TextureSet(IGraphics::CTextureHandle Texture)
 {
 	dbg_assert(m_Drawing == 0, "called Graphics()->TextureSet within begin");
-	if(Texture < 0)
+	if(Texture.IsValid())
 	{
-		glDisable(GL_TEXTURE_2D);
+		glEnable(GL_TEXTURE_2D);
+		glBindTexture(GL_TEXTURE_2D, m_aTextures[Texture.Id()].m_Tex);
 	}
 	else
 	{
-		glEnable(GL_TEXTURE_2D);
-		glBindTexture(GL_TEXTURE_2D, m_aTextures[Texture].m_Tex);
+		glDisable(GL_TEXTURE_2D);
 	}
 }
 

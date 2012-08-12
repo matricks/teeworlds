@@ -229,20 +229,6 @@ void CGameClient::OnInit()
 	// load textures
 	for(int i = 0; i < g_pData->m_NumImages; i++)
 	{
-		// testing stuff
-		/*
-		IResources::CResourceId Id;
-		int Length = str_length(g_pData->m_aImages[i].m_pFilename);
-		if(Length)
-		{
-			void *pName = mem_alloc(Length+1, 1);
-			Id.m_pName = (char *)pName;
-			mem_copy(pName, g_pData->m_aImages[i].m_pFilename, Length+1);
-			Id.m_NameHash = 0;
-			Id.m_ContentHash = 0;
-			m_pResources->GetResource(Id);
-		}*/
-
 		g_pData->m_aImages[i].m_Resource = Resources()->GetResource(g_pData->m_aImages[i].m_pFilename); //, IStorage::TYPE_ALL, CImageInfo::FORMAT_AUTO, 0);
 		m_pMenus->RenderLoading();
 	}
@@ -646,9 +632,9 @@ void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker)
 		if(pMsg->m_SoundID == SOUND_CTF_DROP || pMsg->m_SoundID == SOUND_CTF_RETURN ||
 			pMsg->m_SoundID == SOUND_CTF_CAPTURE || pMsg->m_SoundID == SOUND_CTF_GRAB_EN ||
 			pMsg->m_SoundID == SOUND_CTF_GRAB_PL)
-			g_GameClient.m_pSounds->Enqueue(CSounds::CHN_GLOBAL, pMsg->m_SoundID);
+			m_pSounds->Enqueue(CSounds::CHN_GLOBAL, pMsg->m_SoundID);
 		else
-			g_GameClient.m_pSounds->Play(CSounds::CHN_GLOBAL, Client()->GetResource(pMsg->m_SoundID), 1.0f);
+			m_pSounds->Play(CSounds::CHN_GLOBAL, Client()->GetResource(pMsg->m_SoundID), 1.0f);
 			*/
 	}
 	else if(MsgId == NETMSGTYPE_DE_CLIENTENTER && Client()->State() == IClient::STATE_DEMOPLAYBACK)

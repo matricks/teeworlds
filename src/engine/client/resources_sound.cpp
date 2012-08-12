@@ -134,7 +134,7 @@ bool CResourceHandler_Sound::Insert(CResource *pResource)
 	CResource_Sample *pSample = static_cast<CResource_Sample*>(pResource);
 	pSample->m_Handle = m_pSound->LoadWVFromMem(pSample->m_pData, pSample->m_DataSize);
 	delete [] pSample->m_pData;
-	return pSample->m_Handle >= 0;
+	return pSample->m_Handle.Id() >= 0;
 }
 
 

@@ -450,10 +450,10 @@ ISound::CSampleHandle CSound::LoadWVFromFile(const char *pFilename)
 	delete pData;
 
 	// report error
-	if(SampleId < 0)
+	if(!SampleId.IsValid())
 		dbg_msg("sound/wv", "failed to load sample. filename='%s'", pFilename);
 
-	return CreateSampleHandle(SampleId);
+	return SampleId;
 
 
 	/*
@@ -464,20 +464,20 @@ ISound::CSampleHandle CSound::LoadWVFromFile(const char *pFilename)
 
 	// don't waste memory on sound when we are stress testing
 	if(g_Config.m_DbgStress)
-		return -1;
+		return CSampleHandle();
 
 	// no need to load sound when we are running with no sound
 	if(!m_SoundEnabled)
-		return 1;
+		return CSampleHandle();
 
 	if(!m_pStorage)
-		return -1;
+		return CSampleHandle();
 
 	ms_File = m_pStorage->OpenFile(pFilename, IOFLAG_READ, IStorage::TYPE_ALL);
 	if(!ms_File)
 	{
 		dbg_msg("sound/wv", "failed to open file. filename='%s'", pFilename);
-		return -1;
+		return CSampleHandle();
 	}
 
 	SampleID = AllocID();
@@ -485,7 +485,7 @@ ISound::CSampleHandle CSound::LoadWVFromFile(const char *pFilename)
 	{
 		io_close(ms_File);
 		ms_File = 0;
-		return -1;
+		return CSampleHandle();
 	}
 	pSample = &m_aSamples[SampleID];
 
@@ -509,7 +509,7 @@ ISound::CSampleHandle CSound::LoadWVFromFile(const char *pFilename)
 			dbg_msg("sound/wv", "file is not mono or stereo. filename='%s'", pFilename);
 			io_close(ms_File);
 			ms_File = 0;
-			return -1;
+			return CSampleHandle();
 		}
 
 		if(BitsPerSample != 16)
@@ -517,7 +517,7 @@ ISound::CSampleHandle CSound::LoadWVFromFile(const char *pFilename)
 			dbg_msg("sound/wv", "bps is %d, not 16, filname='%s'", BitsPerSample, pFilename);
 			io_close(ms_File);
 			ms_File = 0;
-			return -1;
+			return CSampleHandle();
 		}
 
 		pData = (int *)mem_alloc(4*m_aSamples*m_aChannels, 1);
@@ -549,7 +549,7 @@ ISound::CSampleHandle CSound::LoadWVFromFile(const char *pFilename)
 		dbg_msg("sound/wv", "loaded %s", pFilename);
 
 	RateConvert(SampleID);
-	return SampleID;
+	return CreateSampleHandle(SampleID);
 	*/
 }
 
@@ -568,7 +568,7 @@ void CSound::SetChannel(int ChannelID, float Vol, float Pan)
 
 int CSound::Play(int ChannelID, CSampleHandle SampleID, int Flags, float x, float y)
 {
-	if(SampleID < 0)
+	if(!SampleID.IsValid())
 		return -1;
 
 	int VoiceID = -1;
@@ -591,10 +591,10 @@ int CSound::Play(int ChannelID, CSampleHandle SampleID, int Flags, float x, floa
 	// voice found, use it
 	if(VoiceID != -1)
 	{
-		m_aVoices[VoiceID].m_pSample = &m_aSamples[SampleID];
+		m_aVoices[VoiceID].m_pSample = &m_aSamples[SampleID.Id()];
 		m_aVoices[VoiceID].m_pChannel = &m_aChannels[ChannelID];
 		if(Flags & FLAG_LOOP)
-			m_aVoices[VoiceID].m_Tick = m_aSamples[SampleID].m_PausedAt;
+			m_aVoices[VoiceID].m_Tick = m_aSamples[SampleID.Id()].m_PausedAt;
 		else
 			m_aVoices[VoiceID].m_Tick = 0;
 		m_aVoices[VoiceID].m_Vol = 255;
@@ -621,7 +621,7 @@ void CSound::Stop(CSampleHandle SampleID)
 {
 	// TODO: a nice fade out
 	lock_wait(m_SoundLock);
-	CSample *pSample = &m_aSamples[SampleID];
+	CSample *pSample = &m_aSamples[SampleID.Id()];
 	for(int i = 0; i < NUM_VOICES; i++)
 	{
 		if(m_aVoices[i].m_pSample == pSample)

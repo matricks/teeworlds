@@ -25,6 +25,8 @@ class CSounds : public CComponent
 	CResourceHandleSound GetSampleId(int SetId);
 
 public:
+	virtual ~CSounds();
+
 	// sound channels
 	enum
 	{
@@ -33,8 +35,6 @@ public:
 		CHN_WORLD,
 		CHN_GLOBAL,
 	};
-
-	~CSounds();
 
 	virtual void OnInit();
 	virtual void OnReset();

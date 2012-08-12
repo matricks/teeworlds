@@ -1104,6 +1104,8 @@ void CMenus::OnInit()
 	Console()->Chain("add_friend", ConchainFriendlistUpdate, this);
 	Console()->Chain("remove_friend", ConchainFriendlistUpdate, this);
 
+	m_TextureBlob = Resources()->GetResource("blob.png");
+
 	// setup load amount
 	m_LoadCurrent = 0;
 	m_LoadTotal = g_pData->m_NumImages;
@@ -1945,8 +1947,6 @@ void CMenus::RenderBackground()
 {
 	//Graphics()->Clear(1,1,1);
 	//render_sunrays(0,0);
-	if(!m_TextureBlob.IsValid())
-		m_TextureBlob = Resources()->GetResource("blob.png");
 
 	float sw = 300*Graphics()->ScreenAspect();
 	float sh = 300;
