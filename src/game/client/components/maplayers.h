@@ -6,7 +6,9 @@
 
 class CMapLayers : public CComponent
 {
-	CLayers *m_pLayers;	// todo refactor: maybe remove it and access it through client*
+	CLayers *m_pMenuLayers;
+	IEngineMap *m_pMenuMap;
+
 	int m_Type;
 	int m_CurrentLocalTick;
 	int m_LastLocalTick;
@@ -26,6 +28,14 @@ public:
 	virtual void OnRender();
 
 	void EnvelopeUpdate();
+
+	static void ConchainBackgroundMap(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
+
+	virtual void OnConsoleInit();
+
+	void BackgroundMapUpdate();
+
+	bool MenuMapLoaded() { return m_pMenuMap ? m_pMenuMap->IsLoaded() : false; }
 };
 
 #endif

@@ -50,6 +50,11 @@ void CChat::OnReset()
 	m_PlaceholderOffset = 0;
 	m_PlaceholderLength = 0;
 	m_pHistoryEntry = 0x0;
+	m_PendingChatCounter = 0;
+	m_LastChatSend = 0;
+
+	for(int i = 0; i < CHAT_NUM; ++i)
+		m_aLastSoundPlayed[i] = 0;
 }
 
 void CChat::OnRelease()
@@ -116,9 +121,25 @@ bool CChat::OnInput(IInput::CEvent Event)
 	{
 		if(m_Input.GetString()[0])
 		{
-			Say(m_Mode == MODE_ALL ? 0 : 1, m_Input.GetString());
-			char *pEntry = m_History.Allocate(m_Input.GetLength()+1);
-			mem_copy(pEntry, m_Input.GetString(), m_Input.GetLength()+1);
+			bool AddEntry = false;
+
+			if(m_LastChatSend+time_freq() < time_get())
+			{
+				Say(m_Mode == MODE_ALL ? 0 : 1, m_Input.GetString());
+				AddEntry = true;
+			}
+			else if(m_PendingChatCounter < 3)
+			{
+				++m_PendingChatCounter;
+				AddEntry = true;
+			}
+
+			if(AddEntry)
+			{
+				CHistoryEntry *pEntry = m_History.Allocate(sizeof(CHistoryEntry)+m_Input.GetLength());
+				pEntry->m_Team = m_Mode == MODE_ALL ? 0 : 1;
+				mem_copy(pEntry->m_aText, m_Input.GetString(), m_Input.GetLength()+1);
+			}
 		}
 		m_pHistoryEntry = 0x0;
 		m_Mode = MODE_NONE;
@@ -208,26 +229,26 @@ bool CChat::OnInput(IInput::CEvent Event)
 	}
 	if(Event.m_Flags&IInput::FLAG_PRESS && Event.m_Key == KEY_UP)
 	{
-		if (m_pHistoryEntry)
+		if(m_pHistoryEntry)
 		{
-			char *pTest = m_History.Prev(m_pHistoryEntry);
+			CHistoryEntry *pTest = m_History.Prev(m_pHistoryEntry);
 
-			if (pTest)
+			if(pTest)
 				m_pHistoryEntry = pTest;
 		}
 		else
 			m_pHistoryEntry = m_History.Last();
 
-		if (m_pHistoryEntry)
-			m_Input.Set(m_pHistoryEntry);
+		if(m_pHistoryEntry)
+			m_Input.Set(m_pHistoryEntry->m_aText);
 	}
 	else if (Event.m_Flags&IInput::FLAG_PRESS && Event.m_Key == KEY_DOWN)
 	{
-		if (m_pHistoryEntry)
+		if(m_pHistoryEntry)
 			m_pHistoryEntry = m_History.Next(m_pHistoryEntry);
 
 		if (m_pHistoryEntry)
-			m_Input.Set(m_pHistoryEntry);
+			m_Input.Set(m_pHistoryEntry->m_aText);
 		else
 			m_Input.Clear();
 	}
@@ -265,8 +286,9 @@ void CChat::OnMessage(int MsgType, void *pRawMsg)
 
 void CChat::AddLine(int ClientID, int Team, const char *pLine)
 {
-	if(ClientID != -1 && (m_pClient->m_aClients[ClientID].m_aName[0] == '\0' || // unknown client
-		m_pClient->m_aClients[ClientID].m_ChatIgnore))
+	if(*pLine == 0 || (ClientID != -1 && (m_pClient->m_aClients[ClientID].m_aName[0] == '\0' || // unknown client
+		m_pClient->m_aClients[ClientID].m_ChatIgnore ||
+		(m_pClient->m_LocalClientID != ClientID && g_Config.m_ClShowChatFriends && !m_pClient->m_aClients[ClientID].m_Friend))))
 		return;
 
 	bool Highlighted = false;
@@ -294,10 +316,10 @@ void CChat::AddLine(int ClientID, int Team, const char *pLine)
 		m_aLines[m_CurrentLine].m_NameColor = -2;
 
 		// check for highlighted name
-		const char *pHL = str_find_nocase(pLine, m_pClient->m_aClients[m_pClient->m_Snap.m_LocalClientID].m_aName);
+		const char *pHL = str_find_nocase(pLine, m_pClient->m_aClients[m_pClient->m_LocalClientID].m_aName);
 		if(pHL)
 		{
-			int Length = str_length(m_pClient->m_aClients[m_pClient->m_Snap.m_LocalClientID].m_aName);
+			int Length = str_length(m_pClient->m_aClients[m_pClient->m_LocalClientID].m_aName);
 			if((pLine == pHL || pHL[-1] == ' ') && (pHL[Length] == 0 || pHL[Length] == ' ' || (pHL[Length] == ':' && pHL[Length+1] == ' ')))
 				Highlighted = true;
 		}
@@ -313,7 +335,7 @@ void CChat::AddLine(int ClientID, int Team, const char *pLine)
 			if(m_pClient->m_aClients[ClientID].m_Team == TEAM_SPECTATORS)
 				m_aLines[m_CurrentLine].m_NameColor = TEAM_SPECTATORS;
 
-			if(m_pClient->m_Snap.m_pGameInfoObj && m_pClient->m_Snap.m_pGameInfoObj->m_GameFlags&GAMEFLAG_TEAMS)
+			if(m_pClient->m_GameInfo.m_GameFlags&GAMEFLAG_TEAMS)
 			{
 				if(m_pClient->m_aClients[ClientID].m_Team == TEAM_RED)
 					m_aLines[m_CurrentLine].m_NameColor = TEAM_RED;
@@ -331,16 +353,50 @@ void CChat::AddLine(int ClientID, int Team, const char *pLine)
 	}
 
 	// play sound
+	int64 Now = time_get();
 	if(ClientID == -1)
-		m_pClient->m_pSounds->Play(CSounds::CHN_GUI, m_Sound_ChatServer, 0, vec2(0,0));
+	{
+		if(Now-m_aLastSoundPlayed[CHAT_SERVER] >= time_freq()*3/10)
+		{
+			m_pClient->m_pSounds->Play(CSounds::CHN_GUI, m_Sound_ChatServer, 0);
+			m_aLastSoundPlayed[CHAT_SERVER] = Now;
+		}
+	}
 	else if(Highlighted)
-		m_pClient->m_pSounds->Play(CSounds::CHN_GUI, m_Sound_ChatHighlight, 0, vec2(0.0f, 0.0f));
+	{
+		if(Now-m_aLastSoundPlayed[CHAT_HIGHLIGHT] >= time_freq()*3/10)
+		{
+			m_pClient->m_pSounds->Play(CSounds::CHN_GUI, m_Sound_ChatHighlight, 0);
+			m_aLastSoundPlayed[CHAT_HIGHLIGHT] = Now;
+		}
+	}
 	else
-		m_pClient->m_pSounds->Play(CSounds::CHN_GUI, m_Sound_ChatPlayer, 0, vec2(0,0));
+	{
+		if(Now-m_aLastSoundPlayed[CHAT_CLIENT] >= time_freq()*3/10)
+		{
+			m_pClient->m_pSounds->Play(CSounds::CHN_GUI, m_Sound_ChatPlayer, 0);
+			m_aLastSoundPlayed[CHAT_CLIENT] = Now;
+		}
+	}
 }
 
 void CChat::OnRender()
 {
+	// send pending chat messages
+	if(m_PendingChatCounter > 0 && m_LastChatSend+time_freq() < time_get())
+	{
+		CHistoryEntry *pEntry = m_History.Last();
+		for(int i = m_PendingChatCounter-1; pEntry; --i, pEntry = m_History.Prev(pEntry))
+		{
+			if(i == 0)
+			{
+				Say(pEntry->m_Team, pEntry->m_aText);
+				break;
+			}
+		}
+		--m_PendingChatCounter;
+	}
+
 	float Width = 300.0f*Graphics()->ScreenAspect();
 	Graphics()->MapScreen(0.0f, 0.0f, Width, 300.0f);
 	float x = 5.0f;
@@ -466,6 +522,8 @@ void CChat::OnRender()
 
 void CChat::Say(int Team, const char *pLine)
 {
+	m_LastChatSend = time_get();
+
 	// send chat message
 	CNetMsg_Cl_Say Msg;
 	Msg.m_Team = Team;

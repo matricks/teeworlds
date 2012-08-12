@@ -5,6 +5,7 @@
 
 #include "kernel.h"
 
+
 class CImageInfo
 {
 public:
@@ -55,7 +56,8 @@ public:
 	*/
 	enum
 	{
-		TEXLOAD_NORESAMPLE=1,
+		TEXLOAD_NORESAMPLE = 1,
+		TEXLOAD_NOMIPMAPS = 2,
 	};
 
 
@@ -70,8 +72,6 @@ public:
 
 		operator int() const { return m_Id; }
 	};
-
-	//typedef strong_typedef<int, struct CSampleHandleUnique> CTextureHandle;
 
 	int ScreenWidth() const { return m_ScreenWidth; }
 	int ScreenHeight() const { return m_ScreenHeight; }
@@ -89,12 +89,15 @@ public:
 	virtual void BlendNone() = 0;
 	virtual void BlendNormal() = 0;
 	virtual void BlendAdditive() = 0;
+	virtual void WrapNormal() = 0;
+	virtual void WrapClamp() = 0;
 	virtual int MemoryUsage() const = 0;
 
 	virtual int LoadPNG(CImageInfo *pImg, const char *pFilename, int StorageType) = 0;
 
 	virtual int UnloadTexture(CTextureHandle Index) = 0;
 	virtual CTextureHandle LoadTextureRaw(int Width, int Height, int Format, const void *pData, int StoreFormat, int Flags) = 0;
+	virtual int LoadTextureRawSub(CTextureHandle TextureID, int x, int y, int Width, int Height, int Format, const void *pData) = 0;
 	virtual CTextureHandle LoadTexture(const char *pFilename, int StorageType, int StoreFormat, int Flags) = 0;
 	virtual void TextureSet(CTextureHandle Texture) = 0;
 	void TextureClear() { TextureSet(CTextureHandle()); }
@@ -149,6 +152,11 @@ public:
 
 	virtual void Swap() = 0;
 
+	// syncronization
+	virtual void InsertSignal(class semaphore *pSemaphore) = 0;
+	virtual bool IsIdle() = 0;
+	virtual void WaitForIdle() = 0;
+
 protected:
 	inline CTextureHandle CreateTextureHandle(int Index)
 	{
@@ -162,7 +170,7 @@ class IEngineGraphics : public IGraphics
 {
 	MACRO_INTERFACE("enginegraphics", 0)
 public:
-	virtual bool Init() = 0;
+	virtual int Init() = 0;
 	virtual void Shutdown() = 0;
 
 	virtual void Minimize() = 0;
@@ -174,5 +182,6 @@ public:
 };
 
 extern IEngineGraphics *CreateEngineGraphics();
+extern IEngineGraphics *CreateEngineGraphicsThreaded();
 
 #endif

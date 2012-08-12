@@ -3,17 +3,14 @@
 #ifndef GAME_SERVER_GAMECONTEXT_H
 #define GAME_SERVER_GAMECONTEXT_H
 
-#include <engine/server.h>
 #include <engine/console.h>
-#include <engine/shared/memheap.h>
+#include <engine/server.h>
 
 #include <game/layers.h>
 #include <game/voting.h>
 
 #include "eventhandler.h"
-#include "gamecontroller.h"
 #include "gameworld.h"
-#include "player.h"
 
 template<int TSIZE>
 class CResourceSet
@@ -62,12 +59,17 @@ class CGameContext : public IGameServer
 	static void ConTuneParam(IConsole::IResult *pResult, void *pUserData);
 	static void ConTuneReset(IConsole::IResult *pResult, void *pUserData);
 	static void ConTuneDump(IConsole::IResult *pResult, void *pUserData);
+	static void ConPause(IConsole::IResult *pResult, void *pUserData);
 	static void ConChangeMap(IConsole::IResult *pResult, void *pUserData);
 	static void ConRestart(IConsole::IResult *pResult, void *pUserData);
 	static void ConBroadcast(IConsole::IResult *pResult, void *pUserData);
 	static void ConSay(IConsole::IResult *pResult, void *pUserData);
 	static void ConSetTeam(IConsole::IResult *pResult, void *pUserData);
 	static void ConSetTeamAll(IConsole::IResult *pResult, void *pUserData);
+	static void ConSwapTeams(IConsole::IResult *pResult, void *pUserData);
+	static void ConShuffleTeams(IConsole::IResult *pResult, void *pUserData);
+	static void ConLockTeams(IConsole::IResult *pResult, void *pUserData);
+	static void ConForceTeamBalance(IConsole::IResult *pResult, void *pUserData);
 	static void ConAddVote(IConsole::IResult *pResult, void *pUserData);
 	static void ConRemoveVote(IConsole::IResult *pResult, void *pUserData);
 	static void ConForceVote(IConsole::IResult *pResult, void *pUserData);
@@ -91,20 +93,23 @@ public:
 	void Clear();
 
 	CEventHandler m_Events;
-	CPlayer *m_apPlayers[MAX_CLIENTS];
+	class CPlayer *m_apPlayers[MAX_CLIENTS];
 
-	IGameController *m_pController;
+	class IGameController *m_pController;
 	CGameWorld m_World;
 
 	// helper functions
 	class CCharacter *GetPlayerChar(int ClientID);
+
+	int m_LockTeams;
 
 	// voting
 	void StartVote(const char *pDesc, const char *pCommand, const char *pReason);
 	void EndVote();
 	void SendVoteSet(int ClientID);
 	void SendVoteStatus(int ClientID, int Total, int Yes, int No);
-	void AbortVoteKickOnDisconnect(int ClientID);
+	void AbortVoteOnDisconnect(int ClientID);
+	void AbortVoteOnTeamChange(int ClientID);
 
 	int m_VoteCreator;
 	int64 m_VoteCloseTime;
@@ -113,6 +118,7 @@ public:
 	char m_aVoteDescription[VOTE_DESC_LENGTH];
 	char m_aVoteCommand[VOTE_CMD_LENGTH];
 	char m_aVoteReason[VOTE_REASON_LENGTH];
+	int m_VoteClientID;
 	int m_NumVoteOptions;
 	int m_VoteEnforce;
 	enum
@@ -121,7 +127,7 @@ public:
 		VOTE_ENFORCE_NO,
 		VOTE_ENFORCE_YES,
 	};
-	CHeap *m_pVoteOptionHeap;
+	class CHeap *m_pVoteOptionHeap;
 	CVoteOptionServer *m_pVoteOptionFirst;
 	CVoteOptionServer *m_pVoteOptionLast;
 
@@ -141,10 +147,10 @@ public:
 	CResourceSet<3> m_Sound_GunFire;
 	CResourceSet<3> m_Sound_ShotgunFire;
 	CResourceSet<3> m_Sound_GrenadeFire;
-	CResourceSet<3> m_Sound_RifleFire;
+	CResourceSet<3> m_Sound_LaserFire;
 	CResourceSet<4> m_Sound_NinjaFire;
 
-	CResourceSet<3> m_Sound_RifleBounce;
+	CResourceSet<3> m_Sound_LaserBounce;
 
 	CResourceSet<4> m_Sound_PlayerJump;
 	CResourceSet<3> m_Sound_PlayerHit;
@@ -198,6 +204,9 @@ public:
 	void CheckPureTuning();
 	void SendTuningParams(int ClientID);
 
+	//
+	void SwapTeams();
+
 	// engine events
 	virtual void OnInit();
 	virtual void OnConsoleInit();
@@ -210,7 +219,9 @@ public:
 
 	virtual void OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID);
 
-	virtual void OnClientConnected(int ClientID);
+	virtual void OnClientConnected(int ClientID) { OnClientConnected(ClientID, false); }
+	void OnClientConnected(int ClientID, bool Dummy);
+	void OnClientTeamChange(int ClientID);
 	virtual void OnClientEnter(int ClientID);
 	virtual void OnClientDrop(int ClientID, const char *pReason);
 	virtual void OnClientDirectInput(int ClientID, void *pInput);

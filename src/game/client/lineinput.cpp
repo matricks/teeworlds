@@ -3,8 +3,6 @@
 #include <engine/keys.h>
 #include "lineinput.h"
 
-char GLOBALVARIABLE[512];
-
 CLineInput::CLineInput()
 {
 	Clear();

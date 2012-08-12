@@ -13,7 +13,6 @@
 #include <game/generated/protocol.h>
 #include <game/generated/client_data.h>
 
-#include <game/localization.h>
 #include <game/client/animstate.h>
 #include <game/client/gameclient.h>
 #include <game/client/render.h>
@@ -39,7 +38,7 @@ void CMenus::RenderGame(CUIRect MainView)
 	if(DoButton_Menu(&s_DisconnectButton, Localize("Disconnect"), 0, &Button))
 		Client()->Disconnect();
 
-	if(m_pClient->m_Snap.m_pLocalInfo && m_pClient->m_Snap.m_pGameInfoObj)
+	if(m_pClient->m_Snap.m_pLocalInfo)
 	{
 		if(m_pClient->m_Snap.m_pLocalInfo->m_Team != TEAM_SPECTATORS)
 		{
@@ -53,7 +52,7 @@ void CMenus::RenderGame(CUIRect MainView)
 			}
 		}
 
-		if(m_pClient->m_Snap.m_pGameInfoObj->m_GameFlags & GAMEFLAG_TEAMS)
+		if(m_pClient->m_GameInfo.m_GameFlags&GAMEFLAG_TEAMS)
 		{
 			if(m_pClient->m_Snap.m_pLocalInfo->m_Team != TEAM_RED)
 			{
@@ -149,11 +148,11 @@ void CMenus::RenderPlayers(CUIRect MainView)
 	static int s_aPlayerIDs[MAX_CLIENTS][2] = {{0}};
 	for(int i = 0, Count = 0; i < MAX_CLIENTS; ++i)
 	{
-		if(!m_pClient->m_Snap.m_paInfoByTeam[i])
+		if(!m_pClient->m_Snap.m_aInfoByTeam[i].m_pPlayerInfo)
 			continue;
 
-		int Index = m_pClient->m_Snap.m_paInfoByTeam[i]->m_ClientID;
-		if(Index == m_pClient->m_Snap.m_LocalClientID)
+		int Index = m_pClient->m_Snap.m_aInfoByTeam[i].m_ClientID;
+		if(Index == m_pClient->m_LocalClientID)
 			continue;
 
 		Options.HSplitTop(28.0f, &ButtonBar, &Options);
@@ -183,15 +182,18 @@ void CMenus::RenderPlayers(CUIRect MainView)
 		ButtonBar.VSplitLeft(Width, &Button, &ButtonBar);
 		Button.VSplitLeft((Width-Button.h)/4.0f, 0, &Button);
 		Button.VSplitLeft(Button.h, &Button, 0);
-		if(DoButton_Toggle(&s_aPlayerIDs[Index][0], m_pClient->m_aClients[Index].m_ChatIgnore, &Button))
-			m_pClient->m_aClients[Index].m_ChatIgnore ^= 1;
+		if(g_Config.m_ClShowChatFriends && !m_pClient->m_aClients[Index].m_Friend)
+			DoButton_Toggle(&s_aPlayerIDs[Index][0], 1, &Button, false);
+		else
+			if(DoButton_Toggle(&s_aPlayerIDs[Index][0], m_pClient->m_aClients[Index].m_ChatIgnore, &Button, true))
+				m_pClient->m_aClients[Index].m_ChatIgnore ^= 1;
 
 		// friend button
 		ButtonBar.VSplitLeft(20.0f, &Button, &ButtonBar);
 		ButtonBar.VSplitLeft(Width, &Button, &ButtonBar);
 		Button.VSplitLeft((Width-Button.h)/4.0f, 0, &Button);
 		Button.VSplitLeft(Button.h, &Button, 0);
-		if(DoButton_Toggle(&s_aPlayerIDs[Index][1], m_pClient->m_aClients[Index].m_Friend, &Button))
+		if(DoButton_Toggle(&s_aPlayerIDs[Index][1], m_pClient->m_aClients[Index].m_Friend, &Button, true))
 		{
 			if(m_pClient->m_aClients[Index].m_Friend)
 				m_pClient->Friends()->RemoveFriend(m_pClient->m_aClients[Index].m_aName, m_pClient->m_aClients[Index].m_aClan);
@@ -300,7 +302,7 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 		Localize("Address"), g_Config.m_UiServerAddress,
 		Localize("Ping"), m_pClient->m_Snap.m_pLocalInfo->m_Latency,
 		Localize("Version"), CurrentServerInfo.m_aVersion,
-		Localize("Password"), CurrentServerInfo.m_Flags &1 ? Localize("Yes") : Localize("No")
+		Localize("Password"), CurrentServerInfo.m_Flags&IServerBrowser::FLAG_PASSWORD ? Localize("Yes") : Localize("No")
 	);
 
 	TextRender()->Text(0, ServerInfo.x+x, ServerInfo.y+y, 20, aBuf, 250);
@@ -331,27 +333,24 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 	TextRender()->Text(0, GameInfo.x+x, GameInfo.y+y, 32, Localize("Game info"), 250);
 	y += 32.0f+5.0f;
 
-	if(m_pClient->m_Snap.m_pGameInfoObj)
-	{
-		mem_zero(aBuf, sizeof(aBuf));
-		str_format(
-			aBuf,
-			sizeof(aBuf),
-			"\n\n"
-			"%s: %s\n"
-			"%s: %s\n"
-			"%s: %d\n"
-			"%s: %d\n"
-			"\n"
-			"%s: %d/%d\n",
-			Localize("Game type"), CurrentServerInfo.m_aGameType,
-			Localize("Map"), CurrentServerInfo.m_aMap,
-			Localize("Score limit"), m_pClient->m_Snap.m_pGameInfoObj->m_ScoreLimit,
-			Localize("Time limit"), m_pClient->m_Snap.m_pGameInfoObj->m_TimeLimit,
-			Localize("Players"), m_pClient->m_Snap.m_NumPlayers, CurrentServerInfo.m_MaxClients
-		);
-		TextRender()->Text(0, GameInfo.x+x, GameInfo.y+y, 20, aBuf, 250);
-	}
+	mem_zero(aBuf, sizeof(aBuf));
+	str_format(
+		aBuf,
+		sizeof(aBuf),
+		"\n\n"
+		"%s: %s\n"
+		"%s: %s\n"
+		"%s: %d\n"
+		"%s: %d\n"
+		"\n"
+		"%s: %d/%d\n",
+		Localize("Game type"), CurrentServerInfo.m_aGameType,
+		Localize("Map"), CurrentServerInfo.m_aMap,
+		Localize("Score limit"), m_pClient->m_GameInfo.m_ScoreLimit,
+		Localize("Time limit"), m_pClient->m_GameInfo.m_TimeLimit,
+		Localize("Players"), m_pClient->m_Snap.m_NumPlayers, CurrentServerInfo.m_MaxClients
+	);
+	TextRender()->Text(0, GameInfo.x+x, GameInfo.y+y, 20, aBuf, 250);
 
 	// motd
 	Motd.HSplitTop(10.0f, 0, &Motd);
@@ -389,11 +388,11 @@ void CMenus::RenderServerControlKick(CUIRect MainView, bool FilterSpectators)
 	static int aPlayerIDs[MAX_CLIENTS];
 	for(int i = 0; i < MAX_CLIENTS; i++)
 	{
-		if(!m_pClient->m_Snap.m_paInfoByTeam[i])
+		if(!m_pClient->m_Snap.m_aInfoByTeam[i].m_pPlayerInfo)
 			continue;
 
-		int Index = m_pClient->m_Snap.m_paInfoByTeam[i]->m_ClientID;
-		if(Index == m_pClient->m_Snap.m_LocalClientID || (FilterSpectators && m_pClient->m_Snap.m_paInfoByTeam[i]->m_Team == TEAM_SPECTATORS))
+		int Index = m_pClient->m_Snap.m_aInfoByTeam[i].m_ClientID;
+		if(Index == m_pClient->m_LocalClientID || (FilterSpectators && m_pClient->m_Snap.m_aInfoByTeam[i].m_pPlayerInfo->m_Team == TEAM_SPECTATORS))
 			continue;
 		if(m_CallvoteSelectedPlayer == Index)
 			Selected = NumOptions;

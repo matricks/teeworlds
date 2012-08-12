@@ -3,12 +3,10 @@
 #ifndef ENGINE_CLIENT_GRAPHICS_H
 #define ENGINE_CLIENT_GRAPHICS_H
 
-#include <base/tl/ringbuffer.h>
-
 class CGraphics_OpenGL : public IEngineGraphics
 {
 protected:
-	class IStorage *m_pStorage; // TODO: remove this dependency
+	class IStorage *m_pStorage;
 	class IConsole *m_pConsole;
 
 	//
@@ -68,11 +66,10 @@ protected:
 	void AddVertices(int Count);
 	void Rotate4(const CPoint &rCenter, CVertex *pPoints);
 
-	static unsigned char Sample(int w, int h, const unsigned char *pData, int u, int v, int Offset);
-
+	static unsigned char Sample(int w, int h, const unsigned char *pData, int u, int v, int Offset, int ScaleW, int ScaleH, int Bpp);
+	static unsigned char *Rescale(int Width, int Height, int NewWidth, int NewHeight, int Format, const unsigned char *pData);
 public:
 	CGraphics_OpenGL();
-	~CGraphics_OpenGL();
 
 	virtual void ClipEnable(int x, int y, int w, int h);
 	virtual void ClipDisable();
@@ -80,6 +77,9 @@ public:
 	virtual void BlendNone();
 	virtual void BlendNormal();
 	virtual void BlendAdditive();
+
+	virtual void WrapNormal();
+	virtual void WrapClamp();
 
 	virtual int MemoryUsage() const;
 
@@ -90,17 +90,17 @@ public:
 	virtual void LinesEnd();
 	virtual void LinesDraw(const CLineItem *pArray, int Num);
 
-	virtual int UnloadTexture(CTextureHandle Index);
-	virtual CTextureHandle LoadTextureRaw(int Width, int Height, int Format, const void *pData, int StoreFormat, int Flags);
+	virtual int UnloadTexture(IGraphics::CTextureHandle Index);
+	virtual IGraphics::CTextureHandle LoadTextureRaw(int Width, int Height, int Format, const void *pData, int StoreFormat, int Flags);
+	virtual int LoadTextureRawSub(IGraphics::CTextureHandle TextureID, int x, int y, int Width, int Height, int Format, const void *pData);
 
 	// simple uncompressed RGBA loaders
-	virtual CTextureHandle LoadTexture(const char *pFilename, int StorageType, int StoreFormat, int Flags);
+	virtual IGraphics::CTextureHandle LoadTexture(const char *pFilename, int StorageType, int StoreFormat, int Flags);
 	virtual int LoadPNG(CImageInfo *pImg, const char *pFilename, int StorageType);
 
 	void ScreenshotDirect(const char *pFilename);
 
-	//virtual void TextureSet(int TextureID);
-	virtual void TextureSet(CTextureHandle iTexture);
+	virtual void TextureSet(IGraphics::CTextureHandle TextureID);
 
 	virtual void Clear(float r, float g, float b);
 
@@ -121,7 +121,7 @@ public:
 	virtual void QuadsDrawFreeform(const CFreeformItem *pArray, int Num);
 	virtual void QuadsText(float x, float y, float Size, float r, float g, float b, float a, const char *pText);
 
-	virtual bool Init();
+	virtual int Init();
 };
 
 class CGraphics_SDL : public CGraphics_OpenGL
@@ -133,7 +133,7 @@ class CGraphics_SDL : public CGraphics_OpenGL
 public:
 	CGraphics_SDL();
 
-	virtual bool Init();
+	virtual int Init();
 	virtual void Shutdown();
 
 	virtual void Minimize();
@@ -147,6 +147,10 @@ public:
 
 	virtual int GetVideoModes(CVideoMode *pModes, int MaxModes);
 
+	// syncronization
+	virtual void InsertSignal(semaphore *pSemaphore);
+	virtual bool IsIdle();
+	virtual void WaitForIdle();
 };
 
 #endif

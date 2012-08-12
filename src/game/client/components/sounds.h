@@ -21,6 +21,8 @@ class CSounds : public CComponent
 	int64 m_QueueWaitTime;
 	class CJob m_SoundJob;
 	bool m_WaitForSoundJob;
+	
+	CResourceHandleSound GetSampleId(int SetId);
 
 public:
 	// sound channels
@@ -40,14 +42,17 @@ public:
 	virtual void OnRender();
 
 	void ClearQueue();
-
-	// new sutff
 	void Enqueue(int Channel, CResourceHandleSound Resource);
-	void Play(int Channel, CResourceHandleSound Resource, float Vol, vec2 Pos);
+
+	// new stuff
+	void Play(int Channel, CResourceHandleSound Resource, float Vol);
+	void PlayAt(int Channel, CResourceHandleSound Resource, float Vol, vec2 Pos);
+	void PlayAndRecord(int Channel, CResourceHandleSound Resource, float Vol, vec2 Pos);
 	void Stop(CResourceHandleSound Resource);
 
 	// old stuff
-	void Play(int Channel, int SetId, float Vol, vec2 Pos);
+	void Play(int Channel, int SetId, float Vol);
+	void PlayAt(int Channel, int SetId, float Vol, vec2 Pos);
 	void PlayAndRecord(int Channel, int SetId, float Vol, vec2 Pos);
 };
 

@@ -195,28 +195,33 @@ void CSpectator::OnRender()
 	float LineHeight = 60.0f;
 	bool Selected = false;
 
-	if(m_pClient->m_Snap.m_SpecInfo.m_SpectatorID == SPEC_FREEVIEW)
+	if(m_pClient->m_Snap.m_pLocalInfo->m_Team == TEAM_SPECTATORS)
 	{
-		Graphics()->TextureClear();
-		Graphics()->QuadsBegin();
-		Graphics()->SetColor(1.0f, 1.0f, 1.0f, 0.25f);
-		RenderTools()->DrawRoundRect(Width/2.0f-280.0f, Height/2.0f-280.0f, 270.0f, 60.0f, 20.0f);
-		Graphics()->QuadsEnd();
-	}
+		if(m_pClient->m_Snap.m_SpecInfo.m_SpectatorID == SPEC_FREEVIEW)
+		{
+			Graphics()->TextureClear();
+			Graphics()->QuadsBegin();
+			Graphics()->SetColor(1.0f, 1.0f, 1.0f, 0.25f);
+			RenderTools()->DrawRoundRect(Width/2.0f-280.0f, Height/2.0f-280.0f, 270.0f, 60.0f, 20.0f);
+			Graphics()->QuadsEnd();
+		}
 
-	if(m_SelectorMouse.x >= -280.0f && m_SelectorMouse.x <= -10.0f &&
-		m_SelectorMouse.y >= -280.0f && m_SelectorMouse.y <= -220.0f)
-	{
-		m_SelectedSpectatorID = SPEC_FREEVIEW;
-		Selected = true;
+		if(m_SelectorMouse.x >= -280.0f && m_SelectorMouse.x <= -10.0f &&
+			m_SelectorMouse.y >= -280.0f && m_SelectorMouse.y <= -220.0f)
+		{
+			m_SelectedSpectatorID = SPEC_FREEVIEW;
+			Selected = true;
+		}
+		TextRender()->TextColor(1.0f, 1.0f, 1.0f, Selected?1.0f:0.5f);
+		TextRender()->Text(0, Width/2.0f-240.0f, Height/2.0f-265.0f, FontSize, Localize("Free-View"), -1);
 	}
-	TextRender()->TextColor(1.0f, 1.0f, 1.0f, Selected?1.0f:0.5f);
-	TextRender()->Text(0, Width/2.0f-240.0f, Height/2.0f-265.0f, FontSize, Localize("Free-View"), -1);
 
 	float x = -270.0f, y = StartY;
 	for(int i = 0, Count = 0; i < MAX_CLIENTS; ++i)
 	{
-		if(!m_pClient->m_Snap.m_paPlayerInfos[i] || m_pClient->m_Snap.m_paPlayerInfos[i]->m_Team == TEAM_SPECTATORS)
+		if(!m_pClient->m_Snap.m_paPlayerInfos[i] || m_pClient->m_Snap.m_paPlayerInfos[i]->m_Team == TEAM_SPECTATORS ||
+			(m_pClient->m_Snap.m_pLocalInfo->m_Team != TEAM_SPECTATORS && (m_pClient->m_Snap.m_paPlayerInfos[i]->m_PlayerFlags&PLAYERFLAG_DEAD ||
+			m_pClient->m_Snap.m_pLocalInfo->m_Team != m_pClient->m_Snap.m_paPlayerInfos[i]->m_Team || i == m_pClient->m_LocalClientID)))
 			continue;
 
 		if(++Count%9 == 0)
@@ -245,9 +250,9 @@ void CSpectator::OnRender()
 		TextRender()->Text(0, Width/2.0f+x+50.0f, Height/2.0f+y+5.0f, FontSize, m_pClient->m_aClients[i].m_aName, 220.0f);
 
 		// flag
-		if(m_pClient->m_Snap.m_pGameInfoObj->m_GameFlags&GAMEFLAG_FLAGS &&
-			m_pClient->m_Snap.m_pGameDataObj && (m_pClient->m_Snap.m_pGameDataObj->m_FlagCarrierRed == m_pClient->m_Snap.m_paPlayerInfos[i]->m_ClientID ||
-			m_pClient->m_Snap.m_pGameDataObj->m_FlagCarrierBlue == m_pClient->m_Snap.m_paPlayerInfos[i]->m_ClientID))
+		if(m_pClient->m_GameInfo.m_GameFlags&GAMEFLAG_FLAGS &&
+			m_pClient->m_Snap.m_pGameDataFlag && (m_pClient->m_Snap.m_pGameDataFlag->m_FlagCarrierRed == i ||
+			m_pClient->m_Snap.m_pGameDataFlag->m_FlagCarrierBlue == i))
 		{
 			Graphics()->BlendNormal();
 			Graphics()->TextureSet(CResourceHandleTexture(g_pData->m_aImages[IMAGE_GAME].m_Resource));

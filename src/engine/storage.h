@@ -12,7 +12,11 @@ public:
 	enum
 	{
 		TYPE_SAVE = 0,
-		TYPE_ALL = -1
+		TYPE_ALL = -1,
+
+		STORAGETYPE_BASIC = 0,
+		STORAGETYPE_SERVER,
+		STORAGETYPE_CLIENT,
 	};
 
 	virtual const char *GetDataPath() = 0;
@@ -23,10 +27,11 @@ public:
 	virtual bool FindFile(const char *pFilename, const char *pPath, int Type, char *pBuffer, int BufferSize) = 0;
 	virtual bool RemoveFile(const char *pFilename, int Type) = 0;
 	virtual bool RenameFile(const char* pOldFilename, const char* pNewFilename, int Type) = 0;
-	virtual bool CreateDirectory(const char *pFoldername, int Type) = 0;
+	virtual bool CreateFolder(const char *pFoldername, int Type) = 0;
+	virtual void GetCompletePath(int Type, const char *pDir, char *pBuffer, unsigned BufferSize) = 0;
 };
 
-extern IStorage *CreateStorage(const char *pApplicationName, int NumArgs, const char **ppArguments);
+extern IStorage *CreateStorage(const char *pApplicationName, int StorageType, int NumArgs, const char **ppArguments);
 
 
 #endif

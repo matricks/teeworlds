@@ -11,6 +11,7 @@
 CMapImages::CMapImages()
 {
 	m_Count = 0;
+	m_MenuCount = 0;
 }
 
 void CMapImages::OnMapLoad()
@@ -29,7 +30,7 @@ void CMapImages::OnMapLoad()
 	for(int i = 0; i < m_Count; i++)
 	{
 		CMapItemImage *pImg = (CMapItemImage *)pMap->GetItem(Start+i, 0, 0);
-		if(pImg->m_External)
+		if(pImg->m_External || (pImg->m_Version > 1 && pImg->m_Format != CImageInfo::FORMAT_RGB && pImg->m_Format != CImageInfo::FORMAT_RGBA))
 		{
 			char aBuf[256];
 			char *pName = (char *)pMap->GetData(pImg->m_ImageName);
@@ -38,16 +39,56 @@ void CMapImages::OnMapLoad()
 		}
 		else
 		{
-			char aBuf[256];
-			str_format(aBuf, sizeof(aBuf), "mapimage%d", i);
+			// TODO: what todo here?
 
 			//void *pData = pMap->GetData(pImg->m_ImageData);
-			// TODO: what do we do here?
-
-			//m_aTextures[i] = Graphics()->LoadTextureRaw(aBuf, pImg->m_Width, pImg->m_Height, CImageInfo::FORMAT_RGBA, pData, CImageInfo::FORMAT_RGBA, 0);
-			//m_aTextures[i] = Graphics()->LoadTextureRaw(aBuf, pImg->m_Width, pImg->m_Height, CImageInfo::FORMAT_RGBA, pData, CImageInfo::FORMAT_RGBA, 0);
+			//m_aMenuTextures[i] = Graphics()->LoadTextureRaw(pImg->m_Width, pImg->m_Height, pImg->m_Version == 1 ? CImageInfo::FORMAT_RGBA : pImg->m_Format, pData, CImageInfo::FORMAT_RGBA, 0);
 			//pMap->UnloadData(pImg->m_ImageData);
 		}
 	}
 }
 
+void CMapImages::OnMenuMapLoad(IMap *pMap)
+{
+	// unload all textures
+	for(int i = 0; i < m_MenuCount; i++)
+		m_aMenuTextures[i].Release();
+	m_MenuCount = 0;
+
+	int Start;
+	pMap->GetType(MAPITEMTYPE_IMAGE, &Start, &m_MenuCount);
+
+	// load new textures
+	for(int i = 0; i < m_MenuCount; i++)
+	{
+		CMapItemImage *pImg = (CMapItemImage *)pMap->GetItem(Start+i, 0, 0);
+		if(pImg->m_External || (pImg->m_Version > 1 && pImg->m_Format != CImageInfo::FORMAT_RGB && pImg->m_Format != CImageInfo::FORMAT_RGBA))
+		{
+			char aBuf[256];
+			char *pName = (char *)pMap->GetData(pImg->m_ImageName);
+			str_format(aBuf, sizeof(aBuf), "mapres/%s.png", pName);
+			m_aMenuTextures[i] = Resources()->GetResource(aBuf);
+		}
+		else
+		{
+			// TODO: what todo here?
+			//void *pData = pMap->GetData(pImg->m_ImageData);
+			//m_aMenuTextures[i] = Graphics()->LoadTextureRaw(pImg->m_Width, pImg->m_Height, pImg->m_Version == 1 ? CImageInfo::FORMAT_RGBA : pImg->m_Format, pData, CImageInfo::FORMAT_RGBA, 0);
+			//pMap->UnloadData(pImg->m_ImageData);
+		}
+	}
+}
+
+CResourceHandleTexture CMapImages::Get(int Index) const
+{
+	if(Client()->State() == IClient::STATE_ONLINE || Client()->State() == IClient::STATE_DEMOPLAYBACK)
+		return m_aTextures[Index];
+	return m_aMenuTextures[Index];
+}
+
+int CMapImages::Num() const
+{
+	if(Client()->State() == IClient::STATE_ONLINE || Client()->State() == IClient::STATE_DEMOPLAYBACK)
+		return m_Count;
+	return m_MenuCount;
+}

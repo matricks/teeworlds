@@ -86,7 +86,7 @@ public:
 
 	TTYPE pop()
 	{
-		assert(size());
+		tl_assert(size());
 		TTYPE item = data[get&MASK];
 		sync_barrier();
 		get++;

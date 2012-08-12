@@ -44,7 +44,7 @@ void CEffects::AirJump(vec2 Pos)
 	p.m_Pos = Pos + vec2(6.0f, 16.0f);
 	m_pClient->m_pParticles->Add(CParticles::GROUP_GENERAL, &p);
 
-	m_pClient->m_pSounds->Play(CSounds::CHN_WORLD, SOUND_PLAYER_AIRJUMP, 1.0f, Pos);
+	m_pClient->m_pSounds->PlayAt(CSounds::CHN_WORLD, SOUND_PLAYER_AIRJUMP, 1.0f, Pos);
 }
 
 void CEffects::DamageIndicator(vec2 Pos, vec2 Dir)
@@ -147,7 +147,7 @@ void CEffects::PlayerSpawn(vec2 Pos)
 		m_pClient->m_pParticles->Add(CParticles::GROUP_GENERAL, &p);
 
 	}
-	m_pClient->m_pSounds->Play(CSounds::CHN_WORLD, SOUND_PLAYER_SPAWN, 1.0f, Pos);
+	m_pClient->m_pSounds->PlayAt(CSounds::CHN_WORLD, SOUND_PLAYER_SPAWN, 1.0f, Pos);
 }
 
 void CEffects::PlayerDeath(vec2 Pos, int ClientID)
@@ -156,11 +156,11 @@ void CEffects::PlayerDeath(vec2 Pos, int ClientID)
 
 	if(ClientID >= 0)
 	{
-		if(m_pClient->m_aClients[ClientID].m_UseCustomColor)
-			BloodColor = m_pClient->m_pSkins->GetColorV3(m_pClient->m_aClients[ClientID].m_ColorBody);
+		if(m_pClient->m_aClients[ClientID].m_aUseCustomColors[SKINPART_BODY])
+			BloodColor = m_pClient->m_pSkins->GetColorV3(m_pClient->m_aClients[ClientID].m_aSkinPartColors[SKINPART_BODY]);
 		else
 		{
-			const CSkins::CSkin *s = m_pClient->m_pSkins->Get(m_pClient->m_aClients[ClientID].m_SkinID);
+			const CSkins::CSkinPart *s = m_pClient->m_pSkins->GetSkinPart(SKINPART_BODY, m_pClient->m_aClients[ClientID].m_SkinPartIDs[SKINPART_BODY]);
 			if(s)
 				BloodColor = s->m_BloodColor;
 		}
@@ -242,7 +242,7 @@ void CEffects::HammerHit(vec2 Pos)
 	p.m_EndSize = 0;
 	p.m_Rot = frandom()*pi*2;
 	m_pClient->m_pParticles->Add(CParticles::GROUP_EXPLOSIONS, &p);
-	m_pClient->m_pSounds->Play(CSounds::CHN_WORLD, SOUND_HAMMER_HIT, 1.0f, Pos);
+	m_pClient->m_pSounds->PlayAt(CSounds::CHN_WORLD, SOUND_HAMMER_HIT, 1.0f, Pos);
 }
 
 void CEffects::OnRender()

@@ -299,7 +299,7 @@ class CResources : public IResources
 
 	virtual CResourceHandle CreateResource(CResourceId Id, bool StartLoad)
 	{
-		assert(Id.m_NameHash != 0);
+		tl_assert(Id.m_NameHash != 0);
 
 		const char *pType = GetTypeFromName(Id.m_pName);
 		if(!pType)
@@ -488,7 +488,7 @@ public:
 			dbg_msg("resources", "errors: resources left when exiting");
 			for(int i = 0; i < m_lpResources.size(); i++)
 				dbg_msg("resources", "    %s", m_lpResources[i]->Name());
-			assert(m_lpResources.size() == 0);
+			tl_assert(m_lpResources.size() == 0);
 		}
 
 		// all handlers should be gone as well
@@ -497,10 +497,10 @@ public:
 			dbg_msg("resources", "errors: handlers left when exiting");
 			for(int i = 0; i < m_lHandlers.size(); i++)
 				dbg_msg("resources", "    %s", m_lHandlers[i].m_pType);
-			assert(m_lHandlers.size() == 0);
+			tl_assert(m_lHandlers.size() == 0);
 		}
 
-		assert(m_JobCounter == 0);
+		tl_assert(m_JobCounter == 0);
 
 		// quit all threads
 		for(CSource *pSource = &m_SourceStart; pSource; pSource = pSource->NextSource())
@@ -546,7 +546,7 @@ public:
 			if(m_lpResources[i]->m_pHandler == pHandler)
 			{
 				dbg_msg("resources", "WARNING: '%s' is still in use", m_lpResources[i]->Name());
-				assert(0);
+				tl_assert(0);
 			}
 		}
 
@@ -589,7 +589,7 @@ public:
 			else
 			{
 				pResource->m_pHandler->Destroy(pResource);
-				assert(pResource->m_State != CResource::STATE_DESTROYED);  // make sure that the handler didn't call delete on the resource
+				tl_assert(pResource->m_State != CResource::STATE_DESTROYED);  // make sure that the handler didn't call delete on the resource
 				delete pResource;
 			}
 		}
@@ -606,8 +606,8 @@ public:
 
 	virtual	void Destroy(CResource *pResource)
 	{
-		assert(pResource->m_State != CResource::STATE_DESTROYED); // make that it isn't destoyed
-		assert(m_Running);
+		tl_assert(pResource->m_State != CResource::STATE_DESTROYED); // make that it isn't destoyed
+		tl_assert(m_Running);
 		dbg_msg("resources", "destroying '%s'", pResource->Name());
 		m_lpResources.remove_fast(pResource);
 		m_lDestroys.push(pResource);

@@ -3,6 +3,7 @@
 
 #include <base/detect.h>
 #include <base/math.h>
+#include <base/tl/threading.h>
 
 #include "SDL.h"
 #include "SDL_opengl.h"
@@ -19,6 +20,20 @@
 #include <math.h> // cosf, sinf
 
 #include "graphics.h"
+
+#if defined(CONF_PLATFORM_MACOSX)
+
+	class semaphore
+	{
+		SDL_sem *sem;
+	public:
+		semaphore() { sem = SDL_CreateSemaphore(0); }
+		~semaphore() { SDL_DestroySemaphore(sem); }
+		void wait() { SDL_SemWait(sem); }
+		void signal() { SDL_SemPost(sem); }
+	};
+#endif
+
 
 static CVideoMode g_aFakeModes[] = {
 	{320,240,8,8,8}, {400,300,8,8,8}, {640,480,8,8,8},
@@ -100,7 +115,6 @@ void CGraphics_OpenGL::Rotate4(const CPoint &rCenter, CVertex *pPoints)
 	}
 }
 
-/*
 unsigned char CGraphics_OpenGL::Sample(int w, int h, const unsigned char *pData, int u, int v, int Offset, int ScaleW, int ScaleH, int Bpp)
 {
 	int Value = 0;
@@ -134,7 +148,7 @@ unsigned char *CGraphics_OpenGL::Rescale(int Width, int Height, int NewWidth, in
 		}
 
 	return pTmpData;
-}*/
+}
 
 CGraphics_OpenGL::CGraphics_OpenGL()
 {
@@ -157,12 +171,6 @@ CGraphics_OpenGL::CGraphics_OpenGL()
 	m_DoScreenshot = false;
 
 	png_init(0,0); // ignore_convention
-}
-
-CGraphics_OpenGL::~CGraphics_OpenGL()
-{
-	//m_InvalidTexture = 0x0;
-	//m_pResources->RemoveHandler(&m_TextureHandler);
 }
 
 void CGraphics_OpenGL::ClipEnable(int x, int y, int w, int h)
@@ -202,6 +210,18 @@ void CGraphics_OpenGL::BlendAdditive()
 {
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+}
+
+void CGraphics_OpenGL::WrapNormal()
+{
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+}
+
+void CGraphics_OpenGL::WrapClamp()
+{
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 }
 
 int CGraphics_OpenGL::MemoryUsage() const
@@ -277,13 +297,19 @@ int CGraphics_OpenGL::UnloadTexture(IGraphics::CTextureHandle Index)
 	return 0;
 }
 
-unsigned char CGraphics_OpenGL::Sample(int w, int h, const unsigned char *pData, int u, int v, int Offset)
+int CGraphics_OpenGL::LoadTextureRawSub(IGraphics::CTextureHandle TextureID, int x, int y, int Width, int Height, int Format, const void *pData)
 {
-	return (pData[(v*w+u)*4+Offset]+
-		pData[(v*w+u+1)*4+Offset]+
-		pData[((v+1)*w+u)*4+Offset]+
-		pData[((v+1)*w+u+1)*4+Offset])/4;
-} 
+	int Oglformat = GL_RGBA;
+	if(Format == CImageInfo::FORMAT_RGB)
+		Oglformat = GL_RGB;
+	else if(Format == CImageInfo::FORMAT_ALPHA)
+		Oglformat = GL_ALPHA;
+
+	glBindTexture(GL_TEXTURE_2D, m_aTextures[TextureID].m_Tex);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, Width, Height, Oglformat, GL_UNSIGNED_BYTE, pData);
+	return 0;
+}
+
 
 IGraphics::CTextureHandle CGraphics_OpenGL::LoadTextureRaw(int Width, int Height, int Format, const void *pData, int StoreFormat, int Flags)
 {
@@ -304,28 +330,23 @@ IGraphics::CTextureHandle CGraphics_OpenGL::LoadTextureRaw(int Width, int Height
 	m_aTextures[Tex].m_Next = -1;
 
 	// resample if needed
-	if(!(Flags&TEXLOAD_NORESAMPLE) && g_Config.m_GfxTextureQuality==0)
+	if(!(Flags&TEXLOAD_NORESAMPLE) && (Format == CImageInfo::FORMAT_RGBA || Format == CImageInfo::FORMAT_RGB))
 	{
-		if(Width > 16 && Height > 16 && Format == CImageInfo::FORMAT_RGBA)
+		if(Width > GL_MAX_TEXTURE_SIZE || Height > GL_MAX_TEXTURE_SIZE)
 		{
-			unsigned char *pTmpData;
-			int c = 0;
-			int x, y;
-
-			pTmpData = (unsigned char *)mem_alloc(Width*Height*4, 1);
-
-			Width/=2;
-			Height/=2;
-
-			for(y = 0; y < Height; y++)
-				for(x = 0; x < Width; x++, c++)
-				{
-					pTmpData[c*4] = Sample(Width*2, Height*2, pTexData, x*2,y*2, 0);
-					pTmpData[c*4+1] = Sample(Width*2, Height*2, pTexData, x*2,y*2, 1);
-					pTmpData[c*4+2] = Sample(Width*2, Height*2, pTexData, x*2,y*2, 2);
-					pTmpData[c*4+3] = Sample(Width*2, Height*2, pTexData, x*2,y*2, 3);
-				}
+			int NewWidth = min(Width, GL_MAX_TEXTURE_SIZE);
+			int NewHeight = min(Height, GL_MAX_TEXTURE_SIZE);
+			pTmpData = Rescale(Width, Height, NewWidth, NewHeight, Format, pTexData);
 			pTexData = pTmpData;
+			Width = NewWidth;
+			Height = NewHeight;
+		}
+		else if(Width > 16 && Height > 16 && g_Config.m_GfxTextureQuality == 0)
+		{
+			pTmpData = Rescale(Width, Height, Width/2, Height/2, Format, pTexData);
+			pTexData = pTmpData;
+			Width /= 2;
+			Height /= 2;
 		}
 	}
 
@@ -355,9 +376,19 @@ IGraphics::CTextureHandle CGraphics_OpenGL::LoadTextureRaw(int Width, int Height
 
 	glGenTextures(1, &m_aTextures[Tex].m_Tex);
 	glBindTexture(GL_TEXTURE_2D, m_aTextures[Tex].m_Tex);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
-	gluBuild2DMipmaps(GL_TEXTURE_2D, StoreOglformat, Width, Height, Oglformat, GL_UNSIGNED_BYTE, pTexData);
+
+	if(Flags&TEXLOAD_NOMIPMAPS)
+	{
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexImage2D(GL_TEXTURE_2D, 0, StoreOglformat, Width, Height, 0, Oglformat, GL_UNSIGNED_BYTE, pData);
+	}
+	else
+	{
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
+		gluBuild2DMipmaps(GL_TEXTURE_2D, StoreOglformat, Width, Height, Oglformat, GL_UNSIGNED_BYTE, pTexData);
+	}
 
 	// calculate memory usage
 	{
@@ -702,20 +733,20 @@ void CGraphics_OpenGL::QuadsText(float x, float y, float Size, float r, float g,
 	QuadsEnd();
 }
 
-bool CGraphics_OpenGL::Init()
+int CGraphics_OpenGL::Init()
 {
 	m_pStorage = Kernel()->RequestInterface<IStorage>();
 	m_pConsole = Kernel()->RequestInterface<IConsole>();
+
+	// Set all z to -5.0f
+	for(int i = 0; i < MAX_VERTICES; i++)
+		m_aVertices[i].m_Pos.z = -5.0f;
 
 	// init textures
 	m_FirstFreeTexture = 0;
 	for(int i = 0; i < MAX_TEXTURES; i++)
 		m_aTextures[i].m_Next = i+1;
 	m_aTextures[MAX_TEXTURES-1].m_Next = -1;
-
-	// Set all z to -5.0f
-	for(int i = 0; i < MAX_VERTICES; i++)
-		m_aVertices[i].m_Pos.z = -5.0f;
 
 	// set some default settings
 	glEnable(GL_BLEND);
@@ -738,16 +769,23 @@ bool CGraphics_OpenGL::Init()
 
 	m_InvalidTexture = LoadTextureRaw(4,4,CImageInfo::FORMAT_RGBA,aNullTextureData,CImageInfo::FORMAT_RGBA,TEXLOAD_NORESAMPLE);
 
-	return true;
+	return 0;
 }
 
 int CGraphics_SDL::TryInit()
 {
+	const SDL_VideoInfo *pInfo = SDL_GetVideoInfo();
+	SDL_EventState(SDL_MOUSEMOTION, SDL_IGNORE); // prevent stuck mouse cursor sdl-bug when loosing fullscreen focus in windows
+
+	// use current resolution as default
+	if(g_Config.m_GfxScreenWidth == 0 || g_Config.m_GfxScreenHeight == 0)
+	{
+		g_Config.m_GfxScreenWidth = pInfo->current_w;
+		g_Config.m_GfxScreenHeight = pInfo->current_h;
+	}
+
 	m_ScreenWidth = g_Config.m_GfxScreenWidth;
 	m_ScreenHeight = g_Config.m_GfxScreenHeight;
-
-	const SDL_VideoInfo *pInfo = SDL_GetVideoInfo();
-	SDL_EventState(SDL_MOUSEMOTION, SDL_IGNORE);
 
 	// set flags
 	int Flags = SDL_OPENGL;
@@ -762,7 +800,15 @@ int CGraphics_SDL::TryInit()
 	if(pInfo->blit_hw) // ignore_convention
 		Flags |= SDL_HWACCEL;
 
-	if(g_Config.m_GfxFullscreen)
+	if(g_Config.m_GfxBorderless && g_Config.m_GfxFullscreen)
+	{
+		dbg_msg("gfx", "both borderless and fullscreen activated, disabling borderless");
+		g_Config.m_GfxBorderless = 0;
+	}
+
+	if(g_Config.m_GfxBorderless)
+		Flags |= SDL_NOFRAME;
+	else if(g_Config.m_GfxFullscreen)
 		Flags |= SDL_FULLSCREEN;
 
 	// set gl attributes
@@ -836,7 +882,7 @@ CGraphics_SDL::CGraphics_SDL()
 	m_pScreenSurface = 0;
 }
 
-bool CGraphics_SDL::Init()
+int CGraphics_SDL::Init()
 {
 	{
 		int Systems = SDL_INIT_VIDEO;
@@ -850,7 +896,7 @@ bool CGraphics_SDL::Init()
 		if(SDL_Init(Systems) < 0)
 		{
 			dbg_msg("gfx", "unable to init SDL: %s", SDL_GetError());
-			return true;
+			return -1;
 		}
 	}
 
@@ -862,14 +908,14 @@ bool CGraphics_SDL::Init()
 	#endif
 
 	if(InitWindow() != 0)
-		return true;
+		return -1;
 
 	SDL_ShowCursor(0);
 
 	CGraphics_OpenGL::Init();
 
 	MapScreen(0,0,g_Config.m_GfxScreenWidth, g_Config.m_GfxScreenHeight);
-	return false;
+	return 0;
 }
 
 void CGraphics_SDL::Shutdown()
@@ -911,7 +957,8 @@ void CGraphics_SDL::Swap()
 {
 	if(m_DoScreenshot)
 	{
-		ScreenshotDirect(m_aScreenshotName);
+		if(WindowActive())
+			ScreenshotDirect(m_aScreenshotName);
 		m_DoScreenshot = false;
 	}
 
@@ -965,6 +1012,21 @@ int CGraphics_SDL::GetVideoModes(CVideoMode *pModes, int MaxModes)
 	}
 
 	return NumModes;
+}
+
+// syncronization
+void CGraphics_SDL::InsertSignal(semaphore *pSemaphore)
+{
+	pSemaphore->signal();
+}
+
+bool CGraphics_SDL::IsIdle()
+{
+	return true;
+}
+
+void CGraphics_SDL::WaitForIdle()
+{
 }
 
 extern IEngineGraphics *CreateEngineGraphics() { return new CGraphics_SDL(); }

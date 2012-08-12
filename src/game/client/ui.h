@@ -52,13 +52,23 @@ public:
 		CORNER_TR=2,
 		CORNER_BL=4,
 		CORNER_BR=8,
+		CORNER_ITL=16,
+		CORNER_ITR=32,
+		CORNER_IBL=64,
+		CORNER_IBR=128,
 
 		CORNER_T=CORNER_TL|CORNER_TR,
 		CORNER_B=CORNER_BL|CORNER_BR,
 		CORNER_R=CORNER_TR|CORNER_BR,
 		CORNER_L=CORNER_TL|CORNER_BL,
 
-		CORNER_ALL=CORNER_T|CORNER_B
+		CORNER_IT=CORNER_ITL|CORNER_ITR,
+		CORNER_IB=CORNER_IBL|CORNER_IBR,
+		CORNER_IR=CORNER_ITR|CORNER_IBR,
+		CORNER_IL=CORNER_ITL|CORNER_IBL,
+
+		CORNER_ALL=CORNER_T|CORNER_B,
+		CORNER_INV_ALL=CORNER_IT|CORNER_IB
 	};
 
 	int Update(float mx, float my, float Mwx, float Mwy, int m_Buttons);
@@ -82,6 +92,7 @@ public:
 	void ConvertMouseMove(float *x, float *y);
 
 	CUIRect *Screen();
+	float PixelSize();
 	void ClipEnable(const CUIRect *pRect);
 	void ClipDisable();
 
@@ -90,6 +101,8 @@ public:
 	float Scale();
 
 	int DoButtonLogic(const void *pID, const char *pText /* TODO: Refactor: Remove */, int Checked, const CUIRect *pRect);
+	int DoPickerLogic(const void *pID, const CUIRect *pRect, int *pX, int *pY);
+	int DoColorSelectionLogic(const CUIRect *pRect, const CUIRect *pButton);
 
 	// TODO: Refactor: Remove this?
 	void DoLabel(const CUIRect *pRect, const char *pText, float Size, int Align, int MaxWidth = -1);

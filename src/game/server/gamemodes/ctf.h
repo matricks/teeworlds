@@ -7,7 +7,10 @@
 
 class CGameControllerCTF : public IGameController
 {
-public:
+	// balancing
+	virtual bool CanBeMovedOnBalance(int ClientID);
+
+	// game
 	class CFlag *m_apFlags[2];
 
 	CResourceIndex m_Sound_FlagDrop;
@@ -16,14 +19,18 @@ public:
 	CResourceIndex m_Sound_FlagGrabEn;
 	CResourceIndex m_Sound_FlagGrabPl;
 
+	virtual void DoWincheckMatch();
+
+public:
 	CGameControllerCTF(class CGameContext *pGameServer);
-	virtual void DoWincheck();
-	virtual bool CanBeMovedOnBalance(int ClientID);
+	
+	// event
+	virtual int OnCharacterDeath(class CCharacter *pVictim, class CPlayer *pKiller, int Weapon);
+	virtual bool OnEntity(int Index, vec2 Pos);
+
+	// general
 	virtual void Snap(int SnappingClient);
 	virtual void Tick();
-
-	virtual bool OnEntity(int Index, vec2 Pos);
-	virtual int OnCharacterDeath(class CCharacter *pVictim, class CPlayer *pKiller, int Weapon);
 };
 
 #endif

@@ -6,13 +6,14 @@
 
 #include <game/server/entities/character.h>
 #include <game/server/entities/flag.h>
-#include <game/server/player.h>
 #include <game/server/gamecontext.h>
+#include <game/server/player.h>
 #include "ctf.h"
 
-CGameControllerCTF::CGameControllerCTF(class CGameContext *pGameServer)
+CGameControllerCTF::CGameControllerCTF(CGameContext *pGameServer)
 : IGameController(pGameServer)
 {
+	// game
 	m_apFlags[0] = 0;
 	m_apFlags[1] = 0;
 	m_pGameType = "CTF";
@@ -25,26 +26,24 @@ CGameControllerCTF::CGameControllerCTF(class CGameContext *pGameServer)
 	m_Sound_FlagGrabPl = Server()->LoadResource("audio/sfx_ctf_grab_pl.wv");
 }
 
-bool CGameControllerCTF::OnEntity(int Index, vec2 Pos)
+// balancing
+bool CGameControllerCTF::CanBeMovedOnBalance(int ClientID)
 {
-	if(IGameController::OnEntity(Index, Pos))
-		return true;
-
-	int Team = -1;
-	if(Index == ENTITY_FLAGSTAND_RED) Team = TEAM_RED;
-	if(Index == ENTITY_FLAGSTAND_BLUE) Team = TEAM_BLUE;
-	if(Team == -1 || m_apFlags[Team])
-		return false;
-
-	CFlag *F = new CFlag(&GameServer()->m_World, Team);
-	F->m_StandPos = Pos;
-	F->m_Pos = Pos;
-	m_apFlags[Team] = F;
-	GameServer()->m_World.InsertEntity(F);
+	CCharacter* Character = GameServer()->m_apPlayers[ClientID]->GetCharacter();
+	if(Character)
+	{
+		for(int fi = 0; fi < 2; fi++)
+		{
+			CFlag *F = m_apFlags[fi];
+			if(F->m_pCarryingCharacter == Character)
+				return false;
+		}
+	}
 	return true;
 }
 
-int CGameControllerCTF::OnCharacterDeath(class CCharacter *pVictim, class CPlayer *pKiller, int WeaponID)
+// event
+int CGameControllerCTF::OnCharacterDeath(CCharacter *pVictim, CPlayer *pKiller, int WeaponID)
 {
 	IGameController::OnCharacterDeath(pVictim, pKiller, WeaponID);
 	int HadFlag = 0;
@@ -72,78 +71,86 @@ int CGameControllerCTF::OnCharacterDeath(class CCharacter *pVictim, class CPlaye
 	return HadFlag;
 }
 
-void CGameControllerCTF::DoWincheck()
+bool CGameControllerCTF::OnEntity(int Index, vec2 Pos)
 {
-	if(m_GameOverTick == -1 && !m_Warmup)
-	{
-		// check score win condition
-		if((g_Config.m_SvScorelimit > 0 && (m_aTeamscore[TEAM_RED] >= g_Config.m_SvScorelimit || m_aTeamscore[TEAM_BLUE] >= g_Config.m_SvScorelimit)) ||
-			(g_Config.m_SvTimelimit > 0 && (Server()->Tick()-m_RoundStartTick) >= g_Config.m_SvTimelimit*Server()->TickSpeed()*60))
-		{
-			if(m_SuddenDeath)
-			{
-				if(m_aTeamscore[TEAM_RED]/100 != m_aTeamscore[TEAM_BLUE]/100)
-					EndRound();
-			}
-			else
-			{
-				if(m_aTeamscore[TEAM_RED] != m_aTeamscore[TEAM_BLUE])
-					EndRound();
-				else
-					m_SuddenDeath = 1;
-			}
-		}
-	}
-}
+	if(IGameController::OnEntity(Index, Pos))
+		return true;
 
-bool CGameControllerCTF::CanBeMovedOnBalance(int ClientID)
-{
-	CCharacter* Character = GameServer()->m_apPlayers[ClientID]->GetCharacter();
-	if(Character)
-	{
-		for(int fi = 0; fi < 2; fi++)
-		{
-			CFlag *F = m_apFlags[fi];
-			if(F->m_pCarryingCharacter == Character)
-				return false;
-		}
-	}
+	int Team = -1;
+	if(Index == ENTITY_FLAGSTAND_RED) Team = TEAM_RED;
+	if(Index == ENTITY_FLAGSTAND_BLUE) Team = TEAM_BLUE;
+	if(Team == -1 || m_apFlags[Team])
+		return false;
+
+	CFlag *F = new CFlag(&GameServer()->m_World, Team);
+	F->m_StandPos = Pos;
+	F->m_Pos = Pos;
+	m_apFlags[Team] = F;
+	GameServer()->m_World.InsertEntity(F);
 	return true;
 }
 
+// game
+void CGameControllerCTF::DoWincheckMatch()
+{
+	// check score win condition
+	if((m_ScoreLimit > 0 && (m_aTeamscore[TEAM_RED] >= m_ScoreLimit || m_aTeamscore[TEAM_BLUE] >= m_ScoreLimit)) ||
+		(m_TimeLimit > 0 && (Server()->Tick()-m_GameStartTick) >= m_TimeLimit*Server()->TickSpeed()*60))
+	{
+		if(m_SuddenDeath)
+		{
+			if(m_aTeamscore[TEAM_RED]/100 != m_aTeamscore[TEAM_BLUE]/100)
+				EndMatch();
+		}
+		else
+		{
+			if(m_aTeamscore[TEAM_RED] != m_aTeamscore[TEAM_BLUE])
+				EndMatch();
+			else
+				m_SuddenDeath = 1;
+		}
+	}
+}
+
+// general
 void CGameControllerCTF::Snap(int SnappingClient)
 {
 	IGameController::Snap(SnappingClient);
 
-	CNetObj_GameData *pGameDataObj = (CNetObj_GameData *)Server()->SnapNewItem(NETOBJTYPE_GAMEDATA, 0, sizeof(CNetObj_GameData));
-	if(!pGameDataObj)
+	CNetObj_GameDataFlag *pGameDataFlag = static_cast<CNetObj_GameDataFlag *>(Server()->SnapNewItem(NETOBJTYPE_GAMEDATAFLAG, 0, sizeof(CNetObj_GameDataFlag)));
+	if(!pGameDataFlag)
 		return;
 
-	pGameDataObj->m_TeamscoreRed = m_aTeamscore[TEAM_RED];
-	pGameDataObj->m_TeamscoreBlue = m_aTeamscore[TEAM_BLUE];
-
+	pGameDataFlag->m_FlagDropTickRed = 0;
 	if(m_apFlags[TEAM_RED])
 	{
 		if(m_apFlags[TEAM_RED]->m_AtStand)
-			pGameDataObj->m_FlagCarrierRed = FLAG_ATSTAND;
+			pGameDataFlag->m_FlagCarrierRed = FLAG_ATSTAND;
 		else if(m_apFlags[TEAM_RED]->m_pCarryingCharacter && m_apFlags[TEAM_RED]->m_pCarryingCharacter->GetPlayer())
-			pGameDataObj->m_FlagCarrierRed = m_apFlags[TEAM_RED]->m_pCarryingCharacter->GetPlayer()->GetCID();
+			pGameDataFlag->m_FlagCarrierRed = m_apFlags[TEAM_RED]->m_pCarryingCharacter->GetPlayer()->GetCID();
 		else
-			pGameDataObj->m_FlagCarrierRed = FLAG_TAKEN;
+		{
+			pGameDataFlag->m_FlagCarrierRed = FLAG_TAKEN;
+			pGameDataFlag->m_FlagDropTickRed = m_apFlags[TEAM_RED]->m_DropTick;
+		}
 	}
 	else
-		pGameDataObj->m_FlagCarrierRed = FLAG_MISSING;
+		pGameDataFlag->m_FlagCarrierRed = FLAG_MISSING;
+	pGameDataFlag->m_FlagDropTickBlue = 0;
 	if(m_apFlags[TEAM_BLUE])
 	{
 		if(m_apFlags[TEAM_BLUE]->m_AtStand)
-			pGameDataObj->m_FlagCarrierBlue = FLAG_ATSTAND;
+			pGameDataFlag->m_FlagCarrierBlue = FLAG_ATSTAND;
 		else if(m_apFlags[TEAM_BLUE]->m_pCarryingCharacter && m_apFlags[TEAM_BLUE]->m_pCarryingCharacter->GetPlayer())
-			pGameDataObj->m_FlagCarrierBlue = m_apFlags[TEAM_BLUE]->m_pCarryingCharacter->GetPlayer()->GetCID();
+			pGameDataFlag->m_FlagCarrierBlue = m_apFlags[TEAM_BLUE]->m_pCarryingCharacter->GetPlayer()->GetCID();
 		else
-			pGameDataObj->m_FlagCarrierBlue = FLAG_TAKEN;
+		{
+			pGameDataFlag->m_FlagCarrierBlue = FLAG_TAKEN;
+			pGameDataFlag->m_FlagDropTickBlue = m_apFlags[TEAM_BLUE]->m_DropTick;
+		}
 	}
 	else
-		pGameDataObj->m_FlagCarrierBlue = FLAG_MISSING;
+		pGameDataFlag->m_FlagCarrierBlue = FLAG_MISSING;
 }
 
 void CGameControllerCTF::Tick()
@@ -258,13 +265,16 @@ void CGameControllerCTF::Tick()
 						if(!pPlayer)
 							continue;
 
-						if(pPlayer->GetTeam() == TEAM_SPECTATORS && pPlayer->m_SpectatorID != SPEC_FREEVIEW && GameServer()->m_apPlayers[pPlayer->m_SpectatorID] && GameServer()->m_apPlayers[pPlayer->m_SpectatorID]->GetTeam() == fi)
+						if((pPlayer->GetTeam() == TEAM_SPECTATORS || pPlayer->m_DeadSpecMode) && pPlayer->GetSpectatorID() != SPEC_FREEVIEW &&
+							GameServer()->m_apPlayers[pPlayer->GetSpectatorID()] && GameServer()->m_apPlayers[pPlayer->GetSpectatorID()]->GetTeam() == fi)
 							GameServer()->CreateSoundGlobal(m_Sound_FlagGrabEn, c);
 						else if(pPlayer->GetTeam() == fi)
 							GameServer()->CreateSoundGlobal(m_Sound_FlagGrabEn, c);
 						else
 							GameServer()->CreateSoundGlobal(m_Sound_FlagGrabPl, c);
 					}
+					// demo record entry
+					GameServer()->CreateSoundGlobal(m_Sound_FlagGrabEn, -2);
 					break;
 				}
 			}

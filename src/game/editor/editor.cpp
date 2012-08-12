@@ -32,6 +32,11 @@ enum
 
 CEditorImage::~CEditorImage()
 {
+	if(m_pData)
+	{
+		mem_free(m_pData);
+		m_pData = 0;
+	}
 }
 
 CLayerGroup::CLayerGroup()
@@ -154,35 +159,42 @@ int CLayerGroup::SwapLayers(int Index0, int Index1)
 
 void CEditorImage::AnalyseTileFlags()
 {
-	mem_zero(m_aTileFlags, sizeof(m_aTileFlags));
-
-	int tw = m_Width/16; // tilesizes
-	int th = m_Height/16;
-	if ( tw == th )
+	if(m_Format == CImageInfo::FORMAT_RGB)
 	{
-		unsigned char *pPixelData = (unsigned char *)m_pData;
-
-		int TileID = 0;
-		for(int ty = 0; ty < 16; ty++)
-			for(int tx = 0; tx < 16; tx++, TileID++)
-			{
-				bool Opaque = true;
-				for(int x = 0; x < tw; x++)
-					for(int y = 0; y < th; y++)
-					{
-						int p = (ty*tw+y)*m_Width + tx*tw+x;
-						if(pPixelData[p*4+3] < 250)
-						{
-							Opaque = false;
-							break;
-						}
-					}
-
-				if(Opaque)
-					m_aTileFlags[TileID] |= TILEFLAG_OPAQUE;
-			}
+		for(int i = 0; i < 256; ++i)
+			m_aTileFlags[i] = TILEFLAG_OPAQUE;
 	}
+	else
+	{
+		mem_zero(m_aTileFlags, sizeof(m_aTileFlags));
 
+		int tw = m_Width/16; // tilesizes
+		int th = m_Height/16;
+		if(tw == th)
+		{
+			unsigned char *pPixelData = (unsigned char *)m_pData;
+
+			int TileID = 0;
+			for(int ty = 0; ty < 16; ty++)
+				for(int tx = 0; tx < 16; tx++, TileID++)
+				{
+					bool Opaque = true;
+					for(int x = 0; x < tw; x++)
+						for(int y = 0; y < th; y++)
+						{
+							int p = (ty*tw+y)*m_Width + tx*tw+x;
+							if(pPixelData[p*4+3] < 250)
+							{
+								Opaque = false;
+								break;
+							}
+						}
+
+					if(Opaque)
+						m_aTileFlags[TileID] |= TILEFLAG_OPAQUE;
+				}
+		}
+	}
 }
 
 void CEditor::EnvelopeEval(float TimeOffset, int Env, float *pChannels, void *pUser)
@@ -209,7 +221,6 @@ void CEditor::EnvelopeEval(float TimeOffset, int Env, float *pChannels, void *pU
 
 // copied from gc_menu.cpp, should be more generalized
 //extern int ui_do_edit_box(void *id, const CUIRect *rect, char *str, int str_size, float font_size, bool hidden=false);
-
 int CEditor::DoEditBox(void *pID, const CUIRect *pRect, char *pStr, unsigned StrSize, float FontSize, float *Offset, bool Hidden, int Corners)
 {
 	int Inside = UI()->MouseInside(pRect);
@@ -223,6 +234,7 @@ int CEditor::DoEditBox(void *pID, const CUIRect *pRect, char *pStr, unsigned Str
 
 	if(UI()->LastActiveItem() == pID)
 	{
+		m_EditBoxActive = 2;
 		int Len = str_length(pStr);
 		if(Len == 0)
 			s_AtIndex = 0;
@@ -966,7 +978,7 @@ void CEditor::DoToolbar(CUIRect ToolBar)
 	// refocus button
 	TB_Bottom.VSplitLeft(50.0f, &Button, &TB_Bottom);
 	static int s_RefocusButton = 0;
-	if(DoButton_Editor(&s_RefocusButton, "Refocus", m_WorldOffsetX&&m_WorldOffsetY?0:-1, &Button, 0, "[HOME] Restore map focus") || Input()->KeyDown(KEY_HOME))
+	if(DoButton_Editor(&s_RefocusButton, "Refocus", m_WorldOffsetX&&m_WorldOffsetY?0:-1, &Button, 0, "[HOME] Restore map focus") || (m_EditBoxActive == 0 && Input()->KeyDown(KEY_HOME)))
 	{
 		m_WorldOffsetX = 0;
 		m_WorldOffsetY = 0;
@@ -1636,6 +1648,12 @@ void CEditor::DoMapEditor(CUIRect View, CUIRect ToolBar)
 			pT->ShowInfo();
 		}
 	}
+	else
+	{
+		// fix aspect ratio of the image in the picker
+		float Max = min(View.w, View.h);
+		View.w = View.h = Max;
+	}
 
 	static void *s_pEditorID = (void *)&s_pEditorID;
 	int Inside = UI()->MouseInside(&View);
@@ -1960,7 +1978,7 @@ void CEditor::DoMapEditor(CUIRect View, CUIRect ToolBar)
 		}
 	}
 
-	if(GetSelectedGroup() && GetSelectedGroup()->m_UseClipping)
+	if(!m_ShowPicker && GetSelectedGroup() && GetSelectedGroup()->m_UseClipping)
 	{
 		CLayerGroup *g = m_Map.m_pGameGroup;
 		g->MapScreen();
@@ -2412,11 +2430,17 @@ void CEditor::ReplaceImage(const char *pFileName, int StorageType, void *pUser)
 	CEditorImage *pImg = pEditor->m_Map.m_lImages[pEditor->m_SelectedImage];
 	int External = pImg->m_External;
 	pImg->m_Texture = IGraphics::CTextureHandle();
+	if(pImg->m_pData)
+	{
+		mem_free(pImg->m_pData);
+		pImg->m_pData = 0;
+	}
 	*pImg = ImgInfo;
 	pImg->m_External = External;
 	pEditor->ExtractName(pFileName, pImg->m_aName, sizeof(pImg->m_aName));
 	pImg->m_AutoMapper.Load(pImg->m_aName);
 	pImg->m_Texture = pEditor->Graphics()->LoadTextureRaw(ImgInfo.m_Width, ImgInfo.m_Height, ImgInfo.m_Format, ImgInfo.m_pData, CImageInfo::FORMAT_AUTO, 0);
+	ImgInfo.m_pData = 0;
 	pEditor->SortImages();
 	for(int i = 0; i < pEditor->m_Map.m_lImages.size(); ++i)
 	{
@@ -2445,6 +2469,7 @@ void CEditor::AddImage(const char *pFileName, int StorageType, void *pUser)
 	CEditorImage *pImg = new CEditorImage(pEditor);
 	*pImg = ImgInfo;
 	pImg->m_Texture = pEditor->Graphics()->LoadTextureRaw(ImgInfo.m_Width, ImgInfo.m_Height, ImgInfo.m_Format, ImgInfo.m_pData, CImageInfo::FORMAT_AUTO, 0);
+	ImgInfo.m_pData = 0;
 	pImg->m_External = 1;	// external by default
 	str_copy(pImg->m_aName, aBuf, sizeof(pImg->m_aName));
 	pImg->m_AutoMapper.Load(pImg->m_aName);
@@ -2668,11 +2693,12 @@ void CEditor::RenderImages(CUIRect ToolBox, CUIRect ToolBar, CUIRect View)
 				r.h *= m_Map.m_lImages[i]->m_Height/Max;
 				Graphics()->TextureSet(m_Map.m_lImages[i]->m_Texture);
 				Graphics()->BlendNormal();
+				Graphics()->WrapClamp();
 				Graphics()->QuadsBegin();
 				IGraphics::CQuadItem QuadItem(r.x, r.y, r.w, r.h);
 				Graphics()->QuadsDrawTL(&QuadItem, 1);
 				Graphics()->QuadsEnd();
-
+				Graphics()->WrapNormal();
 			}
 		}
 
@@ -2769,11 +2795,13 @@ void CEditor::RenderFileDialog()
 	RenderTools()->DrawUIRect(&View, vec4(0,0,0,0.75f), CUI::CORNER_ALL, 5.0f);
 	View.Margin(10.0f, &View);
 
-	CUIRect Title, FileBox, FileBoxLabel, ButtonBar, Scroll;
+	CUIRect Title, FileBox, FileBoxLabel, ButtonBar, Scroll, PathBox;
 	View.HSplitTop(18.0f, &Title, &View);
 	View.HSplitTop(5.0f, 0, &View); // some spacing
 	View.HSplitBottom(14.0f, &View, &ButtonBar);
 	View.HSplitBottom(10.0f, &View, 0); // some spacing
+	View.HSplitBottom(14.0f, &View, &PathBox);
+	View.HSplitBottom(5.0f, &View, 0); // some spacing
 	View.HSplitBottom(14.0f, &View, &FileBox);
 	FileBox.VSplitLeft(55.0f, &FileBoxLabel, &FileBox);
 	View.HSplitBottom(10.0f, &View, 0); // some spacing
@@ -2783,6 +2811,15 @@ void CEditor::RenderFileDialog()
 	RenderTools()->DrawUIRect(&Title, vec4(1, 1, 1, 0.25f), CUI::CORNER_ALL, 4.0f);
 	Title.VMargin(10.0f, &Title);
 	UI()->DoLabel(&Title, m_pFileDialogTitle, 12.0f, -1, -1);
+
+	// pathbox
+	char aPath[128], aBuf[128];
+	if(m_FilesSelectedIndex != -1)
+		Storage()->GetCompletePath(m_FileList[m_FilesSelectedIndex].m_StorageType, m_pFileDialogPath, aPath, sizeof(aPath));
+	else
+		aPath[0] = 0;
+	str_format(aBuf, sizeof(aBuf), "Current path: %s", aPath);
+	UI()->DoLabel(&PathBox, aBuf, 10.0f, -1, -1);
 
 	// filebox
 	if(m_FileDialogStorageType == IStorage::TYPE_SAVE)
@@ -2880,6 +2917,7 @@ void CEditor::RenderFileDialog()
 	static int s_OkButton = 0;
 	static int s_CancelButton = 0;
 	static int s_NewFolderButton = 0;
+	static int s_MapInfoButton = 0;
 
 	CUIRect Button;
 	ButtonBar.VSplitRight(50.0f, &ButtonBar, &Button);
@@ -2952,6 +2990,22 @@ void CEditor::RenderFileDialog()
 			m_FileDialogErrString[0] = 0;
 			static int s_NewFolderPopupID = 0;
 			UiInvokePopupMenu(&s_NewFolderPopupID, 0, Width/2.0f-200.0f, Height/2.0f-100.0f, 400.0f, 200.0f, PopupNewFolder);
+			UI()->SetActiveItem(0);
+		}
+	}
+
+	if(m_FileDialogStorageType == IStorage::TYPE_SAVE)
+	{
+		ButtonBar.VSplitLeft(40.0f, 0, &ButtonBar);
+		ButtonBar.VSplitLeft(70.0f, &Button, &ButtonBar);
+		if(DoButton_Editor(&s_MapInfoButton, "Map details", 0, &Button, 0, 0))
+		{
+			str_copy(m_Map.m_MapInfo.m_aAuthorTmp, m_Map.m_MapInfo.m_aAuthor, sizeof(m_Map.m_MapInfo.m_aAuthorTmp));
+			str_copy(m_Map.m_MapInfo.m_aVersionTmp, m_Map.m_MapInfo.m_aVersion, sizeof(m_Map.m_MapInfo.m_aVersionTmp));
+			str_copy(m_Map.m_MapInfo.m_aCreditsTmp, m_Map.m_MapInfo.m_aCredits, sizeof(m_Map.m_MapInfo.m_aCreditsTmp));
+			str_copy(m_Map.m_MapInfo.m_aLicenseTmp, m_Map.m_MapInfo.m_aLicense, sizeof(m_Map.m_MapInfo.m_aLicenseTmp));
+			static int s_MapInfoPopupID = 0;
+			UiInvokePopupMenu(&s_MapInfoPopupID, 0, Width/2.0f-200.0f, Height/2.0f-100.0f, 400.0f, 200.0f, PopupMapInfo);
 			UI()->SetActiveItem(0);
 		}
 	}
@@ -3573,10 +3627,15 @@ void CEditor::RenderMenubar(CUIRect MenuBar)
 		(void)0;
 		*/
 
+	CUIRect Info;
 	MenuBar.VSplitLeft(40.0f, 0, &MenuBar);
+	MenuBar.VSplitLeft(MenuBar.w*0.75f, &MenuBar, &Info);
 	char aBuf[128];
 	str_format(aBuf, sizeof(aBuf), "File: %s", m_aFileName);
 	UI()->DoLabel(&MenuBar, aBuf, 10.0f, -1, -1);
+
+	str_format(aBuf, sizeof(aBuf), "Z: %i, A: %.1f, G: %i", m_ZoomLevel, m_AnimateSpeed, m_GridFactor);
+	UI()->DoLabel(&Info, aBuf, 10.0f, 1, -1);
 }
 
 void CEditor::Render()
@@ -3591,6 +3650,9 @@ void CEditor::Render()
 
 	// reset tip
 	m_pTooltip = 0;
+
+	if(m_EditBoxActive)
+		--m_EditBoxActive;
 
 	// render checker
 	RenderBackground(View, m_CheckerTexture, 32.0f, 1.0f);
@@ -3857,6 +3919,8 @@ void CEditorMap::Clean()
 	m_lEnvelopes.delete_all();
 	m_lImages.delete_all();
 
+	m_MapInfo.Reset();
+
 	m_pGameLayer = 0x0;
 	m_pGameGroup = 0x0;
 
@@ -3878,6 +3942,7 @@ void CEditorMap::CreateDefault(IGraphics::CTextureHandle EntitiesTexture)
 	pQuad->m_aPoints[1].x = pQuad->m_aPoints[3].x = Width;
 	pQuad->m_aPoints[0].y = pQuad->m_aPoints[1].y = -Height;
 	pQuad->m_aPoints[2].y = pQuad->m_aPoints[3].y = Height;
+	pQuad->m_aPoints[4].x = pQuad->m_aPoints[4].y = 0;
 	pQuad->m_aColors[0].r = pQuad->m_aColors[1].r = 94;
 	pQuad->m_aColors[0].g = pQuad->m_aColors[1].g = 132;
 	pQuad->m_aColors[0].b = pQuad->m_aColors[1].b = 174;

@@ -220,6 +220,31 @@ int CEditorMap::Save(class IStorage *pStorage, const char *pFileName)
 		df.AddItem(MAPITEMTYPE_VERSION, 0, sizeof(Item), &Item);
 	}
 
+	// save map info
+	{
+		CMapItemInfo Item;
+		Item.m_Version = 1;
+
+		if(m_MapInfo.m_aAuthor[0])
+			Item.m_Author = df.AddData(str_length(m_MapInfo.m_aAuthor)+1, m_MapInfo.m_aAuthor);
+		else
+			Item.m_Author = -1;
+		if(m_MapInfo.m_aVersion[0])
+			Item.m_MapVersion = df.AddData(str_length(m_MapInfo.m_aVersion)+1, m_MapInfo.m_aVersion);
+		else
+			Item.m_MapVersion = -1;
+		if(m_MapInfo.m_aCredits[0])
+			Item.m_Credits = df.AddData(str_length(m_MapInfo.m_aCredits)+1, m_MapInfo.m_aCredits);
+		else
+			Item.m_Credits = -1;
+		if(m_MapInfo.m_aLicense[0])
+			Item.m_License = df.AddData(str_length(m_MapInfo.m_aLicense)+1, m_MapInfo.m_aLicense);
+		else
+			Item.m_License = -1;
+
+		df.AddItem(MAPITEMTYPE_INFO, 0, sizeof(Item), &Item);
+	}
+
 	// save images
 	for(int i = 0; i < m_lImages.size(); i++)
 	{
@@ -230,7 +255,7 @@ int CEditorMap::Save(class IStorage *pStorage, const char *pFileName)
 		pImg->AnalyseTileFlags();
 
 		CMapItemImage Item;
-		Item.m_Version = 1;
+		Item.m_Version = CMapItemImage::CURRENT_VERSION;
 
 		Item.m_Width = pImg->m_Width;
 		Item.m_Height = pImg->m_Height;
@@ -239,7 +264,11 @@ int CEditorMap::Save(class IStorage *pStorage, const char *pFileName)
 		if(pImg->m_External)
 			Item.m_ImageData = -1;
 		else
-			Item.m_ImageData = df.AddData(Item.m_Width*Item.m_Height*4, pImg->m_pData);
+		{
+			int PixelSize = pImg->m_Format == CImageInfo::FORMAT_RGB ? 3 : 4;
+			Item.m_ImageData = df.AddData(Item.m_Width*Item.m_Height*PixelSize, pImg->m_pData);
+		}
+		Item.m_Format = pImg->m_Format;
 		df.AddItem(MAPITEMTYPE_IMAGE, i, sizeof(Item), &Item);
 	}
 
@@ -366,6 +395,7 @@ int CEditorMap::Save(class IStorage *pStorage, const char *pFileName)
 	}
 
 	df.AddItem(MAPITEMTYPE_ENVPOINTS, 0, TotalSize, pPoints);
+	mem_free(pPoints);
 
 	// finish the data file
 	df.Finish();
@@ -414,6 +444,22 @@ int CEditorMap::Load(class IStorage *pStorage, const char *pFileName, int Storag
 	{
 		//editor.reset(false);
 
+		// load map info
+		{
+			CMapItemInfo *pItem = (CMapItemInfo *)DataFile.FindItem(MAPITEMTYPE_INFO, 0);
+			if(pItem && pItem->m_Version == 1)
+			{
+				if(pItem->m_Author > -1)
+					str_copy(m_MapInfo.m_aAuthor, (char *)DataFile.GetData(pItem->m_Author), sizeof(m_MapInfo.m_aAuthor));
+				if(pItem->m_MapVersion > -1)
+					str_copy(m_MapInfo.m_aVersion, (char *)DataFile.GetData(pItem->m_MapVersion), sizeof(m_MapInfo.m_aVersion));
+				if(pItem->m_Credits > -1)
+					str_copy(m_MapInfo.m_aCredits, (char *)DataFile.GetData(pItem->m_Credits), sizeof(m_MapInfo.m_aCredits));
+				if(pItem->m_License > -1)
+					str_copy(m_MapInfo.m_aLicense, (char *)DataFile.GetData(pItem->m_License), sizeof(m_MapInfo.m_aLicense));
+			}
+		}
+
 		// load images
 		{
 			int Start, Num;
@@ -427,7 +473,7 @@ int CEditorMap::Load(class IStorage *pStorage, const char *pFileName, int Storag
 				CEditorImage *pImg = new CEditorImage(m_pEditor);
 				pImg->m_External = pItem->m_External;
 
-				if(pItem->m_External)
+				if(pItem->m_External || (pItem->m_Version > 1 && pItem->m_Format != CImageInfo::FORMAT_RGB && pItem->m_Format != CImageInfo::FORMAT_RGBA))
 				{
 					char aBuf[256];
 					str_format(aBuf, sizeof(aBuf),"mapres/%s.png", pName);
@@ -438,6 +484,7 @@ int CEditorMap::Load(class IStorage *pStorage, const char *pFileName, int Storag
 					{
 						*pImg = ImgInfo;
 						pImg->m_Texture = m_pEditor->Graphics()->LoadTextureRaw(ImgInfo.m_Width, ImgInfo.m_Height, ImgInfo.m_Format, ImgInfo.m_pData, CImageInfo::FORMAT_AUTO, 0);
+						ImgInfo.m_pData = 0;
 						pImg->m_External = 1;
 					}
 				}
@@ -445,12 +492,13 @@ int CEditorMap::Load(class IStorage *pStorage, const char *pFileName, int Storag
 				{
 					pImg->m_Width = pItem->m_Width;
 					pImg->m_Height = pItem->m_Height;
-					pImg->m_Format = CImageInfo::FORMAT_RGBA;
+					pImg->m_Format = pItem->m_Version == 1 ? CImageInfo::FORMAT_RGBA : pItem->m_Format;
+					int PixelSize = pImg->m_Format == CImageInfo::FORMAT_RGB ? 3 : 4;
 
 					// copy image data
 					void *pData = DataFile.GetData(pItem->m_ImageData);
-					pImg->m_pData = mem_alloc(pImg->m_Width*pImg->m_Height*4, 1);
-					mem_copy(pImg->m_pData, pData, pImg->m_Width*pImg->m_Height*4);
+					pImg->m_pData = mem_alloc(pImg->m_Width*pImg->m_Height*PixelSize, 1);
+					mem_copy(pImg->m_pData, pData, pImg->m_Width*pImg->m_Height*PixelSize);
 					pImg->m_Texture = m_pEditor->Graphics()->LoadTextureRaw(pImg->m_Width, pImg->m_Height, pImg->m_Format, pImg->m_pData, CImageInfo::FORMAT_AUTO, 0);
 				}
 

@@ -1,11 +1,22 @@
-import shutil, os, sys, zipfile
+import shutil, optparse, os, re, sys, zipfile
+os.chdir(os.path.dirname(os.path.realpath(sys.argv[0])) + "/..")
+import twlib
 
-#valid_platforms = ["win32", "linux86", "linux86_64", "src"]
-
+arguments = optparse.OptionParser(usage="usage: %prog VERSION PLATFORM [options]\n\nVERSION  - Version number\nPLATFORM - Target platform (f.e. linux86, linux86_64, osx, src, win32)")
+arguments.add_option("-l", "--url-languages", default = "http://github.com/teeworlds/teeworlds-translation/zipball/master", help = "URL from which the teeworlds language files will be downloaded")
+arguments.add_option("-s", "--source-dir", help = "Source directory which is used for building the package")
+(options, arguments) = arguments.parse_args()
 if len(sys.argv) != 3:
 	print("wrong number of arguments")
 	print(sys.argv[0], "VERSION PLATFORM")
 	sys.exit(-1)
+if options.source_dir != None:
+	if os.path.exists(options.source_dir) == False:
+		print("Source directory " + options.source_dir + " doesn't exist")
+		exit(1)
+	os.chdir(options.source_dir)
+
+#valid_platforms = ["win32", "osx", "linux86", "linux86_64", "src"]
 
 name = "teeworlds"
 version = sys.argv[1]
@@ -19,26 +30,34 @@ include_data = True
 include_exe = True
 include_src = False
 
-if platform == "src":
-	include_data = True
-	include_exe = False
-	include_src = True
-	use_zip = 1
-	use_gz = 1
-
-#if not platform in valid_platforms:
+#if not options.platform in valid_platforms:
 #	print("not a valid platform")
 #	print(valid_platforms)
 #	sys.exit(-1)
 
-if platform == 'win32':
+if platform == "src":
+	include_exe = False
+	include_src = True
+	use_zip = 1
+elif platform == 'win32':
 	exe_ext = ".exe"
 	use_zip = 1
 	use_gz = 0
-if  platform == 'osx':
+elif platform == 'osx':
 	use_dmg = 1
 	use_gz = 0
 	use_bundle = 1
+
+def unzip(filename, where):
+	try:
+		z = zipfile.ZipFile(filename, "r")
+	except:
+		return False
+	for name in z.namelist():
+		if "/data/languages/" in name:
+				z.extract(name, where)
+	z.close()
+	return z.namelist()[0]
 
 def copydir(src, dst, excl=[]):
 	for root, dirs, files in os.walk(src, topdown=True):
@@ -50,13 +69,31 @@ def copydir(src, dst, excl=[]):
 		for name in files:
 			if name[0] != '.':
 				shutil.copy(os.path.join(root, name), os.path.join(dst, root, name))
-				
+
+def clean():
+	print("*** cleaning ***")
+	try:
+		shutil.rmtree(package_dir)
+		shutil.rmtree(languages_dir)
+		os.remove(src_package_languages)
+	except: pass
+	
 package = "%s-%s-%s" %(name, version, platform)
 package_dir = package
 
 print("cleaning target")
 shutil.rmtree(package_dir, True)
 os.mkdir(package_dir)
+
+print("download and extract languages")
+src_package_languages = twlib.fetch_file(options.url_languages)
+if not src_package_languages:
+	print("couldn't download languages")
+	sys.exit(-1)
+languages_dir = unzip(src_package_languages, ".")
+if not languages_dir:
+	print("couldn't unzip languages")
+	sys.exit(-1)
 
 print("adding files")
 shutil.copy("readme.txt", package_dir)
@@ -66,6 +103,9 @@ shutil.copy("storage.cfg", package_dir)
 if include_data and not use_bundle:
 	os.mkdir(os.path.join(package_dir, "data"))
 	copydir("data", package_dir)
+	os.chdir(languages_dir)
+	copydir("data", "../"+package_dir)
+	os.chdir("..")
 	if platform[:3] == "win":
 		shutil.copy("other/config_directory.bat", package_dir)
 		shutil.copy("SDL.dll", package_dir)
@@ -106,6 +146,9 @@ if use_bundle:
 	os.mkdir(clientbundle_framework_dir)
 	os.mkdir(os.path.join(clientbundle_resource_dir, "data"))
 	copydir("data", clientbundle_resource_dir)
+	os.chdir(languages_dir)
+	copydir("data", "../"+clientbundle_resource_dir)
+	os.chdir("..")
 	shutil.copy("other/icons/Teeworlds.icns", clientbundle_resource_dir)
 	shutil.copy(name+exe_ext, clientbundle_bin_dir)
 	os.system("cp -R /Library/Frameworks/SDL.framework " + clientbundle_framework_dir)
@@ -114,20 +157,20 @@ if use_bundle:
 <!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-        <key>CFBundleDevelopmentRegion</key>
-        <string>English</string>
-        <key>CFBundleExecutable</key>
-        <string>teeworlds</string>
-        <key>CFBundleIconFile</key>
-        <string>Teeworlds</string>
-        <key>CFBundleInfoDictionaryVersion</key>
-        <string>6.0</string>
-        <key>CFBundlePackageType</key>
-        <string>APPL</string>
-        <key>CFBundleSignature</key>
-        <string>????</string>
-        <key>CFBundleVersion</key>
-        <string>%s</string>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>English</string>
+	<key>CFBundleExecutable</key>
+	<string>teeworlds</string>
+	<key>CFBundleIconFile</key>
+	<string>Teeworlds</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleSignature</key>
+	<string>????</string>
+	<key>CFBundleVersion</key>
+	<string>%s</string>
 </dict>
 </plist>
 	""" % (version))
@@ -153,20 +196,20 @@ if use_bundle:
 <!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-        <key>CFBundleDevelopmentRegion</key>
-        <string>English</string>
-        <key>CFBundleExecutable</key>
-        <string>teeworlds_server</string>
-        <key>CFBundleIconFile</key>
-        <string>Teeworlds_srv</string>
-        <key>CFBundleInfoDictionaryVersion</key>
-        <string>6.0</string>
-        <key>CFBundlePackageType</key>
-        <string>APPL</string>
-        <key>CFBundleSignature</key>
-        <string>????</string>
-        <key>CFBundleVersion</key>
-        <string>%s</string>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>English</string>
+	<key>CFBundleExecutable</key>
+	<string>teeworlds_server</string>
+	<key>CFBundleIconFile</key>
+	<string>Teeworlds_srv</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleSignature</key>
+	<string>????</string>
+	<key>CFBundleVersion</key>
+	<string>%s</string>
 </dict>
 </plist>
 	""" % (version))
@@ -193,5 +236,7 @@ if use_dmg:
 	os.system("hdiutil create -srcfolder %s -volname Teeworlds -quiet %s_temp" % (package_dir, package))
 	os.system("hdiutil convert %s_temp.dmg -format UDBZ -o %s.dmg -quiet" % (package, package))
 	os.system("rm -f %s_temp.dmg" % package)
+
+clean()
 	
 print("done")

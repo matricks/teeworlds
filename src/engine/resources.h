@@ -121,7 +121,7 @@ public:
 
 	CResourceHandle &operator =(const CResourceHandle &rOther) { Assign(rOther.m_pResource); return *this; }
 	CResourceHandle &operator =(CResource *pResource) { Assign(pResource); return *this; }
-	CResource *operator->() { assert(m_pResource); return Get(); }
+	CResource *operator->() { tl_assert(m_pResource); return Get(); }
 };
 
 
@@ -367,7 +367,7 @@ void CResourceHandle::Release()
 {
 	if(m_pResource)
 	{
-		assert(m_pResource->m_RefCount > 0);
+		tl_assert(m_pResource->m_RefCount > 0);
 		m_pResource->m_RefCount--;
 		if(m_pResource->m_RefCount == 0)
 			m_pResource->Destroy();

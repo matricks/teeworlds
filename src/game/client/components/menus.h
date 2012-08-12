@@ -13,6 +13,7 @@
 #include <engine/friends.h>
 
 #include <game/voting.h>
+#include <game/localization.h>
 #include <game/client/component.h>
 #include <game/client/ui.h>
 
@@ -28,6 +29,18 @@ public:
 	virtual bool OnInput(IInput::CEvent Event);
 };
 
+enum
+{
+	NO_SELECTION=0,
+	SELECTION_SKIN=1,
+	SELECTION_BODY=2,
+	SELECTION_TATTOO=4,
+	SELECTION_DECORATION=8,
+	SELECTION_HANDS=16,
+	SELECTION_FEET=32,
+	SELECTION_EYES=64
+};
+
 class CMenus : public CComponent
 {
 	static vec4 ms_GuiColor;
@@ -38,18 +51,25 @@ class CMenus : public CComponent
 	static vec4 ms_ColorTabbarInactive;
 	static vec4 ms_ColorTabbarActive;
 
-	vec4 ButtonColorMul(const void *pID);
+	float *ButtonFade(const void *pID, float Seconds, int Checked=0);
 
 
-	int DoButton_DemoPlayer(const void *pID, const char *pText, int Checked, const CUIRect *pRect);
-	int DoButton_Sprite(const void *pID, int ImageID, int SpriteID, int Checked, const CUIRect *pRect, int Corners);
-	int DoButton_Toggle(const void *pID, int Checked, const CUIRect *pRect);
-	int DoButton_Menu(const void *pID, const char *pText, int Checked, const CUIRect *pRect);
+	int DoButton_DemoPlayer(const void *pID, const char *pText, const CUIRect *pRect);
+	int DoButton_Sprite(const void *pID, int ImageID, int SpriteID, const CUIRect *pRect, int Corners);
+	int DoButton_SpriteClean(int ImageID, int SpriteID, const CUIRect *pRect);
+	int DoButton_SpriteCleanID(const void *pID, int ImageID, int SpriteID, const CUIRect *pRect);
+	int DoButton_Toggle(const void *pID, int Checked, const CUIRect *pRect, bool Active);
+	int DoButton_Menu(const void *pID, const char *pText, int Checked, const CUIRect *pRect, float r=5.0f, float FontFactor=0.0f, int Corners=CUI::CORNER_ALL);
+	int DoButton_MenuImage(const void *pID, const char *pText, int Checked, const CUIRect *pRect, const char *pImageName, float r=5.0f, float FontFactor=0.0f);
 	int DoButton_MenuTab(const void *pID, const char *pText, int Checked, const CUIRect *pRect, int Corners);
+	int DoButton_MenuTabTop(const void *pID, const char *pText, int Checked, const CUIRect *pRect, int Corners);
+	int DoButton_Customize(const void *pID, IGraphics::CTextureHandle Texture, int SpriteID, const CUIRect *pRect, float ImageRatio);
 
 	int DoButton_CheckBox_Common(const void *pID, const char *pText, const char *pBoxText, const CUIRect *pRect);
 	int DoButton_CheckBox(const void *pID, const char *pText, int Checked, const CUIRect *pRect);
 	int DoButton_CheckBox_Number(const void *pID, const char *pText, int Checked, const CUIRect *pRect);
+
+	int DoButton_MouseOver(int ImageID, int SpriteID, const CUIRect *pRect);
 
 	/*static void ui_draw_menu_button(const void *id, const char *text, int checked, const CUIRect *r, const void *extra);
 	static void ui_draw_keyselect_button(const void *id, const char *text, int checked, const CUIRect *r, const void *extra);
@@ -59,6 +79,7 @@ class CMenus : public CComponent
 
 	int DoButton_Icon(int ImageId, int SpriteId, const CUIRect *pRect);
 	int DoButton_GridHeader(const void *pID, const char *pText, int Checked, const CUIRect *pRect);
+	int DoButton_GridHeaderIcon(const void *pID, int ImageID, int SpriteID, const CUIRect *pRect, int Corners);
 
 	//static void ui_draw_browse_icon(int what, const CUIRect *r);
 	//static void ui_draw_grid_header(const void *id, const char *text, int checked, const CUIRect *r, const void *extra);
@@ -108,6 +129,7 @@ class CMenus : public CComponent
 		POPUP_DELETE_DEMO,
 		POPUP_RENAME_DEMO,
 		POPUP_REMOVE_FRIEND,
+		POPUP_SAVE_SKIN,
 		POPUP_SOUNDERROR,
 		POPUP_PASSWORD,
 		POPUP_QUIT,
@@ -115,25 +137,47 @@ class CMenus : public CComponent
 
 	enum
 	{
-		PAGE_NEWS=1,
+		PAGE_NEWS=0,
 		PAGE_GAME,
 		PAGE_PLAYERS,
 		PAGE_SERVER_INFO,
 		PAGE_CALLVOTE,
 		PAGE_INTERNET,
 		PAGE_LAN,
-		PAGE_FAVORITES,
+		PAGE_FRIENDS,
 		PAGE_DEMOS,
 		PAGE_SETTINGS,
 		PAGE_SYSTEM,
+		PAGE_START,
+
+		SETTINGS_GENERAL=0,
+		SETTINGS_PLAYER,
+		SETTINGS_TEE,
+		SETTINGS_CONTROLS,
+		SETTINGS_GRAPHICS,
+		SETTINGS_SOUND,
 	};
 
 	int m_GamePage;
 	int m_Popup;
 	int m_ActivePage;
+	int m_MenuPage;
 	bool m_MenuActive;
 	bool m_UseMouseButtons;
 	vec2 m_MousePos;
+
+	// images
+	struct CMenuImage
+	{
+		char m_aName[64];
+		IGraphics::CTextureHandle m_OrgTexture;
+		IGraphics::CTextureHandle m_GreyTexture;
+	};
+	array<CMenuImage> m_lMenuImages;
+
+	static int MenuImageScan(const char *pName, int IsDir, int DirType, void *pUser);
+
+	const CMenuImage *FindMenuImage(const char* pName);
 
 	int64 m_LastInput;
 
@@ -162,7 +206,12 @@ class CMenus : public CComponent
 	bool m_NeedRestartGraphics;
 	bool m_NeedRestartSound;
 	bool m_NeedSendinfo;
-	int m_SettingPlayerPage;
+	int m_TeePartSelection;
+	int m_TeePartsColorSelection;
+	char m_aSaveSkinName[24];
+
+	void SaveSkinfile();
+	void WriteLineSkinfile(IOHANDLE File, const char *pLine);
 
 	//
 	bool m_EscapePressed;
@@ -221,11 +270,11 @@ class CMenus : public CComponent
 				return false;
 			else
 			{
-				int Result = str_comp(m_pFriendInfo->m_aName, Other.m_pFriendInfo->m_aName);
+				int Result = str_comp_nocase(m_pFriendInfo->m_aName, Other.m_pFriendInfo->m_aName);
 				if(Result)
 					return Result < 0;
 				else
-					return str_comp(m_pFriendInfo->m_aClan, Other.m_pFriendInfo->m_aClan) < 0;
+					return str_comp_nocase(m_pFriendInfo->m_aClan, Other.m_pFriendInfo->m_aClan) < 0;
 			}
 		}
 	};
@@ -234,6 +283,110 @@ class CMenus : public CComponent
 	int m_FriendlistSelectedIndex;
 
 	void FriendlistOnUpdate();
+
+	class CBrowserFilter
+	{
+		bool m_Extended;
+		int m_Custom;
+		char m_aName[64];
+		int m_Filter;
+		class IServerBrowser *m_pServerBrowser;
+
+	public:
+
+		enum
+		{
+			FILTER_CUSTOM=0,
+			FILTER_ALL,
+			FILTER_STANDARD,
+			FILTER_FAVORITES,
+		};
+		// buttons var
+		int m_SwitchButton;
+
+		CBrowserFilter() {}
+		CBrowserFilter(int Custom, const char* pName, IServerBrowser *pServerBrowser, int Filter, int Ping, int Country, const char* pGametype, const char* pServerAddress);
+		void Switch();
+		bool Extended() const;
+		int Custom() const;
+		int Filter() const;
+		const char* Name() const;
+
+		void SetFilterNum(int Num);
+
+		int NumSortedServers() const;
+		int NumPlayers() const;
+		const CServerInfo *SortedGet(int Index) const;
+		const void *ID(int Index) const;
+
+		void GetFilter(int *pSortHash, int *pPing, int *pCountry, char* pGametype, char* pServerAddress);
+		void SetFilter(int SortHash, int Ping, int Country, const char* pGametype, const char* pServerAddress);
+	};
+
+	array<CBrowserFilter> m_lFilters;
+
+	int m_SelectedFilter;
+
+	void RemoveFilter(int FilterIndex);
+	void Move(bool Up, int Filter);
+
+	class CInfoOverlay
+	{
+	public:
+		enum
+		{
+			OVERLAY_SERVERINFO=0,
+			OVERLAY_HEADERINFO,
+		};
+
+		int m_Type;
+		const void *m_pData;
+		float m_X;
+		float m_Y;
+	};
+
+	CInfoOverlay m_InfoOverlay;
+	bool m_InfoOverlayActive;
+
+	class CServerEntry
+	{
+	public:
+		int m_Filter;
+		int m_Index;
+	};
+
+	CServerEntry m_SelectedServer;
+
+	enum
+	{
+		FIXED=1,
+		SPACER=2,
+
+		COL_FLAG=0,
+		COL_NAME,
+		COL_GAMETYPE,
+		COL_MAP,
+		COL_PLAYERS,
+		COL_PING,
+		COL_FAVORITE,
+		COL_INFO,
+
+		NUM_COLS,
+	};
+
+	struct CColumn
+	{
+		int m_ID;
+		int m_Sort;
+		CLocConstString m_Caption;
+		int m_Direction;
+		float m_Width;
+		int m_Flags;
+		CUIRect m_Rect;
+		CUIRect m_Spacer;
+	};
+
+	static CColumn ms_aCols[NUM_COLS];
 
 	// found in menus.cpp
 	int Render();
@@ -246,6 +399,10 @@ class CMenus : public CComponent
 	void RenderDemoPlayer(CUIRect MainView);
 	void RenderDemoList(CUIRect MainView);
 
+	// found in menus_start.cpp
+	void RenderStartMenu(CUIRect MainView);
+	void RenderLogo(CUIRect MainView);
+
 	// found in menus_ingame.cpp
 	void RenderGame(CUIRect MainView);
 	void RenderPlayers(CUIRect MainView);
@@ -255,18 +412,25 @@ class CMenus : public CComponent
 	void RenderServerControlServer(CUIRect MainView);
 
 	// found in menus_browser.cpp
-	int m_SelectedIndex;
 	int m_ScrollOffset;
 	void RenderServerbrowserServerList(CUIRect View);
-	void RenderServerbrowserServerDetail(CUIRect View);
+	void RenderServerbrowserServerDetail(CUIRect View, const CServerInfo *pInfo);
 	void RenderServerbrowserFilters(CUIRect View);
 	void RenderServerbrowserFriends(CUIRect View);
+	void RenderServerbrowserConnect(CUIRect View);
+	void RenderServerbrowserOverlay();
+	bool RenderFilterHeader(CUIRect View, int FilterIndex);
+	int DoBrowserEntry(const void *pID, CUIRect *pRect, const CServerInfo *pEntry);
 	void RenderServerbrowser(CUIRect MainView);
 	static void ConchainFriendlistUpdate(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 	static void ConchainServerbrowserUpdate(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
+	void SetOverlay(int Type, float x, float y, const void *pData);
 
 	// found in menus_settings.cpp
 	void RenderLanguageSelection(CUIRect MainView);
+	void RenderHSLPicker(CUIRect Picker);
+	void RenderSkinSelection(CUIRect MainView);
+	void RenderSkinPartSelection(CUIRect MainView);
 	void RenderSettingsGeneral(CUIRect MainView);
 	void RenderSettingsPlayer(CUIRect MainView);
 	void RenderSettingsTee(CUIRect MainView);
@@ -276,6 +440,11 @@ class CMenus : public CComponent
 	void RenderSettings(CUIRect MainView);
 
 	void SetActive(bool Active);
+
+	void InvokePopupMenu(void *pID, int Flags, float X, float Y, float W, float H, int (*pfnFunc)(CMenus *pMenu, CUIRect Rect), void *pExtra=0);
+	void DoPopupMenu();
+
+	static int PopupFilter(CMenus *pMenus, CUIRect View);
 
 	CResourceHandleTexture m_TextureBlob;
 	CResourceHandleSound m_Music;
@@ -294,6 +463,7 @@ public:
 
 	virtual void OnInit();
 
+	virtual void OnConsoleInit();
 	virtual void OnStateChange(int NewState, int OldState);
 	virtual void OnReset();
 	virtual void OnRender();

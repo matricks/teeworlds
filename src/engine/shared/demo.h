@@ -17,6 +17,8 @@ class CDemoRecorder : public IDemoRecorder
 	int m_FirstTick;
 	unsigned char m_aLastSnapshotData[CSnapshot::MAX_SIZE];
 	class CSnapshotDelta *m_pSnapshotDelta;
+	int m_NumTimelineMarkers;
+	int m_aTimelineMarkers[MAX_TIMELINE_MARKERS];
 
 	void WriteTickMarker(int Tick, int Keyframe);
 	void Write(int Type, const void *pData, int Size);
@@ -25,6 +27,7 @@ public:
 
 	int Start(class IStorage *pStorage, class IConsole *pConsole, const char *pFilename, const char *pNetversion, const char *pMap, unsigned MapCrc, const char *pType);
 	int Stop();
+	void AddDemoMarker();
 
 	void RecordSnapshot(int Tick, const void *pData, int Size);
 	void RecordMessage(const void *pData, int Size);
@@ -83,6 +86,7 @@ private:
 	class IConsole *m_pConsole;
 	IOHANDLE m_File;
 	char m_aFilename[256];
+	char m_aErrorMsg[256];
 	CKeyFrame *m_pKeyFrames;
 
 	CPlaybackInfo m_Info;
@@ -102,13 +106,13 @@ public:
 
 	void SetListner(IListner *pListner);
 
-	int Load(class IStorage *pStorage, class IConsole *pConsole, const char *pFilename, int StorageType);
+	const char *Load(class IStorage *pStorage, class IConsole *pConsole, const char *pFilename, int StorageType, const char *pNetversion);
 	int Play();
 	void Pause();
 	void Unpause();
 	int Stop();
 	void SetSpeed(float Speed);
-	int SetPos(float Precent);
+	int SetPos(float Percent);
 	const CInfo *BaseInfo() const { return &m_Info.m_Info; }
 	void GetDemoName(char *pBuffer, int BufferSize) const;
 	bool GetDemoInfo(class IStorage *pStorage, const char *pFilename, int StorageType, CDemoHeader *pDemoHeader) const;

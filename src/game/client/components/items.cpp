@@ -22,7 +22,6 @@ void CItems::OnReset()
 
 void CItems::RenderProjectile(const CNetObj_Projectile *pCurrent, int ItemID)
 {
-
 	// get positions
 	float Curvature = 0;
 	float Speed = 0;
@@ -42,7 +41,10 @@ void CItems::RenderProjectile(const CNetObj_Projectile *pCurrent, int ItemID)
 		Speed = m_pClient->m_Tuning.m_GunSpeed;
 	}
 
-	float Ct = (Client()->PrevGameTick()-pCurrent->m_StartTick)/(float)SERVER_TICK_SPEED + Client()->GameTickTime();
+	static float s_LastGameTickTime = Client()->GameTickTime();
+	if(m_pClient->m_Snap.m_pGameData && !(m_pClient->m_Snap.m_pGameData->m_GameStateFlags&GAMESTATEFLAG_PAUSED))
+		s_LastGameTickTime = Client()->GameTickTime();
+	float Ct = (Client()->PrevGameTick()-pCurrent->m_StartTick)/(float)SERVER_TICK_SPEED + s_LastGameTickTime;
 	if(Ct < 0)
 		return; // projectile havn't been shot yet
 
@@ -64,28 +66,27 @@ void CItems::RenderProjectile(const CNetObj_Projectile *pCurrent, int ItemID)
 	if(pCurrent->m_Type == WEAPON_GRENADE)
 	{
 		m_pClient->m_pEffects->SmokeTrail(Pos, Vel*-1);
-		m_pClient->m_pFlow->Add(Pos, Vel*1000*Client()->FrameTime(), 10.0f);
+		static float s_Time = 0.0f;
+		static float s_LastLocalTime = Client()->LocalTime();
 
 		if(Client()->State() == IClient::STATE_DEMOPLAYBACK)
 		{
 			const IDemoPlayer::CInfo *pInfo = DemoPlayer()->BaseInfo();
-			static float Time = 0;
-			static float LastLocalTime = Client()->LocalTime();
-
 			if(!pInfo->m_Paused)
-				Time += (Client()->LocalTime()-LastLocalTime)*pInfo->m_Speed;
-
-			Graphics()->QuadsSetRotation(Time*pi*2*2 + ItemID);
-
-			LastLocalTime = Client()->LocalTime();
+				s_Time += (Client()->LocalTime()-s_LastLocalTime)*pInfo->m_Speed;
 		}
 		else
-			Graphics()->QuadsSetRotation(Client()->LocalTime()*pi*2*2 + ItemID);
+		{
+			if(m_pClient->m_Snap.m_pGameData && !(m_pClient->m_Snap.m_pGameData->m_GameStateFlags&GAMESTATEFLAG_PAUSED))
+				s_Time += Client()->LocalTime()-s_LastLocalTime;
+		}
+
+		Graphics()->QuadsSetRotation(s_Time*pi*2*2 + ItemID);
+		s_LastLocalTime = Client()->LocalTime();
 	}
 	else
 	{
 		m_pClient->m_pEffects->BulletTrail(Pos);
-		m_pClient->m_pFlow->Add(Pos, Vel*1000*Client()->FrameTime(), 10.0f);
 
 		if(length(Vel) > 0.00001f)
 			Graphics()->QuadsSetRotation(GetAngle(Vel));
@@ -107,57 +108,58 @@ void CItems::RenderPickup(const CNetObj_Pickup *pPrev, const CNetObj_Pickup *pCu
 	vec2 Pos = mix(vec2(pPrev->m_X, pPrev->m_Y), vec2(pCurrent->m_X, pCurrent->m_Y), Client()->IntraGameTick());
 	float Angle = 0.0f;
 	float Size = 64.0f;
-	if (pCurrent->m_Type == POWERUP_WEAPON)
-	{
-		Angle = 0; //-pi/6;//-0.25f * pi * 2.0f;
-		RenderTools()->SelectSprite(g_pData->m_Weapons.m_aId[clamp(pCurrent->m_Subtype, 0, NUM_WEAPONS-1)].m_pSpriteBody);
-		Size = g_pData->m_Weapons.m_aId[clamp(pCurrent->m_Subtype, 0, NUM_WEAPONS-1)].m_VisualSize;
-	}
-	else
-	{
-		const int c[] = {
-			SPRITE_PICKUP_HEALTH,
-			SPRITE_PICKUP_ARMOR,
-			SPRITE_PICKUP_WEAPON,
-			SPRITE_PICKUP_NINJA
-			};
-		RenderTools()->SelectSprite(c[pCurrent->m_Type]);
+	const int c[] = {
+		SPRITE_PICKUP_HEALTH,
+		SPRITE_PICKUP_ARMOR,
+		SPRITE_PICKUP_GRENADE,
+		SPRITE_PICKUP_SHOTGUN,
+		SPRITE_PICKUP_LASER,
+		SPRITE_PICKUP_NINJA
+		};
+	RenderTools()->SelectSprite(c[pCurrent->m_Type]);
 
-		if(c[pCurrent->m_Type] == SPRITE_PICKUP_NINJA)
-		{
-			m_pClient->m_pEffects->PowerupShine(Pos, vec2(96,18));
-			Size *= 2.0f;
-			Pos.x -= 10.0f;
-		}
+	switch(pCurrent->m_Type)
+	{
+	case PICKUP_GRENADE:
+		Size = g_pData->m_Weapons.m_aId[WEAPON_GRENADE].m_VisualSize;
+		break;
+	case PICKUP_SHOTGUN:
+		Size = g_pData->m_Weapons.m_aId[WEAPON_SHOTGUN].m_VisualSize;
+		break;
+	case PICKUP_LASER:
+		Size = g_pData->m_Weapons.m_aId[WEAPON_LASER].m_VisualSize;
+		break;
+	case PICKUP_NINJA:
+		m_pClient->m_pEffects->PowerupShine(Pos, vec2(96,18));
+		Size *= 2.0f;
+		Pos.x -= 10.0f;
 	}
+	
 
 	Graphics()->QuadsSetRotation(Angle);
 
+	static float s_Time = 0.0f;
+	static float s_LastLocalTime = Client()->LocalTime();
 	float Offset = Pos.y/32.0f + Pos.x/32.0f;
 	if(Client()->State() == IClient::STATE_DEMOPLAYBACK)
 	{
 		const IDemoPlayer::CInfo *pInfo = DemoPlayer()->BaseInfo();
-		static float Time = 0;
-		static float LastLocalTime = Client()->LocalTime();
-
 		if(!pInfo->m_Paused)
-			Time += (Client()->LocalTime()-LastLocalTime)*pInfo->m_Speed;
-
-		Pos.x += cosf(Time*2.0f+Offset)*2.5f;
-		Pos.y += sinf(Time*2.0f+Offset)*2.5f;
-
-		LastLocalTime = Client()->LocalTime();
+			s_Time += (Client()->LocalTime()-s_LastLocalTime)*pInfo->m_Speed;
 	}
 	else
 	{
-		Pos.x += cosf(Client()->LocalTime()*2.0f+Offset)*2.5f;
-		Pos.y += sinf(Client()->LocalTime()*2.0f+Offset)*2.5f;
-	}
+		if(m_pClient->m_Snap.m_pGameData && !(m_pClient->m_Snap.m_pGameData->m_GameStateFlags&GAMESTATEFLAG_PAUSED))
+			s_Time += Client()->LocalTime()-s_LastLocalTime;
+ 	}
+	Pos.x += cosf(s_Time*2.0f+Offset)*2.5f;
+	Pos.y += sinf(s_Time*2.0f+Offset)*2.5f;
+	s_LastLocalTime = Client()->LocalTime();
 	RenderTools()->DrawSprite(Pos.x, Pos.y, Size);
 	Graphics()->QuadsEnd();
 }
 
-void CItems::RenderFlag(const CNetObj_Flag *pPrev, const CNetObj_Flag *pCurrent, const CNetObj_GameData *pPrevGameData, const CNetObj_GameData *pCurGameData)
+void CItems::RenderFlag(const CNetObj_Flag *pPrev, const CNetObj_Flag *pCurrent, const CNetObj_GameDataFlag *pPrevGameDataFlag, const CNetObj_GameDataFlag *pCurGameDataFlag)
 {
 	float Angle = 0.0f;
 	float Size = 42.0f;
@@ -175,18 +177,18 @@ void CItems::RenderFlag(const CNetObj_Flag *pPrev, const CNetObj_Flag *pCurrent,
 
 	vec2 Pos = mix(vec2(pPrev->m_X, pPrev->m_Y), vec2(pCurrent->m_X, pCurrent->m_Y), Client()->IntraGameTick());
 
-	if(pCurGameData)
+	if(pCurGameDataFlag)
 	{
 		// make sure that the flag isn't interpolated between capture and return
-		if(pPrevGameData &&
-			((pCurrent->m_Team == TEAM_RED && pPrevGameData->m_FlagCarrierRed != pCurGameData->m_FlagCarrierRed) ||
-			(pCurrent->m_Team == TEAM_BLUE && pPrevGameData->m_FlagCarrierBlue != pCurGameData->m_FlagCarrierBlue)))
+		if(pPrevGameDataFlag &&
+			((pCurrent->m_Team == TEAM_RED && pPrevGameDataFlag->m_FlagCarrierRed != pCurGameDataFlag->m_FlagCarrierRed) ||
+			(pCurrent->m_Team == TEAM_BLUE && pPrevGameDataFlag->m_FlagCarrierBlue != pCurGameDataFlag->m_FlagCarrierBlue)))
 			Pos = vec2(pCurrent->m_X, pCurrent->m_Y);
 
 		// make sure to use predicted position if we are the carrier
 		if(m_pClient->m_Snap.m_pLocalInfo &&
-			((pCurrent->m_Team == TEAM_RED && pCurGameData->m_FlagCarrierRed == m_pClient->m_Snap.m_LocalClientID) ||
-			(pCurrent->m_Team == TEAM_BLUE && pCurGameData->m_FlagCarrierBlue == m_pClient->m_Snap.m_LocalClientID)))
+			((pCurrent->m_Team == TEAM_RED && pCurGameDataFlag->m_FlagCarrierRed == m_pClient->m_LocalClientID) ||
+			(pCurrent->m_Team == TEAM_BLUE && pCurGameDataFlag->m_FlagCarrierBlue == m_pClient->m_LocalClientID)))
 			Pos = m_pClient->m_LocalCharacterPos;
 	}
 
@@ -302,9 +304,9 @@ void CItems::OnRender()
 			const void *pPrev = Client()->SnapFindItem(IClient::SNAP_PREV, Item.m_Type, Item.m_ID);
 			if (pPrev)
 			{
-				const void *pPrevGameData = Client()->SnapFindItem(IClient::SNAP_PREV, NETOBJTYPE_GAMEDATA, m_pClient->m_Snap.m_GameDataSnapID);
+				const void *pPrevGameDataFlag = Client()->SnapFindItem(IClient::SNAP_PREV, NETOBJTYPE_GAMEDATAFLAG, m_pClient->m_Snap.m_GameDataFlagSnapID);
 				RenderFlag(static_cast<const CNetObj_Flag *>(pPrev), static_cast<const CNetObj_Flag *>(pData),
-							static_cast<const CNetObj_GameData *>(pPrevGameData), m_pClient->m_Snap.m_pGameDataObj);
+							static_cast<const CNetObj_GameDataFlag *>(pPrevGameDataFlag), m_pClient->m_Snap.m_pGameDataFlag);
 			}
 		}
 	}

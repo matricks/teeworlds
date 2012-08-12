@@ -6,6 +6,7 @@
 #include <engine/server.h>
 #include <engine/resources.h>
 
+
 class CSnapIDPool
 {
 	enum
@@ -39,6 +40,25 @@ public:
 	void TimeoutIDs();
 	void FreeID(int ID);
 };
+
+
+class CServerBan : public CNetBan
+{
+	class CServer *m_pServer;
+
+	template<class T> int BanExt(T *pBanPool, const typename T::CDataType *pData, int Seconds, const char *pReason);
+
+public:
+	class CServer *Server() const { return m_pServer; }
+
+	void Init(class IConsole *pConsole, class IStorage *pStorage, class CServer* pServer);
+
+	int BanAddr(const NETADDR *pAddr, int Seconds, const char *pReason);
+	int BanRange(const CNetRange *pRange, int Seconds, const char *pReason);
+
+	static void ConBanExt(class IConsole::IResult *pResult, void *pUser);
+};
+
 
 class CServer : public IServer
 {
@@ -104,6 +124,7 @@ public:
 		int m_Authed;
 		int m_AuthTries;
 
+		int m_MapChunk;
 		const IConsole::CCommandInfo *m_pRconCmdToSend;
 
 		void Reset();
@@ -116,6 +137,7 @@ public:
 	CSnapIDPool m_IDPool;
 	CNetServer m_NetServer;
 	CEcon m_Econ;
+	CServerBan m_ServerBan;
 
 	IEngineMap *m_pMap;
 
@@ -130,10 +152,16 @@ public:
 	int64 m_Lastheartbeat;
 	//static NETADDR4 master_server;
 
+	// map
+	enum
+	{
+		MAP_CHUNK_SIZE=NET_MAX_PAYLOAD-NET_MAX_CHUNKHEADERSIZE-4, // msg type
+	};
 	char m_aCurrentMap[64];
 	unsigned m_CurrentMapCrc;
 	unsigned char *m_pCurrentMapData;
 	int m_CurrentMapSize;
+	int m_MapChunksPerRequest;
 
 	CDemoRecorder m_DemoRecorder;
 	CRegister m_Register;
@@ -151,6 +179,7 @@ public:
 	void Kick(int ClientID, const char *pReason);
 
 	void DemoRecorder_HandleAutoStart();
+	bool DemoRecorder_IsRecording();
 
 	//int Tick()
 	int64 TickStartTime(int Tick);
@@ -158,7 +187,9 @@ public:
 
 	int Init();
 
+	void SetRconCID(int ClientID);
 	bool IsAuthed(int ClientID);
+	bool IsBanned(int ClientID);
 	int GetClientInfo(int ClientID, CClientInfo *pInfo);
 	void GetClientAddr(int ClientID, char *pAddrStr, int Size);
 	const char *ClientName(int ClientID);
@@ -188,12 +219,8 @@ public:
 
 	void ProcessClientPacket(CNetChunk *pPacket);
 
-	void SendServerInfo(NETADDR *pAddr, int Token);
+	void SendServerInfo(const NETADDR *pAddr, int Token);
 	void UpdateServerInfo();
-
-	int BanAdd(NETADDR Addr, int Seconds, const char *pReason);
-	int BanRemove(NETADDR Addr);
-	int BanRemoveAll();
 
 	void PumpNetwork();
 
@@ -204,15 +231,12 @@ public:
 	int Run();
 
 	static void ConKick(IConsole::IResult *pResult, void *pUser);
-	static void ConBan(IConsole::IResult *pResult, void *pUser);
-	static void ConUnban(IConsole::IResult *pResult, void *pUser);
-	static void ConUnbanAll(IConsole::IResult *pResult, void *pUser);
-	static void ConBans(IConsole::IResult *pResult, void *pUser);
- 	static void ConStatus(IConsole::IResult *pResult, void *pUser);
+	static void ConStatus(IConsole::IResult *pResult, void *pUser);
 	static void ConShutdown(IConsole::IResult *pResult, void *pUser);
 	static void ConRecord(IConsole::IResult *pResult, void *pUser);
 	static void ConStopRecord(IConsole::IResult *pResult, void *pUser);
 	static void ConMapReload(IConsole::IResult *pResult, void *pUser);
+	static void ConLogout(IConsole::IResult *pResult, void *pUser);
 	static void ConchainSpecialInfoupdate(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 	static void ConchainMaxclientsperipUpdate(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 	static void ConchainModCommandUpdate(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
