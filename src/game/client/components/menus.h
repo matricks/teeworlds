@@ -43,14 +43,6 @@ enum
 
 class CMenus : public CComponent
 {
-	static vec4 ms_GuiColor;
-	static vec4 ms_ColorTabbarInactiveOutgame;
-	static vec4 ms_ColorTabbarActiveOutgame;
-	static vec4 ms_ColorTabbarInactiveIngame;
-	static vec4 ms_ColorTabbarActiveIngame;
-	static vec4 ms_ColorTabbarInactive;
-	static vec4 ms_ColorTabbarActive;
-
 	float *ButtonFade(const void *pID, float Seconds, int Checked=0);
 
 
@@ -205,7 +197,6 @@ class CMenus : public CComponent
 	// for settings
 	bool m_NeedRestartGraphics;
 	bool m_NeedRestartSound;
-	bool m_NeedSendinfo;
 	int m_TeePartSelection;
 	int m_TeePartsColorSelection;
 	char m_aSaveSkinName[24];

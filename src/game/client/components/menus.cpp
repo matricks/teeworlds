@@ -32,14 +32,6 @@
 #include "menus.h"
 #include "skins.h"
 
-vec4 CMenus::ms_GuiColor;
-vec4 CMenus::ms_ColorTabbarInactiveOutgame;
-vec4 CMenus::ms_ColorTabbarActiveOutgame;
-vec4 CMenus::ms_ColorTabbarInactive;
-vec4 CMenus::ms_ColorTabbarActive = vec4(0,0,0,0.5f);
-vec4 CMenus::ms_ColorTabbarInactiveIngame;
-vec4 CMenus::ms_ColorTabbarActiveIngame;
-
 float CMenus::ms_ButtonHeight = 25.0f;
 float CMenus::ms_ListheaderHeight = 17.0f;
 float CMenus::ms_FontmodHeight = 0.8f;
@@ -56,7 +48,6 @@ CMenus::CMenus()
 
 	m_NeedRestartGraphics = false;
 	m_NeedRestartSound = false;
-	m_NeedSendinfo = false;
 	m_TeePartSelection = NO_SELECTION;
 	m_TeePartsColorSelection = NO_SELECTION;
 	m_aSaveSkinName[0] = 0;
@@ -198,10 +189,10 @@ void CMenus::DoButton_KeySelect(const void *pID, const char *pText, int Checked,
 int CMenus::DoButton_MenuTab(const void *pID, const char *pText, int Checked, const CUIRect *pRect, int Corners)
 {
 	if(Checked)
-		RenderTools()->DrawUIRect(pRect, ms_ColorTabbarActive, Corners, 10.0f);
+		RenderTools()->DrawUIRect(pRect, vec4(1.0f, 1.0f, 1.0f, 0.25f), Corners, 10.0f);
 	else
 	{
-		RenderTools()->DrawUIRect(pRect, ms_ColorTabbarInactive, Corners, 10.0f);
+		RenderTools()->DrawUIRect(pRect, vec4(0.0f, 0.0f, 0.0f, 0.25f), Corners, 10.0f);
 		TextRender()->TextColor(1.0f, 1.0f, 1.0f, 0.7f);
 	}
 
@@ -247,7 +238,7 @@ int CMenus::DoButton_GridHeaderIcon(const void *pID, int ImageID, int SpriteID, 
 
 	CUIRect Image;
 	pRect->HMargin(2.0f, &Image);
-	pRect->VMargin(pRect->w/2.0f-Image.h, &Image);
+	pRect->VMargin((Image.w-Image.h)/2.0f, &Image);
 
 	Graphics()->TextureSet(g_pData->m_aImages[ImageID].m_Resource);
 	Graphics()->QuadsBegin();
@@ -746,7 +737,7 @@ int CMenus::RenderMenubar(CUIRect r)
 		{
 			Box.VSplitLeft(100.0f, &Button, &Box);
 			static int s_InternetButton=0;
-			if(DoButton_MenuTabTop(&s_InternetButton, Localize("Internet"), m_ActivePage==PAGE_INTERNET, &Button, CUI::CORNER_T|CUI::CORNER_IBL))
+			if(DoButton_MenuTabTop(&s_InternetButton, Localize("Internet"), m_ActivePage==PAGE_INTERNET, &Button, CUI::CORNER_T|CUI::CORNER_IBL) && m_ActivePage!=PAGE_INTERNET)
 			{
 				m_pClient->m_pCamera->ChangePosition(CCamera::POS_INTERNET);
 				ServerBrowser()->Refresh(IServerBrowser::TYPE_INTERNET);
@@ -757,7 +748,7 @@ int CMenus::RenderMenubar(CUIRect r)
 			//Box.VSplitLeft(4.0f, 0, &Box);
 			Box.VSplitLeft(80.0f, &Button, &Box);
 			static int s_LanButton=0;
-			if(DoButton_MenuTabTop(&s_LanButton, Localize("LAN"), m_ActivePage==PAGE_LAN, &Button, CUI::CORNER_T))
+			if(DoButton_MenuTabTop(&s_LanButton, Localize("LAN"), m_ActivePage==PAGE_LAN, &Button, CUI::CORNER_T) && m_ActivePage!=PAGE_LAN)
 			{
 				m_pClient->m_pCamera->ChangePosition(CCamera::POS_LAN);
 				ServerBrowser()->Refresh(IServerBrowser::TYPE_LAN);
@@ -915,10 +906,6 @@ void CMenus::RenderLoading()
 
 	LastLoadRender = time_get();
 
-	// need up date this here to get correct
-	vec3 Rgb = HslToRgb(vec3(g_Config.m_UiColorHue/255.0f, g_Config.m_UiColorSat/255.0f, g_Config.m_UiColorLht/255.0f));
-	ms_GuiColor = vec4(Rgb.r, Rgb.g, Rgb.b, g_Config.m_UiColorAlpha/255.0f);
-
 	CUIRect Screen = *UI()->Screen();
 	Graphics()->MapScreen(Screen.x, Screen.y, Screen.w, Screen.h);
 
@@ -958,7 +945,7 @@ void CMenus::RenderLoading()
 
 void CMenus::RenderNews(CUIRect MainView)
 {
-	RenderTools()->DrawUIRect(&MainView, ms_ColorTabbarActive, CUI::CORNER_ALL, 10.0f);
+	RenderTools()->DrawUIRect(&MainView, vec4(1.0f, 1.0f, 1.0f, 0.25f), CUI::CORNER_ALL, 10.0f);
 }
 
 int CMenus::MenuImageScan(const char *pName, int IsDir, int DirType, void *pUser)
@@ -1155,17 +1142,9 @@ int CMenus::Render()
 		s_First = false;
 	}
 
-	if(Client()->State() == IClient::STATE_ONLINE || m_pClient->m_pMapLayersBackGround->MenuMapLoaded())
-	{
-		ms_ColorTabbarInactive = ms_ColorTabbarInactiveIngame;
-		ms_ColorTabbarActive = ms_ColorTabbarActiveIngame;
-	}
-	else
-	{
+	// render background only if needed
+	if(Client()->State() != IClient::STATE_ONLINE && !m_pClient->m_pMapLayersBackGround->MenuMapLoaded())
 		RenderBackground();
-		ms_ColorTabbarInactive = ms_ColorTabbarInactiveOutgame;
-		ms_ColorTabbarActive = ms_ColorTabbarActiveOutgame;
-	}
 
 	CUIRect TabBar;
 	CUIRect MainView;
@@ -1756,12 +1735,6 @@ void CMenus::SetActive(bool Active)
 	m_MenuActive = Active;
 	if(!m_MenuActive)
 	{
-		if(m_NeedSendinfo)
-		{
-			m_pClient->SendInfo(false);
-			m_NeedSendinfo = false;
-		}
-
 		if(Client()->State() == IClient::STATE_ONLINE)
 		{
 			m_pClient->OnRelease();
@@ -1922,27 +1895,6 @@ void CMenus::OnRender()
 		return;
 	}
 
-	// update colors
-	vec3 Rgb = HslToRgb(vec3(g_Config.m_UiColorHue/255.0f, g_Config.m_UiColorSat/255.0f, g_Config.m_UiColorLht/255.0f));
-	ms_GuiColor = vec4(Rgb.r, Rgb.g, Rgb.b, g_Config.m_UiColorAlpha/255.0f);
-
-	ms_ColorTabbarInactiveOutgame = vec4(0,0,0,0.25f);
-	ms_ColorTabbarActiveOutgame = vec4(0,0,0,0.5f);
-
-	float ColorIngameScaleI = 0.5f;
-	float ColorIngameAcaleA = 0.2f;
-	ms_ColorTabbarInactiveIngame = vec4(
-		ms_GuiColor.r*ColorIngameScaleI,
-		ms_GuiColor.g*ColorIngameScaleI,
-		ms_GuiColor.b*ColorIngameScaleI,
-		ms_GuiColor.a*0.8f);
-
-	ms_ColorTabbarActiveIngame = vec4(
-		ms_GuiColor.r*ColorIngameAcaleA,
-		ms_GuiColor.g*ColorIngameAcaleA,
-		ms_GuiColor.b*ColorIngameAcaleA,
-		ms_GuiColor.a);
-
 	// update the ui
 	CUIRect *pScreen = UI()->Screen();
 	float mx = (m_MousePos.x/(float)Graphics()->ScreenWidth())*pScreen->w;
@@ -2005,8 +1957,8 @@ void CMenus::RenderBackground()
 	Graphics()->QuadsBegin();
 		//vec4 bottom(gui_color.r*0.3f, gui_color.g*0.3f, gui_color.b*0.3f, 1.0f);
 		//vec4 bottom(0, 0, 0, 1.0f);
-		vec4 Bottom(ms_GuiColor.r, ms_GuiColor.g, ms_GuiColor.b, 1.0f);
-		vec4 Top(ms_GuiColor.r, ms_GuiColor.g, ms_GuiColor.b, 1.0f);
+		vec4 Bottom(0.25f, 0.25f, 0.25f, 1.0f);
+		vec4 Top(0.25f, 0.25f, 0.25f, 1.0f);
 		IGraphics::CColorVertex Array[4] = {
 			IGraphics::CColorVertex(0, Top.r, Top.g, Top.b, Top.a),
 			IGraphics::CColorVertex(1, Top.r, Top.g, Top.b, Top.a),

@@ -43,7 +43,7 @@ void CHud::RenderGameTimer()
 				Time = 0;
 		}
 		else if(m_pClient->m_Snap.m_pGameData->m_GameStateFlags&(GAMESTATEFLAG_ROUNDOVER|GAMESTATEFLAG_GAMEOVER))
-			Time = m_pClient->m_Snap.m_pGameData->m_GameStateTimer/Client()->GameTickSpeed();
+			Time = m_pClient->m_Snap.m_pGameData->m_GameStateEndTick/Client()->GameTickSpeed();
 		else
 			Time = (Client()->GameTick()-m_pClient->m_Snap.m_pGameData->m_GameStartTick)/Client()->GameTickSpeed();
 
@@ -72,29 +72,22 @@ void CHud::RenderPauseTimer()
 		TextRender()->Text(0, 150*Graphics()->ScreenAspect()+-w/2, 50, FontSize, pText, -1);
 
 		FontSize = 16.0f;
-		if(m_pClient->m_Snap.m_pGameData->m_GameStateTimer == -1)
+		if(m_pClient->m_Snap.m_pGameData->m_GameStateEndTick == 0)
 		{
-			int NotReadyCount = 0;
-			for(int i = 0; i < MAX_CLIENTS; ++i)
-			{
-				if(m_pClient->m_Snap.m_paPlayerInfos[i] && m_pClient->m_Snap.m_paPlayerInfos[i]->m_Team != TEAM_SPECTATORS &&
-					!(m_pClient->m_Snap.m_paPlayerInfos[i]->m_PlayerFlags&PLAYERFLAG_READY))
-						++NotReadyCount;
-			}
-			if(NotReadyCount == 1)
-				str_format(aBuf, sizeof(aBuf), Localize("%d player not ready"), NotReadyCount);
-			else if(NotReadyCount > 1)
-				str_format(aBuf, sizeof(aBuf), Localize("%d players not ready"), NotReadyCount);
+			if(m_pClient->m_Snap.m_NotReadyCount == 1)
+				str_format(aBuf, sizeof(aBuf), Localize("%d player not ready"), m_pClient->m_Snap.m_NotReadyCount);
+			else if(m_pClient->m_Snap.m_NotReadyCount > 1)
+				str_format(aBuf, sizeof(aBuf), Localize("%d players not ready"), m_pClient->m_Snap.m_NotReadyCount);
 			else
 				return;
 		}
 		else
 		{
-			int Seconds = m_pClient->m_Snap.m_pGameData->m_GameStateTimer/SERVER_TICK_SPEED;
+			float Seconds = static_cast<float>(m_pClient->m_Snap.m_pGameData->m_GameStateEndTick-Client()->GameTick())/SERVER_TICK_SPEED;
 			if(Seconds < 5)
-				str_format(aBuf, sizeof(aBuf), "%d.%d", Seconds, (m_pClient->m_Snap.m_pGameData->m_GameStateTimer*10/SERVER_TICK_SPEED)%10);
+				str_format(aBuf, sizeof(aBuf), "%.1f", Seconds);
 			else
-				str_format(aBuf, sizeof(aBuf), "%d", Seconds);
+				str_format(aBuf, sizeof(aBuf), "%d", round(Seconds));
 		}
 		w = TextRender()->TextWidth(0, FontSize, aBuf, -1);
 		TextRender()->Text(0, 150*Graphics()->ScreenAspect()+-w/2, 75, FontSize, aBuf, -1);
@@ -105,17 +98,17 @@ void CHud::RenderStartCountdown()
 {
 	if(m_pClient->m_Snap.m_pGameData->m_GameStateFlags&GAMESTATEFLAG_STARTCOUNTDOWN)
 	{
-		char aBuf[256];
 		const char *pText = Localize("Game starts in");
 		float FontSize = 20.0f;
 		float w = TextRender()->TextWidth(0, FontSize, pText, -1);
 		TextRender()->Text(0, 150*Graphics()->ScreenAspect()+-w/2, 50, FontSize, pText, -1);
 
-		if(m_pClient->m_Snap.m_pGameData->m_GameStateTimer == -1)
+		if(m_pClient->m_Snap.m_pGameData->m_GameStateEndTick == 0)
 			return;
 		
 		FontSize = 16.0f;
-		int Seconds = (m_pClient->m_Snap.m_pGameData->m_GameStateTimer+SERVER_TICK_SPEED-1)/SERVER_TICK_SPEED;
+		char aBuf[32];
+		int Seconds = (m_pClient->m_Snap.m_pGameData->m_GameStateEndTick-Client()->GameTick()+SERVER_TICK_SPEED-1)/SERVER_TICK_SPEED;
 		str_format(aBuf, sizeof(aBuf), "%d", Seconds);
 		w = TextRender()->TextWidth(0, FontSize, aBuf, -1);
 		TextRender()->Text(0, 150*Graphics()->ScreenAspect()+-w/2, 75, FontSize, aBuf, -1);
@@ -124,8 +117,8 @@ void CHud::RenderStartCountdown()
 
 void CHud::RenderDeadNotification()
 {
-	if(m_pClient->m_Snap.m_pGameData->m_GameStateFlags == 0 && m_pClient->m_Snap.m_pLocalInfo->m_Team != TEAM_SPECTATORS &&
-		(m_pClient->m_Snap.m_pLocalInfo->m_PlayerFlags&PLAYERFLAG_DEAD))
+	if(m_pClient->m_Snap.m_pGameData->m_GameStateFlags == 0 && m_pClient->m_aClients[m_pClient->m_LocalClientID].m_Team != TEAM_SPECTATORS &&
+		m_pClient->m_Snap.m_pLocalInfo && (m_pClient->m_Snap.m_pLocalInfo->m_PlayerFlags&PLAYERFLAG_DEAD))
 	{
 		const char *pText = Localize("Wait for next round");
 		float FontSize = 16.0f;
@@ -165,7 +158,7 @@ void CHud::RenderScoreHud()
 			float Split = 3.0f;
 			float ImageSize = GameFlags&GAMEFLAG_FLAGS ? 16.0f : Split;
 
-			for(int t = 0; t < 2; t++)
+			for(int t = 0; t < NUM_TEAMS; t++)
 			{
 				// draw box
 				Graphics()->BlendNormal();
@@ -184,15 +177,9 @@ void CHud::RenderScoreHud()
 				if(GameFlags&GAMEFLAG_SURVIVAL)
 				{
 					// draw number of alive players
-					int Count = 0;
-					for(int i = 0; i < MAX_CLIENTS; ++i)
-					{
-						if(m_pClient->m_Snap.m_paPlayerInfos[i] && !(m_pClient->m_Snap.m_paPlayerInfos[i]->m_PlayerFlags&PLAYERFLAG_DEAD) &&
-							m_pClient->m_Snap.m_paPlayerInfos[i]->m_Team == t)
-							++Count;
-					}
 					char aBuf[32];
-					str_format(aBuf, sizeof(aBuf), Count==1?Localize("%d player left"):Localize("%d players left"), Count);
+					str_format(aBuf, sizeof(aBuf), m_pClient->m_Snap.m_AliveCount[t]==1 ? Localize("%d player left") : Localize("%d players left"),
+								m_pClient->m_Snap.m_AliveCount[t]);
 					float w = TextRender()->TextWidth(0, 8.0f, aBuf, -1);
 					TextRender()->Text(0, min(Whole-w-1.0f, Whole-ScoreWidthMax-ImageSize-2*Split), StartY+(t+1)*20.0f-3.0f, 8.0f, aBuf, -1);
 				}
@@ -245,7 +232,7 @@ void CHud::RenderScoreHud()
 			int i = 0;
 			for(int t = 0; t < 2 && i < MAX_CLIENTS && m_pClient->m_Snap.m_aInfoByScore[i].m_pPlayerInfo; ++i)
 			{
-				if(m_pClient->m_Snap.m_aInfoByScore[i].m_pPlayerInfo->m_Team != TEAM_SPECTATORS)
+				if(m_pClient->m_aClients[m_pClient->m_Snap.m_aInfoByScore[i].m_ClientID].m_Team != TEAM_SPECTATORS)
 				{
 					aPlayerInfo[t] = m_pClient->m_Snap.m_aInfoByScore[i];
 					if(aPlayerInfo[t].m_ClientID == m_pClient->m_LocalClientID)
@@ -254,11 +241,11 @@ void CHud::RenderScoreHud()
 				}
 			}
 			// search local player info if not a spectator, nor within top2 scores
-			if(Local == -1 && m_pClient->m_Snap.m_pLocalInfo && m_pClient->m_Snap.m_pLocalInfo->m_Team != TEAM_SPECTATORS)
+			if(Local == -1 && m_pClient->m_aClients[m_pClient->m_LocalClientID].m_Team != TEAM_SPECTATORS)
 			{
 				for(; i < MAX_CLIENTS && m_pClient->m_Snap.m_aInfoByScore[i].m_pPlayerInfo; ++i)
 				{
-					if(m_pClient->m_Snap.m_aInfoByScore[i].m_pPlayerInfo->m_Team != TEAM_SPECTATORS)
+					if(m_pClient->m_aClients[m_pClient->m_Snap.m_aInfoByScore[i].m_ClientID].m_Team != TEAM_SPECTATORS)
 						++aPos[1];
 					if(m_pClient->m_Snap.m_aInfoByScore[i].m_ClientID == m_pClient->m_LocalClientID)
 					{
@@ -335,29 +322,22 @@ void CHud::RenderWarmupTimer()
 		TextRender()->Text(0, 150*Graphics()->ScreenAspect()+-w/2, 50, FontSize, Localize("Warmup"), -1);
 
 		FontSize = 16.0f;
-		if(m_pClient->m_Snap.m_pGameData->m_GameStateTimer == -1)
+		if(m_pClient->m_Snap.m_pGameData->m_GameStateEndTick == 0)
 		{
-			int NotReadyCount = 0;
-			for(int i = 0; i < MAX_CLIENTS; ++i)
-			{
-				if(m_pClient->m_Snap.m_paPlayerInfos[i] && m_pClient->m_Snap.m_paPlayerInfos[i]->m_Team != TEAM_SPECTATORS &&
-					!(m_pClient->m_Snap.m_paPlayerInfos[i]->m_PlayerFlags&PLAYERFLAG_READY))
-						++NotReadyCount;
-			}
-			if(NotReadyCount == 1)
-				str_format(aBuf, sizeof(aBuf), Localize("%d player not ready"), NotReadyCount);
-			else if(NotReadyCount > 1)
-				str_format(aBuf, sizeof(aBuf), Localize("%d players not ready"), NotReadyCount);
+			if(m_pClient->m_Snap.m_NotReadyCount == 1)
+				str_format(aBuf, sizeof(aBuf), Localize("%d player not ready"), m_pClient->m_Snap.m_NotReadyCount);
+			else if(m_pClient->m_Snap.m_NotReadyCount > 1)
+				str_format(aBuf, sizeof(aBuf), Localize("%d players not ready"), m_pClient->m_Snap.m_NotReadyCount);
 			else
 				str_format(aBuf, sizeof(aBuf), Localize("wait for more players"));
 		}
 		else
 		{
-			int Seconds = m_pClient->m_Snap.m_pGameData->m_GameStateTimer/SERVER_TICK_SPEED;
+			float Seconds = static_cast<float>(m_pClient->m_Snap.m_pGameData->m_GameStateEndTick-Client()->GameTick())/SERVER_TICK_SPEED;
 			if(Seconds < 5)
-				str_format(aBuf, sizeof(aBuf), "%d.%d", Seconds, (m_pClient->m_Snap.m_pGameData->m_GameStateTimer*10/SERVER_TICK_SPEED)%10);
+				str_format(aBuf, sizeof(aBuf), "%.1f", Seconds);
 			else
-				str_format(aBuf, sizeof(aBuf), "%d", Seconds);
+				str_format(aBuf, sizeof(aBuf), "%d", round(Seconds));
 		}
 		w = TextRender()->TextWidth(0, FontSize, aBuf, -1);
 		TextRender()->Text(0, 150*Graphics()->ScreenAspect()+-w/2, 75, FontSize, aBuf, -1);
@@ -401,8 +381,7 @@ void CHud::RenderTeambalanceWarning()
 	bool Flash = time_get()/(time_freq()/2)%2 == 0;
 	if(m_pClient->m_GameInfo.m_GameFlags&GAMEFLAG_TEAMS)
 	{
-		int TeamDiff = m_pClient->m_Snap.m_aTeamSize[TEAM_RED]-m_pClient->m_Snap.m_aTeamSize[TEAM_BLUE];
-		if (g_Config.m_ClWarningTeambalance && (TeamDiff >= 2 || TeamDiff <= -2))
+		if(g_Config.m_ClWarningTeambalance && absolute(m_pClient->m_GameInfo.m_aTeamSize[TEAM_RED]-m_pClient->m_GameInfo.m_aTeamSize[TEAM_BLUE]) >= 2)
 		{
 			const char *pText = Localize("Please balance teams!");
 			if(Flash)

@@ -125,6 +125,7 @@ public:
 		int m_AuthTries;
 
 		int m_MapChunk;
+		bool m_Quitting;
 		const IConsole::CCommandInfo *m_pRconCmdToSend;
 
 		void Reset();
@@ -199,7 +200,6 @@ public:
 	int MaxClients() const;
 
 	virtual int SendMsg(CMsgPacker *pMsg, int Flags, int ClientID);
-	int SendMsgEx(CMsgPacker *pMsg, int Flags, int ClientID, bool System);
 
 	void DoSnapshot();
 

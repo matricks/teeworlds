@@ -255,10 +255,9 @@ public:
 	CClient();
 
 	// ----- send functions -----
+	int SendMsgRaw(const void *pData, unsigned DataSize, int Flags);
 	virtual int SendMsg(CMsgPacker *pMsg, int Flags);
 
-	int SendMsgRaw(void *pData, unsigned DataSize, int Flags, bool System);
-	int SendMsgEx(CMsgPacker *pMsg, int Flags, bool System=true);
 	void SendInfo();
 	void SendEnterGame();
 	void SendReady();

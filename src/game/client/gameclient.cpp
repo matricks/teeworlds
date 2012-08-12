@@ -58,6 +58,21 @@ const char *CGameClient::Version() { return GAME_VERSION; }
 const char *CGameClient::NetVersion() { return GAME_NETVERSION; }
 const char *CGameClient::GetItemName(int Type) { return m_NetObjHandler.GetObjName(Type); }
 
+const char *CGameClient::GetTeamName(int Team, bool Teamplay) const
+{
+	if(Teamplay)
+	{
+		if(Team == TEAM_RED)
+			return Localize("red team");
+		else if(Team == TEAM_BLUE)
+			return Localize("blue team");
+	}
+	else if(Team == 0)
+		return Localize("game");
+
+	return Localize("spectators");
+}
+
 void CGameClient::OnConsoleInit()
 {
 	m_pEngine = Kernel()->RequestInterface<IEngine>();
@@ -155,6 +170,8 @@ void CGameClient::OnConsoleInit()
 	Console()->Register("kill", "", CFGFLAG_CLIENT, ConKill, this, "Kill yourself");
 	Console()->Register("ready_change", "", CFGFLAG_CLIENT, ConReadyChange, this, "Change ready state");
 
+	Console()->Chain("add_friend", ConchainFriendUpdate, this);
+	Console()->Chain("remove_friend", ConchainFriendUpdate, this);
 
 	for(int i = 0; i < m_All.m_Num; i++)
 		m_All.m_paComponents[i]->m_pClient = this;
@@ -162,26 +179,6 @@ void CGameClient::OnConsoleInit()
 	// let all the other components register their console commands
 	for(int i = 0; i < m_All.m_Num; i++)
 		m_All.m_paComponents[i]->OnConsoleInit();
-
-
-	//
-	Console()->Chain("player_name", ConchainSpecialInfoupdate, this);
-	Console()->Chain("player_clan", ConchainSpecialInfoupdate, this);
-	Console()->Chain("player_country", ConchainSpecialInfoupdate, this);
-
-	static const char *const s_apParts[6] = {"body", "tattoo", "decoration", "hands", "feet", "eyes"};
-	for(int p = 0; p < NUM_SKINPARTS; p++)
-	{
-		char aBuf[64];
-		str_format(aBuf, sizeof(aBuf), "player_color_%s", s_apParts[p]);
-		Console()->Chain(aBuf, ConchainSpecialInfoupdate, this);
-		str_format(aBuf, sizeof(aBuf), "player_use_custom_color_%s", s_apParts[p]);
-		Console()->Chain(aBuf, ConchainSpecialInfoupdate, this);
-		str_format(aBuf, sizeof(aBuf), "player_skin_%s", s_apParts[p]);
-		Console()->Chain(aBuf, ConchainSpecialInfoupdate, this);
-	}
-
-	Console()->Chain("player_skin", ConchainUpdateSkinParts, this);
 
 	//
 	m_SuppressEvents = false;
@@ -250,8 +247,7 @@ void CGameClient::OnInit()
 		m_pMenus->RenderLoading();
 	}
 
-	for(int i = 0; i < m_All.m_Num; i++)
-		m_All.m_paComponents[i]->OnReset();
+	OnReset();
 
 	int64 End = time_get();
 	char aBuf[256];
@@ -324,10 +320,9 @@ void CGameClient::OnConnected()
 	Client()->GetServerInfo(&CurrentServerInfo);
 
 	m_ServerMode = SERVERMODE_PURE;
-	m_LastSendInfo = 0;
 
 	// send the inital info
-	SendInfo(true);
+	SendStartInfo();
 }
 
 void CGameClient::OnReset()
@@ -343,6 +338,7 @@ void CGameClient::OnReset()
 		m_All.m_paComponents[i]->OnReset();
 
 	m_LocalClientID = -1;
+	mem_zero(&m_GameInfo, sizeof(m_GameInfo));
 	m_DemoSpecID = SPEC_FREEVIEW;
 	m_Tuning = CTuningParams();
 }
@@ -443,29 +439,6 @@ void CGameClient::OnRender()
 	// clear new tick flags
 	m_NewTick = false;
 	m_NewPredictedTick = false;
-
-	// check if client info has to be resent
-	//if(m_LastSendInfo && Client()->State() == IClient::STATE_ONLINE && m_Snap.m_LocalClientID >= 0 && !m_pMenus->IsActive() && m_LastSendInfo+time_freq()*6 < time_get())
-	//{
-	//	// resend if client info differs
-	//	if(str_comp(g_Config.m_PlayerName, m_aClients[m_Snap.m_LocalClientID].m_aName) ||
-	//		str_comp(g_Config.m_PlayerClan, m_aClients[m_Snap.m_LocalClientID].m_aClan) ||
-	//		g_Config.m_PlayerCountry != m_aClients[m_Snap.m_LocalClientID].m_Country)
-	//	{
-	//		SendInfo(false);
-	//	}
-	//	for(int p = 0; p < NUM_SKINPARTS; p++)
-	//	{
-	//		if(str_comp(gs_apSkinVariables[p], m_aClients[m_Snap.m_LocalClientID].m_aaSkinPartNames[p]))
-	//			SendInfo(false);
-	//		else if(*gs_apUCCVariables[p] != m_aClients[m_Snap.m_LocalClientID].m_aUseCustomColors[p] ||
-	//			*gs_apColorVariables[p] != m_aClients[m_Snap.m_LocalClientID].m_aSkinPartColors[p])
-	//		{
-	//			SendInfo(false);
-	//		}
-	//	}
-	//	m_LastSendInfo = 0;
-	//}
 }
 
 void CGameClient::OnRelease()
@@ -498,8 +471,9 @@ void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker)
 
 		return;
 	}
-	else if(MsgId == NETMSGTYPE_SV_TUNEPARAMS)
+	else if(MsgId == NETMSGTYPE_SV_TUNEPARAMS && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 	{
+		Client()->RecordGameMessage(false);
 		// unpack the new tuning
 		CTuningParams NewTuning;
 		int *pParams = (int *)&NewTuning;
@@ -514,7 +488,6 @@ void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker)
 
 		// apply new tuning
 		m_Tuning = NewTuning;
-		Client()->RecordGameMessage(false);
 		return;
 	}
 
@@ -531,13 +504,46 @@ void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker)
 	for(int i = 0; i < m_All.m_Num; i++)
 		m_All.m_paComponents[i]->OnMessage(MsgId, pRawMsg);
 
-	if(MsgId == NETMSGTYPE_SV_CLIENTINFO)
+	if(MsgId == NETMSGTYPE_SV_CLIENTINFO && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 	{
+		Client()->RecordGameMessage(false);
 		CNetMsg_Sv_ClientInfo *pMsg = (CNetMsg_Sv_ClientInfo *)pRawMsg;
-		CClientData *pClient = &m_aClients[pMsg->m_ClientID];
 
 		if(pMsg->m_Local)
+		{
+			if(m_LocalClientID != -1)
+			{
+				if(g_Config.m_Debug)
+					Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "client", "invalid local clientinfo");
+				return;
+			}
 			m_LocalClientID = pMsg->m_ClientID;
+		}
+		else
+		{
+			if(m_aClients[pMsg->m_ClientID].m_Active)
+			{
+				if(g_Config.m_Debug)
+					Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "client", "invalid clientinfo");
+				return;
+			}
+
+			if(m_LocalClientID != -1)
+			{
+				DoEnterMessage(pMsg->m_pName, pMsg->m_Team);
+				
+				if(m_pDemoRecorder->IsRecording())
+				{
+					CNetMsg_De_ClientEnter Msg;
+					Msg.m_pName = pMsg->m_pName;
+					Msg.m_Team = pMsg->m_Team;
+					Client()->SendPackMsg(&Msg, MSGFLAG_NOSEND|MSGFLAG_RECORD);
+				}
+			}
+		}
+
+		m_aClients[pMsg->m_ClientID].m_Active = true;
+		m_aClients[pMsg->m_ClientID].m_Team  = pMsg->m_Team;
 		str_copy(m_aClients[pMsg->m_ClientID].m_aName, pMsg->m_pName, sizeof(m_aClients[pMsg->m_ClientID].m_aName));
 		str_copy(m_aClients[pMsg->m_ClientID].m_aClan, pMsg->m_pClan, sizeof(m_aClients[pMsg->m_ClientID].m_aClan));
 		m_aClients[pMsg->m_ClientID].m_Country = pMsg->m_Country;
@@ -548,39 +554,45 @@ void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker)
 			m_aClients[pMsg->m_ClientID].m_aSkinPartColors[i] = pMsg->m_aSkinPartColors[i];
 		}
 
-		pClient->m_SkinInfo.m_Size = 64;
+		// update friend state
+		m_aClients[pMsg->m_ClientID].m_Friend = Friends()->IsFriend(m_aClients[pMsg->m_ClientID].m_aName, m_aClients[pMsg->m_ClientID].m_aClan, true);
 
-		for(int p = 0; p < NUM_SKINPARTS; p++)
+		m_aClients[pMsg->m_ClientID].UpdateRenderInfo(this, true);
+
+		m_GameInfo.m_NumPlayers++;
+		// calculate team-balance
+		if(m_aClients[pMsg->m_ClientID].m_Team != TEAM_SPECTATORS)
+			m_GameInfo.m_aTeamSize[m_aClients[pMsg->m_ClientID].m_Team]++;
+	}
+	else if(MsgId == NETMSGTYPE_SV_CLIENTDROP && Client()->State() != IClient::STATE_DEMOPLAYBACK)
+	{
+		Client()->RecordGameMessage(false);
+		CNetMsg_Sv_ClientDrop *pMsg = (CNetMsg_Sv_ClientDrop *)pRawMsg;
+
+		if(m_LocalClientID == pMsg->m_ClientID || !m_aClients[pMsg->m_ClientID].m_Active)
 		{
-			if(pClient->m_aaSkinPartNames[p][0] == 'x' && pClient->m_aaSkinPartNames[p][1] == '_')
-				str_copy(pClient->m_aaSkinPartNames[p], "default", 24);
-
-			pClient->m_SkinPartIDs[p] = m_pSkins->FindSkinPart(p, pClient->m_aaSkinPartNames[p]);
-			if(pClient->m_SkinPartIDs[p] < 0)
-			{
-				pClient->m_SkinPartIDs[p] = m_pSkins->Find("default");
-				if(pClient->m_SkinPartIDs[p] < 0)
-					pClient->m_SkinPartIDs[p] = 0;
-			}
-
-			const CSkins::CSkinPart *pSkinPart = m_pSkins->GetSkinPart(p, pClient->m_SkinPartIDs[p]);
-			if(pClient->m_aUseCustomColors[p])
-			{
-				pClient->m_SkinInfo.m_aTextures[p] = pSkinPart->m_ColorTexture;
-				pClient->m_SkinInfo.m_aColors[p] = m_pSkins->GetColorV4(pClient->m_aSkinPartColors[p], p==SKINPART_TATTOO);
-			}
-			else
-			{
-				pClient->m_SkinInfo.m_aTextures[p] = pSkinPart->m_OrgTexture;
-				pClient->m_SkinInfo.m_aColors[p] = vec4(1.0f, 1.0f, 1.0f, 1.0f);
-			}
+			if(g_Config.m_Debug)
+				Console()->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "client", "invalid clientdrop");
+			return;
 		}
 
-		pClient->UpdateRenderInfo(this);
-		Client()->RecordGameMessage(false);
+		DoLeaveMessage(m_aClients[pMsg->m_ClientID].m_aName, pMsg->m_pReason);
+
+		CNetMsg_De_ClientLeave Msg;
+		Msg.m_pName = m_aClients[pMsg->m_ClientID].m_aName;
+		Msg.m_pReason = pMsg->m_pReason;
+		Client()->SendPackMsg(&Msg, MSGFLAG_NOSEND|MSGFLAG_RECORD);
+
+		m_GameInfo.m_NumPlayers--;
+		// calculate team-balance
+		if(m_aClients[pMsg->m_ClientID].m_Team != TEAM_SPECTATORS)
+			m_GameInfo.m_aTeamSize[m_aClients[pMsg->m_ClientID].m_Team]--;
+
+		m_aClients[pMsg->m_ClientID].Reset(this);
 	}
-	else if(MsgId == NETMSGTYPE_SV_GAMEINFO)
+	else if(MsgId == NETMSGTYPE_SV_GAMEINFO && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 	{
+		Client()->RecordGameMessage(false);
 		CNetMsg_Sv_GameInfo *pMsg = (CNetMsg_Sv_GameInfo *)pRawMsg;
 
 		m_GameInfo.m_GameFlags = pMsg->m_GameFlags;
@@ -588,8 +600,27 @@ void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker)
 		m_GameInfo.m_TimeLimit = pMsg->m_TimeLimit;
 		m_GameInfo.m_MatchNum = pMsg->m_MatchNum;
 		m_GameInfo.m_MatchCurrent = pMsg->m_MatchCurrent;
+	}
+	else if(MsgId == NETMSGTYPE_SV_TEAM)
+	{
+		CNetMsg_Sv_Team *pMsg = (CNetMsg_Sv_Team *)pRawMsg;
 
-		Client()->RecordGameMessage(false);
+		if(Client()->State() != IClient::STATE_DEMOPLAYBACK)
+		{
+			// calculate team-balance
+			if(m_aClients[pMsg->m_ClientID].m_Team != TEAM_SPECTATORS)
+				m_GameInfo.m_aTeamSize[m_aClients[pMsg->m_ClientID].m_Team]--;
+			m_aClients[pMsg->m_ClientID].m_Team = pMsg->m_Team;
+			if(m_aClients[pMsg->m_ClientID].m_Team != TEAM_SPECTATORS)
+				m_GameInfo.m_aTeamSize[m_aClients[pMsg->m_ClientID].m_Team]++;
+
+			m_aClients[pMsg->m_ClientID].UpdateRenderInfo(this, false);
+		}
+
+		if(pMsg->m_Silent == 0)
+		{
+			DoTeamChangeMessage(m_aClients[pMsg->m_ClientID].m_aName, pMsg->m_Team);
+		}		
 	}
 	else if(MsgId == NETMSGTYPE_SV_READYTOENTER)
 	{
@@ -619,6 +650,16 @@ void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker)
 		else
 			g_GameClient.m_pSounds->Play(CSounds::CHN_GLOBAL, Client()->GetResource(pMsg->m_SoundID), 1.0f);
 			*/
+	}
+	else if(MsgId == NETMSGTYPE_DE_CLIENTENTER && Client()->State() == IClient::STATE_DEMOPLAYBACK)
+	{
+		CNetMsg_De_ClientEnter *pMsg = (CNetMsg_De_ClientEnter *)pRawMsg;
+		DoEnterMessage(pMsg->m_pName, pMsg->m_Team);
+	}
+	else if(MsgId == NETMSGTYPE_DE_CLIENTLEAVE && Client()->State() == IClient::STATE_DEMOPLAYBACK)
+	{
+		CNetMsg_De_ClientLeave *pMsg = (CNetMsg_De_ClientLeave *)pRawMsg;
+		DoLeaveMessage(pMsg->m_pName, pMsg->m_pReason);
 	}
 }
 
@@ -748,12 +789,11 @@ void CGameClient::OnNewSnapshot()
 	if(Client()->State() == IClient::STATE_DEMOPLAYBACK)
 	{
 		m_Tuning = StandardTuning;
+		mem_zero(&m_GameInfo, sizeof(m_GameInfo));
 	}
 
 	// go trough all the items in the snapshot and gather the info we want
 	{
-		m_Snap.m_aTeamSize[TEAM_RED] = m_Snap.m_aTeamSize[TEAM_BLUE] = 0;
-
 		int Num = Client()->SnapNumItems(IClient::SNAP_CURRENT);
 		for(int i = 0; i < Num; i++)
 		{
@@ -771,6 +811,8 @@ void CGameClient::OnNewSnapshot()
 
 					if(pInfo->m_Local)
 						m_LocalClientID = ClientID;
+					pClient->m_Active = true;
+					pClient->m_Team  = pInfo->m_Team;
 					IntsToStr(pInfo->m_aName, 4, pClient->m_aName);
 					IntsToStr(pInfo->m_aClan, 3, pClient->m_aClan);
 					pClient->m_Country = pInfo->m_Country;
@@ -782,35 +824,20 @@ void CGameClient::OnNewSnapshot()
 						pClient->m_aSkinPartColors[p] = pInfo->m_aSkinPartColors[p];
 					}
 
-					pClient->m_SkinInfo.m_Size = 64;
+					m_GameInfo.m_NumPlayers++;
+					// calculate team-balance
+					if(pClient->m_Team != TEAM_SPECTATORS)
+						m_GameInfo.m_aTeamSize[pClient->m_Team]++;
+				}
+				else if(Item.m_Type == NETOBJTYPE_DE_GAMEINFO)
+				{
+					const CNetObj_De_GameInfo *pInfo = (const CNetObj_De_GameInfo *)pData;
 
-					for(int p = 0; p < NUM_SKINPARTS; p++)
-					{
-						if(pClient->m_aaSkinPartNames[p][0] == 'x' && pClient->m_aaSkinPartNames[p][1] == '_')
-							str_copy(pClient->m_aaSkinPartNames[p], "default", 24);
-
-						pClient->m_SkinPartIDs[p] = m_pSkins->FindSkinPart(p, pClient->m_aaSkinPartNames[p]);
-						if(pClient->m_SkinPartIDs[p] < 0)
-						{
-							pClient->m_SkinPartIDs[p] = m_pSkins->Find("default");
-							if(pClient->m_SkinPartIDs[p] < 0)
-								pClient->m_SkinPartIDs[p] = 0;
-						}
-
-						const CSkins::CSkinPart *pSkinPart = m_pSkins->GetSkinPart(p, pClient->m_SkinPartIDs[p]);
-						if(pClient->m_aUseCustomColors[p])
-						{
-							pClient->m_SkinInfo.m_aTextures[p] = pSkinPart->m_ColorTexture;
-							pClient->m_SkinInfo.m_aColors[p] = m_pSkins->GetColorV4(pClient->m_aSkinPartColors[p], p==SKINPART_TATTOO);
-						}
-						else
-						{
-							pClient->m_SkinInfo.m_aTextures[p] = pSkinPart->m_OrgTexture;
-							pClient->m_SkinInfo.m_aColors[p] = vec4(1.0f, 1.0f, 1.0f, 1.0f);
-						}
-					}
-
-					pClient->UpdateRenderInfo(this);
+					m_GameInfo.m_GameFlags = pInfo->m_GameFlags;
+					m_GameInfo.m_ScoreLimit = pInfo->m_ScoreLimit;
+					m_GameInfo.m_TimeLimit = pInfo->m_TimeLimit;
+					m_GameInfo.m_MatchNum = pInfo->m_MatchNum;
+					m_GameInfo.m_MatchCurrent = pInfo->m_MatchCurrent;
 				}
 				else if(Item.m_Type == NETOBJTYPE_DE_TUNEPARAMS)
 				{
@@ -826,29 +853,23 @@ void CGameClient::OnNewSnapshot()
 			{
 				const CNetObj_PlayerInfo *pInfo = (const CNetObj_PlayerInfo *)pData;
 				int ClientID = Item.m_ID;
-
-				m_aClients[ClientID].m_Team = pInfo->m_Team;
-				m_aClients[ClientID].m_Active = true;
-				m_Snap.m_paPlayerInfos[ClientID] = pInfo;
-				m_Snap.m_aInfoByScore[ClientID].m_pPlayerInfo = pInfo;
-				m_Snap.m_aInfoByScore[ClientID].m_ClientID = ClientID;
-				m_Snap.m_NumPlayers++;
-
-				if(m_LocalClientID == ClientID)
+				if(m_aClients[ClientID].m_Active)
 				{
-					m_Snap.m_pLocalInfo = pInfo;
+					m_Snap.m_paPlayerInfos[ClientID] = pInfo;
+					m_Snap.m_aInfoByScore[ClientID].m_pPlayerInfo = pInfo;
+					m_Snap.m_aInfoByScore[ClientID].m_ClientID = ClientID;
 
-					if(pInfo->m_Team == TEAM_SPECTATORS)
+					if(m_LocalClientID == ClientID)
 					{
-						m_Snap.m_SpecInfo.m_Active = true;
-						m_Snap.m_SpecInfo.m_SpectatorID = SPEC_FREEVIEW;
+						m_Snap.m_pLocalInfo = pInfo;
+
+						if(m_aClients[ClientID].m_Team == TEAM_SPECTATORS)
+						{
+							m_Snap.m_SpecInfo.m_Active = true;
+							m_Snap.m_SpecInfo.m_SpectatorID = SPEC_FREEVIEW;
+						}
 					}
 				}
-
-				// calculate team-balance
-				if(pInfo->m_Team != TEAM_SPECTATORS)
-					m_Snap.m_aTeamSize[pInfo->m_Team]++;
-
 			}
 			else if(Item.m_Type == NETOBJTYPE_CHARACTER)
 			{
@@ -928,22 +949,6 @@ void CGameClient::OnNewSnapshot()
 			m_Snap.m_SpecInfo.m_SpectatorID = SPEC_FREEVIEW;
 	}
 
-	// clear out unneeded client data
-	for(int i = 0; i < MAX_CLIENTS; ++i)
-	{
-		if(!m_Snap.m_paPlayerInfos[i] && m_aClients[i].m_Active)
-			m_aClients[i].Reset(this);
-	}
-
-	// update friend state
-	for(int i = 0; i < MAX_CLIENTS; ++i)
-	{
-		if(i == m_LocalClientID || !m_Snap.m_paPlayerInfos[i] || !Friends()->IsFriend(m_aClients[i].m_aName, m_aClients[i].m_aClan, true))
-			m_aClients[i].m_Friend = false;
-		else
-			m_aClients[i].m_Friend = true;
-	}
-
 	// sort player infos by score
 	for(int k = 0; k < MAX_CLIENTS-1; k++) // ffs, bubblesort
 	{
@@ -958,18 +963,29 @@ void CGameClient::OnNewSnapshot()
 			}
 		}
 	}
-	// sort player infos by team
-	int Teams[3] = { TEAM_RED, TEAM_BLUE, TEAM_SPECTATORS };
-	int Index = 0;
-	for(int Team = 0; Team < 3; ++Team)
+
+	// calc some player stats
+	for(int i = 0; i < MAX_CLIENTS; ++i)
 	{
-		for(int i = 0; i < MAX_CLIENTS && Index < MAX_CLIENTS; ++i)
+		if(!m_Snap.m_paPlayerInfos[i])
+			continue;
+
+		// count not ready players
+		if((m_Snap.m_pGameData->m_GameStateFlags&(GAMESTATEFLAG_STARTCOUNTDOWN|GAMESTATEFLAG_PAUSED|GAMESTATEFLAG_WARMUP)) &&
+			m_Snap.m_pGameData->m_GameStateEndTick == 0 && m_aClients[i].m_Team != TEAM_SPECTATORS && !(m_Snap.m_paPlayerInfos[i]->m_PlayerFlags&PLAYERFLAG_READY))
+			m_Snap.m_NotReadyCount++;
+
+		// count alive players per team
+		if((m_GameInfo.m_GameFlags&GAMEFLAG_SURVIVAL) && m_aClients[i].m_Team != TEAM_SPECTATORS && !(m_Snap.m_paPlayerInfos[i]->m_PlayerFlags&PLAYERFLAG_DEAD))
+			m_Snap.m_AliveCount[m_aClients[i].m_Team]++;
+	}
+
+	if(Client()->State() == IClient::STATE_DEMOPLAYBACK)
+	{
+		for(int i = 0; i < MAX_CLIENTS; ++i)
 		{
-			if(m_Snap.m_paPlayerInfos[i] && m_Snap.m_paPlayerInfos[i]->m_Team == Teams[Team])
-			{
-				m_Snap.m_aInfoByTeam[Index].m_pPlayerInfo = m_Snap.m_paPlayerInfos[i];
-				m_Snap.m_aInfoByTeam[Index++].m_ClientID = i;
-			}
+			if(m_aClients[i].m_Active)
+				m_aClients[i].UpdateRenderInfo(this, true);
 		}
 	}
 
@@ -999,6 +1015,8 @@ void CGameClient::OnDemoRecSnap()
 		if(!pClientInfo)
 			return;
 
+		pClientInfo->m_Local = i==m_LocalClientID ? 1 : 0;
+		pClientInfo->m_Team = m_aClients[i].m_Team;
 		StrToInts(pClientInfo->m_aName, 4, m_aClients[i].m_aName);
 		StrToInts(pClientInfo->m_aClan, 3, m_aClients[i].m_aClan);
 		pClientInfo->m_Country = m_aClients[i].m_Country;
@@ -1044,8 +1062,8 @@ void CGameClient::OnPredict()
 	if(m_LocalClientID == -1 || !m_Snap.m_aCharacters[m_LocalClientID].m_Active)
 		return;
 
-	// don't predict anything if we are paused
-	if(m_Snap.m_pGameData && m_Snap.m_pGameData->m_GameStateFlags&GAMESTATEFLAG_PAUSED)
+	// don't predict anything if we are paused or round/game is over
+	if(m_Snap.m_pGameData && m_Snap.m_pGameData->m_GameStateFlags&(GAMESTATEFLAG_PAUSED|GAMESTATEFLAG_ROUNDOVER|GAMESTATEFLAG_GAMEOVER))
 	{
 		if(m_Snap.m_pLocalCharacter)
 			m_PredictedChar.Read(m_Snap.m_pLocalCharacter);
@@ -1166,8 +1184,40 @@ void CGameClient::OnActivateEditor()
 	OnRelease();
 }
 
-void CGameClient::CClientData::UpdateRenderInfo(CGameClient *pGameClient)
+void CGameClient::CClientData::UpdateRenderInfo(CGameClient *pGameClient, bool UpdateSkinInfo)
 {
+	// update skin info
+	if(UpdateSkinInfo)
+	{
+		m_SkinInfo.m_Size = 64;
+
+		for(int p = 0; p < NUM_SKINPARTS; p++)
+		{
+			if(m_aaSkinPartNames[p][0] == 'x' && m_aaSkinPartNames[p][1] == '_')
+				str_copy(m_aaSkinPartNames[p], "default", 24);
+
+			m_SkinPartIDs[p] = pGameClient->m_pSkins->FindSkinPart(p, m_aaSkinPartNames[p]);
+			if(m_SkinPartIDs[p] < 0)
+			{
+				m_SkinPartIDs[p] = pGameClient->m_pSkins->Find("default");
+				if(m_SkinPartIDs[p] < 0)
+					m_SkinPartIDs[p] = 0;
+			}
+
+			const CSkins::CSkinPart *pSkinPart = pGameClient->m_pSkins->GetSkinPart(p, m_SkinPartIDs[p]);
+			if(m_aUseCustomColors[p])
+			{
+				m_SkinInfo.m_aTextures[p] = pSkinPart->m_ColorTexture;
+				m_SkinInfo.m_aColors[p] = pGameClient->m_pSkins->GetColorV4(m_aSkinPartColors[p], p==SKINPART_TATTOO);
+			}
+			else
+			{
+				m_SkinInfo.m_aTextures[p] = pSkinPart->m_OrgTexture;
+				m_SkinInfo.m_aColors[p] = vec4(1.0f, 1.0f, 1.0f, 1.0f);
+			}
+		}
+	}
+
 	m_RenderInfo = m_SkinInfo;
 
 	// force team colors
@@ -1193,13 +1243,38 @@ void CGameClient::CClientData::Reset(CGameClient *pGameClient)
 	m_EmoticonStart = -1;
 	m_Active = false;
 	m_ChatIgnore = false;
+	m_Friend = false;
 	for(int p = 0; p < NUM_SKINPARTS; p++)
 	{
 		m_SkinPartIDs[p] = 0;
 		m_SkinInfo.m_aTextures[p] = pGameClient->m_pSkins->GetSkinPart(p, 0)->m_ColorTexture;
 		m_SkinInfo.m_aColors[p] = vec4(1.0f, 1.0f, 1.0f , 1.0f);
 	}
-	UpdateRenderInfo(pGameClient);
+	UpdateRenderInfo(pGameClient, false);
+}
+
+void CGameClient::DoEnterMessage(const char *pName, int Team)
+{
+	char aBuf[128];
+	str_format(aBuf, sizeof(aBuf), Localize("'%s' entered and joined the %s"), pName, GetTeamName(Team, m_GameInfo.m_GameFlags&GAMEFLAG_TEAMS));
+	m_pChat->AddLine(-1, 0, aBuf);
+}
+
+void CGameClient::DoLeaveMessage(const char *pName, const char *pReason)
+{
+	char aBuf[128];
+	if(pReason[0])
+		str_format(aBuf, sizeof(aBuf), Localize("'%s' has left the game (%s)"), pName, pReason);
+	else
+		str_format(aBuf, sizeof(aBuf), Localize("'%s' has left the game"), pName);
+	m_pChat->AddLine(-1, 0, aBuf);
+}
+
+void CGameClient::DoTeamChangeMessage(const char *pName, int Team)
+{
+	char aBuf[128];
+	str_format(aBuf, sizeof(aBuf), Localize("'%s' joined the %s"), pName, GetTeamName(Team, m_GameInfo.m_GameFlags&GAMEFLAG_TEAMS));
+	m_pChat->AddLine(-1, 0, aBuf);
 }
 
 void CGameClient::SendSwitchTeam(int Team)
@@ -1209,40 +1284,19 @@ void CGameClient::SendSwitchTeam(int Team)
 	Client()->SendPackMsg(&Msg, MSGFLAG_VITAL);
 }
 
-void CGameClient::SendInfo(bool Start)
+void CGameClient::SendStartInfo()
 {
-	if(Start)
+	CNetMsg_Cl_StartInfo Msg;
+	Msg.m_pName = g_Config.m_PlayerName;
+	Msg.m_pClan = g_Config.m_PlayerClan;
+	Msg.m_Country = g_Config.m_PlayerCountry;
+	for(int p = 0; p < NUM_SKINPARTS; p++)
 	{
-		CNetMsg_Cl_StartInfo Msg;
-		Msg.m_pName = g_Config.m_PlayerName;
-		Msg.m_pClan = g_Config.m_PlayerClan;
-		Msg.m_Country = g_Config.m_PlayerCountry;
-		for(int p = 0; p < NUM_SKINPARTS; p++)
-		{
-			Msg.m_apSkinPartNames[p] = gs_apSkinVariables[p];
-			Msg.m_aUseCustomColors[p] = *gs_apUCCVariables[p];
-			Msg.m_aSkinPartColors[p] = *gs_apColorVariables[p];
-		}
-		Client()->SendPackMsg(&Msg, MSGFLAG_VITAL);
+		Msg.m_apSkinPartNames[p] = gs_apSkinVariables[p];
+		Msg.m_aUseCustomColors[p] = *gs_apUCCVariables[p];
+		Msg.m_aSkinPartColors[p] = *gs_apColorVariables[p];
 	}
-	else
-	{
-		CNetMsg_Cl_ChangeInfo Msg;
-		Msg.m_pName = g_Config.m_PlayerName;
-		Msg.m_pClan = g_Config.m_PlayerClan;
-		Msg.m_Country = g_Config.m_PlayerCountry;
-		for(int p = 0; p < NUM_SKINPARTS; p++)
-		{
-			Msg.m_apSkinPartNames[p] = gs_apSkinVariables[p];
-			Msg.m_aUseCustomColors[p] = *gs_apUCCVariables[p];
-			Msg.m_aSkinPartColors[p] = *gs_apColorVariables[p];
-		}
-		Client()->SendPackMsg(&Msg, MSGFLAG_VITAL);
-
-		// activate timer to resend the info if it gets filtered
-		if(!m_LastSendInfo || m_LastSendInfo+time_freq()*5 < time_get())
-			m_LastSendInfo = time_get();
-	}
+	Client()->SendPackMsg(&Msg, MSGFLAG_VITAL);
 }
 
 void CGameClient::SendKill()
@@ -1272,28 +1326,14 @@ void CGameClient::ConReadyChange(IConsole::IResult *pResult, void *pUserData)
 	((CGameClient*)pUserData)->SendReadyChange();
 }
 
-void CGameClient::ConchainSpecialInfoupdate(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)
+void CGameClient::ConchainFriendUpdate(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)
 {
 	pfnCallback(pResult, pCallbackUserData);
-	if(pResult->NumArguments())
-		((CGameClient*)pUserData)->SendInfo(false);
-}
-
-void CGameClient::ConchainUpdateSkinParts(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)
-{
-	pfnCallback(pResult, pCallbackUserData);
-	CGameClient *pSelf = (CGameClient*)pUserData;
-	if(pResult->NumArguments() && pSelf->m_pSkins->Num() > 0)
+	CGameClient *pClient = static_cast<CGameClient *>(pUserData);
+	for(int i = 0; i < MAX_CLIENTS; ++i)
 	{
-		int SkinID = pSelf->m_pSkins->Find(g_Config.m_PlayerSkin);
-		const CSkins::CSkin *s = pSelf->m_pSkins->Get(SkinID);
-		for(int p = 0; p < NUM_SKINPARTS; p++)
-		{
-			mem_copy(gs_apSkinVariables[p], s->m_apParts[p]->m_aName, 24);
-			*gs_apUCCVariables[p] = s->m_aUseCustomColors[p];
-			*gs_apColorVariables[p] = s->m_aPartColors[p];
-		}
-		pSelf->SendInfo(false);
+		if(pClient->m_aClients[i].m_Active)
+			pClient->m_aClients[i].m_Friend = pClient->Friends()->IsFriend(pClient->m_aClients[i].m_aName, pClient->m_aClients[i].m_aClan, true);
 	}
 }
 

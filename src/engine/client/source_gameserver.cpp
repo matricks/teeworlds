@@ -21,7 +21,7 @@ void CSource_GameServer::SendMsg(CMsgPacker *pMsg)
 
 void CSource_GameServer::SendNextFetch()
 {
-	CMsgPacker Msg(NETMSG_REQUEST_RES_DATA);
+	CMsgPacker Msg(NETMSG_REQUEST_RES_DATA, true);
 	Msg.AddInt(m_pOrder->m_pResource->NameHash());
 	Msg.AddInt(m_pOrder->m_pResource->ContentHash());
 	Msg.AddInt(m_DataOffset);

@@ -375,7 +375,6 @@ bool CMenus::RenderFilterHeader(CUIRect View, int FilterIndex)
 
 	View.VSplitLeft(50.0f, 0, &Label);
 	Label.HMargin(2.0f, &Label);
-	char aBuf[256];
 	if(pFilter->Custom() <= CBrowserFilter::FILTER_ALL)
 		UI()->DoLabel(&Label, pFilter->Name(), 12.0f, -1);
 	else
@@ -1303,7 +1302,7 @@ void CMenus::RenderServerbrowser(CUIRect MainView)
 	CUIRect ServerList, ToolBox, ConnectBox;
 
 	// background
-	RenderTools()->DrawUIRect(&MainView, ms_ColorTabbarActive, CUI::CORNER_ALL, 12.0f);
+	RenderTools()->DrawUIRect(&MainView, vec4(0.0f, 0.0f, 0.0f, 0.25f), CUI::CORNER_ALL, 12.0f);
 	MainView.Margin(10.0f, &MainView);
 
 	// create server list, status box, tab bar and tool box area

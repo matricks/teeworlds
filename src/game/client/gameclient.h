@@ -76,14 +76,10 @@ class CGameClient : public IGameClient
 	int m_PredictedTick;
 	int m_LastNewPredictedTick;
 
-	int64 m_LastSendInfo;
-
 	static void ConTeam(IConsole::IResult *pResult, void *pUserData);
 	static void ConKill(IConsole::IResult *pResult, void *pUserData);
 	static void ConReadyChange(IConsole::IResult *pResult, void *pUserData);
-
-	static void ConchainSpecialInfoupdate(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
-	static void ConchainUpdateSkinParts(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
+	static void ConchainFriendUpdate(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 
 
 	void EvolveCharacter(CNetObj_Character *pCharacter, int Tick);
@@ -156,13 +152,12 @@ public:
 		const CNetObj_GameDataTeam *m_pGameDataTeam;
 		const CNetObj_GameDataFlag *m_pGameDataFlag;
 		int m_GameDataFlagSnapID;
+		
+		int m_NotReadyCount;
+		int m_AliveCount[NUM_TEAMS];
 
 		const CNetObj_PlayerInfo *m_paPlayerInfos[MAX_CLIENTS];
 		CPlayerInfoItem m_aInfoByScore[MAX_CLIENTS];
-		CPlayerInfoItem m_aInfoByTeam[MAX_CLIENTS];
-
-		int m_NumPlayers;
-		int m_aTeamSize[2];
 
 		// spectate data
 		struct CSpectateInfo
@@ -214,7 +209,7 @@ public:
 		bool m_ChatIgnore;
 		bool m_Friend;
 
-		void UpdateRenderInfo(CGameClient *pGameClient);
+		void UpdateRenderInfo(CGameClient *pGameClient, bool UpdateSkinInfo);
 		void Reset(CGameClient *pGameClient);
 	};
 
@@ -228,6 +223,9 @@ public:
 		int m_TimeLimit;
 		int m_MatchNum;
 		int m_MatchCurrent;
+
+		int m_NumPlayers;
+		int m_aTeamSize[NUM_TEAMS];
 	};
 
 	CGameInfo m_GameInfo;
@@ -258,12 +256,17 @@ public:
 	virtual const char *GetItemName(int Type);
 	virtual const char *Version();
 	virtual const char *NetVersion();
+	const char *GetTeamName(int Team, bool Teamplay) const;
 
+	//
+	void DoEnterMessage(const char *pName, int Team);
+	void DoLeaveMessage(const char *pName, const char *pReason);
+	void DoTeamChangeMessage(const char *pName, int Team);
 
 	// actions
 	// TODO: move these
 	void SendSwitchTeam(int Team);
-	void SendInfo(bool Start);
+	void SendStartInfo();
 	void SendKill();
 	void SendReadyChange();
 
