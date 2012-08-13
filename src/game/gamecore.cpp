@@ -125,7 +125,10 @@ void CCharacterCore::Tick(bool UseInput)
 				else if(!(m_Jumped&2))
 				{
 					m_TriggeredEvents |= COREEVENT_AIR_JUMP;
-					m_Vel.y = -m_pWorld->m_Tuning.m_AirJumpImpulse;
+					float Momentum = length(m_Vel);
+					float MomentumScale = (dot(normalize(m_Vel), TargetDirection) + 1) * 0.5f;
+					float Boost = 6;
+					m_Vel = TargetDirection * Momentum * MomentumScale + TargetDirection * Boost;
 					m_Jumped |= 3;
 				}
 			}
