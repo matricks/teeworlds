@@ -66,6 +66,17 @@ public:
 		TEXLOAD_NOMIPMAPS = 2,
 	};
 
+	struct CPoint { float x, y; };
+	struct CTexCoord { float u, v; };
+	struct CColor { float r, g, b, a; };
+
+	struct CVertex
+	{
+		CPoint m_Pos;
+		CTexCoord m_Tex;
+		CColor m_Color;
+	};
+
 
 	class CTextureHandle
 	{
@@ -118,6 +129,8 @@ public:
 	virtual void LinesBegin() = 0;
 	virtual void LinesEnd() = 0;
 	virtual void LinesDraw(const CLineItem *pArray, int Num) = 0;
+
+	virtual void RenderQuads(CVertex *pVertices, int NumVertices) = 0;
 
 	virtual void QuadsBegin() = 0;
 	virtual void QuadsEnd() = 0;

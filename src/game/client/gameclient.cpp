@@ -477,7 +477,7 @@ void CGameClient::OnRender()
 	for(int i = 0; i < m_All.m_Num; i++)
 	{
 		char aBuf[128];
-		str_format(aBuf, sizeof(aBuf), "%s %.2f", m_All.m_paComponents[i]->ComponentName(), (m_aComponentStats[i].m_RenderTime/(double)time_freq())*1000);
+		str_format(aBuf, sizeof(aBuf), "%s %.3f", m_All.m_paComponents[i]->ComponentName(), (m_aComponentStats[i].m_RenderTime/(double)time_freq())*1000);
 		TextRender()->Text(0, 10, 30 + i*8, 8, aBuf, -1);
 	}
 }
