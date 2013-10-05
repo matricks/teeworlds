@@ -92,6 +92,7 @@ void CVoting::Vote(int v)
 }
 
 CVoting::CVoting()
+: CComponent("voting")
 {
 	ClearOptions();
 	

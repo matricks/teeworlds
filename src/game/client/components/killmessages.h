@@ -31,6 +31,10 @@ public:
 	CKillMsg m_aKillmsgs[MAX_KILLMSGS];
 	int m_KillmsgCurrent;
 
+	CKillMessages()
+	: CComponent("killmessages")
+	{}
+
 	virtual void OnReset();
 	virtual void OnRender();
 	virtual void OnMessage(int MsgType, void *pRawMsg);

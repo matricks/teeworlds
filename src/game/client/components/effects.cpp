@@ -19,6 +19,7 @@
 inline vec2 RandomDir() { return normalize(vec2(frandom()-0.5f, frandom()-0.5f)); }
 
 CEffects::CEffects()
+: CComponent("effects")
 {
 	m_Add50hz = false;
 	m_Add100hz = false;

@@ -26,6 +26,7 @@
 CMenusKeyBinder CMenus::m_Binder;
 
 CMenusKeyBinder::CMenusKeyBinder()
+: CComponent("menuskeybinder")
 {
 	m_TakeKey = false;
 	m_GotKey = false;

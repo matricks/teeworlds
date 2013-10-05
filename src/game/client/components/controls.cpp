@@ -14,6 +14,7 @@
 #include "controls.h"
 
 CControls::CControls()
+: CComponent("controls")
 {
 	mem_zero(&m_LastData, sizeof(m_LastData));
 }

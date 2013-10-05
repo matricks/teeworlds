@@ -58,6 +58,11 @@ public:
 	static int * const ms_apUCCVariables[NUM_SKINPARTS]; // use custom color
 	static int * const ms_apColorVariables[NUM_SKINPARTS];
 
+
+	CSkins()
+	: CComponent("skins")
+	{}
+
 	//
 	void OnInit();
 

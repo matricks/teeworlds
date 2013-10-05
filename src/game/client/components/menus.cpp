@@ -40,6 +40,7 @@ int CMenus::m_NumInputEvents;
 
 
 CMenus::CMenus()
+: CComponent("menus")
 {
 	m_Popup = POPUP_NONE;
 	m_NextPopup = POPUP_NONE;

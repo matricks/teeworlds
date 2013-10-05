@@ -11,6 +11,7 @@
 #include "controls.h"
 
 CCamera::CCamera()
+: CComponent("camera")
 {
 	m_CamType = CAMTYPE_UNDEFINED;
 	m_RotationCenter = vec2(0.0f, 0.0f);

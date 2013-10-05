@@ -25,6 +25,10 @@ class CSounds : public CComponent
 	ISound::CSampleHandle GetSampleId(int SetId);
 
 public:
+	CSounds()
+	: CComponent("sounds")
+	{}
+
 	// sound channels
 	enum
 	{

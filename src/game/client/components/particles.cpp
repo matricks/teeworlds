@@ -10,6 +10,7 @@
 #include "particles.h"
 
 CParticles::CParticles()
+: CComponent("particles")
 {
 	OnReset();
 	m_RenderTrail.m_pParts = this;

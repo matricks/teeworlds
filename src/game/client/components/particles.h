@@ -85,6 +85,10 @@ private:
 	class CRenderGroup : public CComponent
 	{
 	public:
+		CRenderGroup()
+		: CComponent("particlerendergroup")
+		{}
+
 		CParticles *m_pParts;
 		virtual void OnRender() { m_pParts->RenderGroup(TGROUP); }
 	};

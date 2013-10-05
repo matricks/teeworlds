@@ -19,6 +19,7 @@
 #include "binds.h"
 
 CHud::CHud()
+: CComponent("hud")
 {
 	// won't work if zero
 	m_AverageFPS = 1.0f;

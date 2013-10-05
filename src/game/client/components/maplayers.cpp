@@ -19,6 +19,7 @@
 #include "maplayers.h"
 
 CMapLayers::CMapLayers(int t)
+: CComponent("maplayers")
 {
 	m_Type = t;
 	m_CurrentLocalTick = 0;

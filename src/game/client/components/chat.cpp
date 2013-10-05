@@ -21,6 +21,7 @@
 
 
 CChat::CChat()
+: CComponent("chat")
 {
 	OnReset();
 }

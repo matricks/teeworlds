@@ -11,6 +11,7 @@
 #include "emoticon.h"
 
 CEmoticon::CEmoticon()
+: CComponent("emoticon")
 {
 	OnReset();
 }

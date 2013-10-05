@@ -221,7 +221,7 @@ void CGameConsole::CInstance::PrintLine(const char *pLine)
 }
 
 CGameConsole::CGameConsole()
-: m_LocalConsole(CONSOLETYPE_LOCAL), m_RemoteConsole(CONSOLETYPE_REMOTE)
+: CComponent("gameconsole"), m_LocalConsole(CONSOLETYPE_LOCAL), m_RemoteConsole(CONSOLETYPE_REMOTE)
 {
 	m_ConsoleType = CONSOLETYPE_LOCAL;
 	m_ConsoleState = CONSOLE_CLOSED;

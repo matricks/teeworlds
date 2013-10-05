@@ -24,6 +24,10 @@ class CPlayers : public CComponent
 	);
 
 public:
+	CPlayers()
+	: CComponent("players")
+	{}	
+
 	virtual void OnRender();
 };
 

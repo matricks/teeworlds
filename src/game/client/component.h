@@ -8,6 +8,8 @@
 
 class CComponent
 {
+private:
+	const char * const m_pComponentName;
 protected:
 	friend class CGameClient;
 
@@ -30,6 +32,10 @@ protected:
 	class CLayers *Layers() const { return m_pClient->Layers(); }
 	class CCollision *Collision() const { return m_pClient->Collision(); }
 public:
+	CComponent(const char *pName) : m_pComponentName(pName) {}
+
+	const char * ComponentName() const { return m_pComponentName; }
+
 	virtual ~CComponent() {}
 
 	virtual void OnStateChange(int NewState, int OldState) {};

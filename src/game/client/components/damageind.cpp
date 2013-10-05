@@ -11,6 +11,7 @@
 #include "damageind.h"
 
 CDamageInd::CDamageInd()
+: CComponent("damageind")
 {
 	m_NumItems = 0;
 }

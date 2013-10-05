@@ -14,6 +14,10 @@ class CNamePlates : public CComponent
 	);
 
 public:
+	CNamePlates()
+	: CComponent("nameplates")
+	{}	
+
 	virtual void OnRender();
 };
 

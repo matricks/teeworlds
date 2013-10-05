@@ -21,6 +21,7 @@ bool CBinds::CBindsSpecial::OnInput(IInput::CEvent Event)
 }
 
 CBinds::CBinds()
+: CComponent("binds")
 {
 	mem_zero(m_aaKeyBindings, sizeof(m_aaKeyBindings));
 	m_SpecialBinds.m_pBinds = this;

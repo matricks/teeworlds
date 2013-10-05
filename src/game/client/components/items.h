@@ -20,6 +20,10 @@ class CItems : public CComponent
 	void RenderLaser(const struct CNetObj_Laser *pCurrent);
 
 public:
+	CItems()
+	: CComponent("items")
+	{}	
+
 	virtual void OnReset();
 	virtual void OnRender();
 

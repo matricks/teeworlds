@@ -11,6 +11,10 @@ class CMotd : public CComponent
 public:
 	char m_aServerMotd[900];
 
+	CMotd()
+	: CComponent("motd")
+	{}
+
 	void Clear();
 	bool IsActive();
 

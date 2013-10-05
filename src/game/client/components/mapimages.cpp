@@ -9,6 +9,7 @@
 #include "mapimages.h"
 
 CMapImages::CMapImages()
+: CComponent("mapimages")
 {
 	m_Count = 0;
 	m_MenuCount = 0;

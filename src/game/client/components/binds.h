@@ -25,6 +25,10 @@ public:
 	class CBindsSpecial : public CComponent
 	{
 	public:
+		CBindsSpecial()
+		: CComponent("bindsspecial")
+		{}
+		
 		CBinds *m_pBinds;
 		virtual bool OnInput(IInput::CEvent Event);
 	};

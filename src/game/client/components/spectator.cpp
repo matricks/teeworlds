@@ -122,6 +122,7 @@ void CSpectator::ConSpectatePrevious(IConsole::IResult *pResult, void *pUserData
 }
 
 CSpectator::CSpectator()
+: CComponent("spectator")
 {
 	OnReset();
 }

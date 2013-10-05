@@ -19,6 +19,7 @@
 
 
 CScoreboard::CScoreboard()
+: CComponent("scoreboard")
 {
 	OnReset();
 }

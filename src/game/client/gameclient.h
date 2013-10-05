@@ -12,13 +12,15 @@
 
 class CGameClient : public IGameClient
 {
+	enum
+	{
+		MAX_COMPONENTS = 64,
+	};
+		
 	class CStack
 	{
 	public:
-		enum
-		{
-			MAX_COMPONENTS = 64,
-		};
+
 
 		CStack();
 		void Add(class CComponent *pComponent);
@@ -217,6 +219,12 @@ public:
 	} m_ServerSettings;
 
 	CRenderTools m_RenderTools;
+
+	// performance measurements
+	struct
+	{
+		int64 m_RenderTime;
+	} m_aComponentStats[MAX_COMPONENTS];
 
 	void OnReset();
 
