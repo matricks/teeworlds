@@ -137,24 +137,6 @@ void *CCommandProcessorFragment_OpenGL::Rescale(int Width, int Height, int NewWi
 
 void CCommandProcessorFragment_OpenGL::SetState(const CCommandBuffer::SState &State)
 {
-	// blend
-	switch(State.m_BlendMode)
-	{
-	case CCommandBuffer::BLEND_NONE:
-		glDisable(GL_BLEND);
-		break;
-	case CCommandBuffer::BLEND_ALPHA:
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		break;
-	case CCommandBuffer::BLEND_ADDITIVE:
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-		break;
-	default:
-		dbg_msg("render", "unknown blendmode %d\n", State.m_BlendMode);
-	};
-
 	// clip
 	if(State.m_ClipEnable)
 	{
@@ -165,13 +147,35 @@ void CCommandProcessorFragment_OpenGL::SetState(const CCommandBuffer::SState &St
 		glDisable(GL_SCISSOR_TEST);
 	
 	// texture
+	int SrcBlendMode = GL_SRC_ALPHA;
 	if(State.m_Texture >= 0 && State.m_Texture < CCommandBuffer::MAX_TEXTURES)
 	{
 		glEnable(GL_TEXTURE_2D);
 		glBindTexture(GL_TEXTURE_2D, m_aTextures[State.m_Texture].m_Tex);
+
+		if(m_aTextures[State.m_Texture].m_Format == CCommandBuffer::TEXFORMAT_RGBA)
+			SrcBlendMode = GL_ONE;
 	}
 	else
 		glDisable(GL_TEXTURE_2D);
+
+	// blend
+	switch(State.m_BlendMode)
+	{
+	case CCommandBuffer::BLEND_NONE:
+		glDisable(GL_BLEND);
+		break;
+	case CCommandBuffer::BLEND_ALPHA:
+		glEnable(GL_BLEND);
+		glBlendFunc(SrcBlendMode, GL_ONE_MINUS_SRC_ALPHA);
+		break;
+	case CCommandBuffer::BLEND_ADDITIVE:
+		glEnable(GL_BLEND);
+		glBlendFunc(SrcBlendMode, GL_ONE);
+		break;
+	default:
+		dbg_msg("render", "unknown blendmode %d\n", State.m_BlendMode);
+	};
 
 	switch(State.m_WrapMode)
 	{
@@ -247,6 +251,18 @@ void CCommandProcessorFragment_OpenGL::Cmd_Texture_Create(const CCommandBuffer::
 		}
 	}
 
+	if(pCommand->m_Format == CCommandBuffer::TEXFORMAT_RGBA)
+	{
+		unsigned char *pTexels = (unsigned char *)pTexData;
+		for(int i =0; i < Width*Height; i++)
+		{
+			const float a = (pTexels[i*4+3]/255.0f);
+			pTexels[i*4+0] = (unsigned char)(pTexels[i*4+0] * a);
+			pTexels[i*4+1] = (unsigned char)(pTexels[i*4+1] * a);
+			pTexels[i*4+2] = (unsigned char)(pTexels[i*4+2] * a);
+		}
+	}
+
 	int Oglformat = TexFormatToOpenGLFormat(pCommand->m_Format);
 	int StoreOglformat = TexFormatToOpenGLFormat(pCommand->m_StoreFormat);
 
@@ -260,6 +276,8 @@ void CCommandProcessorFragment_OpenGL::Cmd_Texture_Create(const CCommandBuffer::
 			default: StoreOglformat = GL_COMPRESSED_RGBA_ARB;
 		}
 	}
+
+	m_aTextures[pCommand->m_Slot].m_Format = pCommand->m_Format;
 	glGenTextures(1, &m_aTextures[pCommand->m_Slot].m_Tex);
 	glBindTexture(GL_TEXTURE_2D, m_aTextures[pCommand->m_Slot].m_Tex);
 
